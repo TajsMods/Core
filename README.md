@@ -25,6 +25,10 @@ A comprehensive modding framework for Godot games, providing essential systems f
    - Set Node Name: `Core`
    - Enable the singleton
 
+📖 **See [INSTALLATION.md](INSTALLATION.md) for detailed installation instructions**
+
+📚 **See [QUICKSTART.md](QUICKSTART.md) for a 5-minute tutorial**
+
 ### Basic Usage
 
 ```gdscript
@@ -122,8 +126,11 @@ Core.Patches.apply_patch("patch_id")
 
 ## Documentation
 
+- **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
+- **[Installation Guide](INSTALLATION.md)** - Detailed setup instructions
 - **[API Reference](docs/API.md)** - Complete API documentation
 - **[Example Module](examples/example_module/)** - Working example showing all features
+- **[Changelog](CHANGELOG.md)** - Version history and changes
 
 ## Example Module
 
@@ -170,7 +177,7 @@ Current version: **1.0.0**
 
 ## License
 
-This framework is provided as-is for use in game mods.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
