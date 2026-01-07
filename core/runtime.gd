@@ -15,7 +15,10 @@ var _module_load_order := []
 ## @param module_version: Semantic version string (e.g., "1.0.0")
 func register_module(module_name: String, module_instance: Node, module_version: String = "1.0.0") -> bool:
 	if _modules.has(module_name):
-		Core.Logger.warn("Module '%s' is already registered" % module_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Module '%s' is already registered" % module_name)
+		else:
+			push_warning("Module '%s' is already registered" % module_name)
 		return false
 	
 	_modules[module_name] = {
@@ -25,8 +28,13 @@ func register_module(module_name: String, module_instance: Node, module_version:
 	}
 	_module_load_order.append(module_name)
 	
-	Core.Logger.info("Registered module: %s (v%s)" % [module_name, module_version])
-	Core.EventBus.emit_signal("module_registered", module_name, module_version)
+	if Core and Core.Logger:
+		Core.Logger.info("Registered module: %s (v%s)" % [module_name, module_version])
+	else:
+		print("Registered module: %s (v%s)" % [module_name, module_version])
+	
+	if Core and Core.EventBus:
+		Core.EventBus.emit_signal("module_registered", module_name, module_version)
 	
 	return true
 
@@ -54,7 +62,8 @@ func get_all_modules() -> Array:
 func set_module_enabled(module_name: String, enabled: bool) -> void:
 	if _modules.has(module_name):
 		_modules[module_name].enabled = enabled
-		Core.Logger.info("Module '%s' %s" % [module_name, "enabled" if enabled else "disabled"])
+		if Core and Core.Logger:
+			Core.Logger.info("Module '%s' %s" % [module_name, "enabled" if enabled else "disabled"])
 
 ## Check if module is enabled
 func is_module_enabled(module_name: String) -> bool:

@@ -13,15 +13,17 @@ var _action_conflicts := {}
 ## @param allow_conflicts: If true, allows conflicting bindings
 func register_action(action_name: String, events: Array, description: String = "", allow_conflicts: bool = false) -> bool:
 	if InputMap.has_action(action_name):
-		Core.Logger.warn("Action '%s' is already registered in InputMap" % action_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Action '%s' is already registered in InputMap" % action_name)
 		return false
 	
 	# Check for conflicts
 	var conflicts := _check_conflicts(events)
 	if not conflicts.is_empty() and not allow_conflicts:
-		Core.Logger.warn("Action '%s' has conflicts: %s" % [action_name, str(conflicts)])
-		_action_conflicts[action_name] = conflicts
-		Core.EventBus.emit_signal("keybind_conflict", action_name, str(conflicts), str(events))
+		if Core and Core.Logger:
+			Core.Logger.warn("Action '%s' has conflicts: %s" % [action_name, str(conflicts)])
+		if Core and Core.EventBus:
+			Core.EventBus.emit_signal("keybind_conflict", action_name, str(conflicts), str(events))
 		return false
 	
 	# Register the action
@@ -36,22 +38,26 @@ func register_action(action_name: String, events: Array, description: String = "
 		"conflicts": conflicts
 	}
 	
-	Core.Logger.info("Registered keybind: %s - %s" % [action_name, description])
-	Core.EventBus.emit_signal("keybind_registered", action_name)
+	if Core and Core.Logger:
+		Core.Logger.info("Registered keybind: %s - %s" % [action_name, description])
+	if Core and Core.EventBus:
+		Core.EventBus.emit_signal("keybind_registered", action_name)
 	
 	return true
 
 ## Unregister an input action
 func unregister_action(action_name: String) -> void:
 	if not _registered_actions.has(action_name):
-		Core.Logger.warn("Action '%s' is not registered" % action_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Action '%s' is not registered" % action_name)
 		return
 	
 	InputMap.erase_action(action_name)
 	_registered_actions.erase(action_name)
 	_action_conflicts.erase(action_name)
 	
-	Core.Logger.info("Unregistered keybind: %s" % action_name)
+	if Core and Core.Logger:
+		Core.Logger.info("Unregistered keybind: %s" % action_name)
 
 ## Check if an action is registered
 func has_action(action_name: String) -> bool:
@@ -109,13 +115,15 @@ func _events_match(event1: InputEvent, event2: InputEvent) -> bool:
 ## Rebind an action to new events
 func rebind_action(action_name: String, new_events: Array, allow_conflicts: bool = false) -> bool:
 	if not _registered_actions.has(action_name):
-		Core.Logger.warn("Cannot rebind unregistered action: %s" % action_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Cannot rebind unregistered action: %s" % action_name)
 		return false
 	
 	# Check for conflicts
 	var conflicts := _check_conflicts(new_events)
 	if not conflicts.is_empty() and not allow_conflicts:
-		Core.Logger.warn("Rebind for '%s' has conflicts: %s" % [action_name, str(conflicts)])
+		if Core and Core.Logger:
+			Core.Logger.warn("Rebind for '%s' has conflicts: %s" % [action_name, str(conflicts)])
 		return false
 	
 	# Clear existing events
@@ -129,6 +137,7 @@ func rebind_action(action_name: String, new_events: Array, allow_conflicts: bool
 	_registered_actions[action_name].events = new_events
 	_registered_actions[action_name].conflicts = conflicts
 	
-	Core.Logger.info("Rebound action: %s" % action_name)
+	if Core and Core.Logger:
+		Core.Logger.info("Rebound action: %s" % action_name)
 	
 	return true

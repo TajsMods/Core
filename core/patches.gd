@@ -16,7 +16,8 @@ func _ready() -> void:
 ## @param description: Human-readable description of what the patch does
 func register_patch(patch_id: String, patch_func: Callable, description: String = "") -> void:
 	if _patch_registry.has(patch_id):
-		Core.Logger.warn("Patch '%s' is already registered" % patch_id)
+		if Core and Core.Logger:
+			Core.Logger.warn("Patch '%s' is already registered" % patch_id)
 		return
 	
 	_patch_registry[patch_id] = {
@@ -25,23 +26,27 @@ func register_patch(patch_id: String, patch_func: Callable, description: String 
 		"registered_at": Time.get_unix_time_from_system()
 	}
 	
-	Core.Logger.debug("Registered patch: %s - %s" % [patch_id, description])
+	if Core and Core.Logger:
+		Core.Logger.debug("Registered patch: %s - %s" % [patch_id, description])
 
 ## Apply a patch if it hasn't been applied yet
 ## @param patch_id: The ID of the patch to apply
 ## @return true if patch was applied, false if already applied or doesn't exist
 func apply_patch(patch_id: String) -> bool:
 	if not _patch_registry.has(patch_id):
-		Core.Logger.error("Patch '%s' is not registered" % patch_id)
+		if Core and Core.Logger:
+			Core.Logger.error("Patch '%s' is not registered" % patch_id)
 		return false
 	
 	if is_patch_applied(patch_id):
-		Core.Logger.debug("Patch '%s' has already been applied" % patch_id)
+		if Core and Core.Logger:
+			Core.Logger.debug("Patch '%s' has already been applied" % patch_id)
 		return false
 	
 	var patch_data = _patch_registry[patch_id]
 	
-	Core.Logger.info("Applying patch: %s - %s" % [patch_id, patch_data.description])
+	if Core and Core.Logger:
+		Core.Logger.info("Applying patch: %s - %s" % [patch_id, patch_data.description])
 	
 	# Apply the patch
 	var result = patch_data.func.call()
@@ -55,7 +60,8 @@ func apply_patch(patch_id: String) -> bool:
 	
 	_save_patch_history()
 	
-	Core.EventBus.emit_signal("patch_applied", patch_id)
+	if Core and Core.EventBus:
+		Core.EventBus.emit_signal("patch_applied", patch_id)
 	
 	return true
 
@@ -79,23 +85,28 @@ func apply_all_patches() -> int:
 		if apply_patch(patch_id):
 			count += 1
 	
-	Core.Logger.info("Applied %d patch(es)" % count)
+	if Core and Core.Logger:
+		Core.Logger.info("Applied %d patch(es)" % count)
 	return count
 
 ## Reset patch history (use with caution!)
 func reset_patch_history() -> void:
 	_applied_patches.clear()
 	_save_patch_history()
-	Core.Logger.warn("Patch history has been reset")
+	if Core and Core.Logger:
+		Core.Logger.warn("Patch history has been reset")
 
 ## Load patch history from settings
 func _load_patch_history() -> void:
-	var history = Core.Settings.get_value("_patches", "applied", {})
-	if history is Dictionary:
-		_applied_patches = history
-		Core.Logger.debug("Loaded patch history: %d patch(es) applied" % _applied_patches.size())
+	if Core and Core.Settings:
+		var history = Core.Settings.get_value("_patches", "applied", {})
+		if history is Dictionary:
+			_applied_patches = history
+			if Core.Logger:
+				Core.Logger.debug("Loaded patch history: %d patch(es) applied" % _applied_patches.size())
 
 ## Save patch history to settings
 func _save_patch_history() -> void:
-	Core.Settings.set_value("_patches", "applied", _applied_patches)
-	Core.Settings.save_settings()
+	if Core and Core.Settings:
+		Core.Settings.set_value("_patches", "applied", _applied_patches)
+		Core.Settings.save_settings()

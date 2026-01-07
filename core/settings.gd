@@ -19,7 +19,8 @@ func _ready() -> void:
 ## @param migration_func: Callable that takes ConfigFile and migrates it
 func register_migration(from_version: int, migration_func: Callable) -> void:
 	_migrations[from_version] = migration_func
-	Core.Logger.debug("Registered migration from version %d" % from_version)
+	if Core and Core.Logger:
+		Core.Logger.debug("Registered migration from version %d" % from_version)
 
 ## Get a setting value with namespace
 ## @param namespace: The namespace (e.g., "core", "mod_name")
@@ -40,39 +41,50 @@ func save_settings() -> void:
 	_config.set_value("_meta", "version", SETTINGS_VERSION)
 	var error := _config.save(SETTINGS_FILE)
 	if error != OK:
-		Core.Logger.error("Failed to save settings: %d" % error)
+		if Core and Core.Logger:
+			Core.Logger.error("Failed to save settings: %d" % error)
+		else:
+			push_error("Failed to save settings: %d" % error)
 	else:
-		Core.Logger.debug("Settings saved successfully")
+		if Core and Core.Logger:
+			Core.Logger.debug("Settings saved successfully")
 
 ## Load settings from disk
 func _load_settings() -> void:
 	var error := _config.load(SETTINGS_FILE)
 	
 	if error == ERR_FILE_NOT_FOUND:
-		Core.Logger.info("No settings file found, using defaults")
+		if Core and Core.Logger:
+			Core.Logger.info("No settings file found, using defaults")
 		_config.set_value("_meta", "version", SETTINGS_VERSION)
 		save_settings()
 		return
 	
 	if error != OK:
-		Core.Logger.error("Failed to load settings: %d" % error)
+		if Core and Core.Logger:
+			Core.Logger.error("Failed to load settings: %d" % error)
+		else:
+			push_error("Failed to load settings: %d" % error)
 		return
 	
 	# Check version and migrate if necessary
 	var current_version := _config.get_value("_meta", "version", 0)
 	if current_version < SETTINGS_VERSION:
-		Core.Logger.info("Migrating settings from version %d to %d" % [current_version, SETTINGS_VERSION])
+		if Core and Core.Logger:
+			Core.Logger.info("Migrating settings from version %d to %d" % [current_version, SETTINGS_VERSION])
 		_migrate_settings(current_version)
 		save_settings()
 	
-	Core.Logger.info("Settings loaded successfully")
+	if Core and Core.Logger:
+		Core.Logger.info("Settings loaded successfully")
 
 ## Apply migrations from old version to current version
 func _migrate_settings(from_version: int) -> void:
 	var version := from_version
 	while version < SETTINGS_VERSION:
 		if _migrations.has(version):
-			Core.Logger.debug("Applying migration from version %d" % version)
+			if Core and Core.Logger:
+				Core.Logger.debug("Applying migration from version %d" % version)
 			_migrations[version].call(_config)
 		version += 1
 

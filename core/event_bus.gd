@@ -29,7 +29,8 @@ var _custom_signals := {}
 ## @param param_names: Array of parameter names (for documentation)
 func register_custom_signal(signal_name: String, param_names: Array = []) -> void:
 	if _custom_signals.has(signal_name):
-		Core.Logger.warn("Signal '%s' is already registered" % signal_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Signal '%s' is already registered" % signal_name)
 		return
 	
 	_custom_signals[signal_name] = {
@@ -37,14 +38,16 @@ func register_custom_signal(signal_name: String, param_names: Array = []) -> voi
 		"connections": []
 	}
 	
-	Core.Logger.debug("Registered custom signal: %s(%s)" % [signal_name, ", ".join(param_names)])
+	if Core and Core.Logger:
+		Core.Logger.debug("Registered custom signal: %s(%s)" % [signal_name, ", ".join(param_names)])
 
 ## Emit a custom signal
 ## @param signal_name: Name of the signal to emit
 ## @param args: Arguments to pass to connected callbacks
 func emit_custom(signal_name: String, args: Array = []) -> void:
 	if not _custom_signals.has(signal_name):
-		Core.Logger.warn("Attempting to emit unregistered signal: %s" % signal_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Attempting to emit unregistered signal: %s" % signal_name)
 		return
 	
 	for connection in _custom_signals[signal_name].connections:
@@ -55,7 +58,8 @@ func emit_custom(signal_name: String, args: Array = []) -> void:
 ## @param callable: The callable to connect
 func connect_custom(signal_name: String, callable: Callable) -> void:
 	if not _custom_signals.has(signal_name):
-		Core.Logger.warn("Attempting to connect to unregistered signal: %s" % signal_name)
+		if Core and Core.Logger:
+			Core.Logger.warn("Attempting to connect to unregistered signal: %s" % signal_name)
 		return
 	
 	_custom_signals[signal_name].connections.append(callable)
