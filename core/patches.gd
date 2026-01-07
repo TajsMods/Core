@@ -73,7 +73,7 @@ func apply_patch(patch_id: String) -> bool:
 	_save_patch_history()
 	
 	if Core and Core.EventBus:
-		Core.EventBus.emit_signal("patch_applied", patch_id)
+		Core.EventBus.patch_applied.emit(patch_id)
 	
 	return true
 

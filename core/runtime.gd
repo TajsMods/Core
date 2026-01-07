@@ -34,7 +34,7 @@ func register_module(module_name: String, module_instance: Node, module_version:
 		print("Registered module: %s (v%s)" % [module_name, module_version])
 	
 	if Core and Core.EventBus:
-		Core.EventBus.emit_signal("module_registered", module_name, module_version)
+		Core.EventBus.module_registered.emit(module_name, module_version)
 	
 	return true
 

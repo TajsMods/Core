@@ -23,7 +23,7 @@ func register_action(action_name: String, events: Array, description: String = "
 		if Core and Core.Logger:
 			Core.Logger.warn("Action '%s' has conflicts: %s" % [action_name, str(conflicts)])
 		if Core and Core.EventBus:
-			Core.EventBus.emit_signal("keybind_conflict", action_name, str(conflicts), str(events))
+			Core.EventBus.keybind_conflict.emit(action_name, str(conflicts), str(events))
 		return false
 	
 	# Register the action
@@ -41,7 +41,7 @@ func register_action(action_name: String, events: Array, description: String = "
 	if Core and Core.Logger:
 		Core.Logger.info("Registered keybind: %s - %s" % [action_name, description])
 	if Core and Core.EventBus:
-		Core.EventBus.emit_signal("keybind_registered", action_name)
+		Core.EventBus.keybind_registered.emit(action_name)
 	
 	return true
 
