@@ -48,8 +48,20 @@ func apply_patch(patch_id: String) -> bool:
 	if Core and Core.Logger:
 		Core.Logger.info("Applying patch: %s - %s" % [patch_id, patch_data.description])
 	
-	# Apply the patch
-	var result = patch_data.func.call()
+	# Apply the patch with error handling
+	var result = null
+	var error_occurred = false
+	
+	# Godot 4 doesn't have try/catch, so we validate the callable
+	if patch_data.func.is_valid():
+		result = patch_data.func.call()
+	else:
+		error_occurred = true
+		if Core and Core.Logger:
+			Core.Logger.error("Patch '%s' has invalid callable" % patch_id)
+	
+	if error_occurred:
+		return false
 	
 	# Mark as applied
 	_applied_patches[patch_id] = {

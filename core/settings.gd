@@ -57,7 +57,7 @@ func _load_settings() -> void:
 		if Core and Core.Logger:
 			Core.Logger.info("No settings file found, using defaults")
 		_config.set_value("_meta", "version", SETTINGS_VERSION)
-		save_settings()
+		# Don't auto-save on first load - wait for actual changes
 		return
 	
 	if error != OK:

@@ -100,9 +100,7 @@ func _check_conflicts(events: Array) -> Array:
 
 ## Check if two events match (same key/button)
 func _events_match(event1: InputEvent, event2: InputEvent) -> bool:
-	if event1.get_class() != event2.get_class():
-		return false
-	
+	# Check if both are the same type
 	if event1 is InputEventKey and event2 is InputEventKey:
 		return event1.keycode == event2.keycode
 	elif event1 is InputEventMouseButton and event2 is InputEventMouseButton:

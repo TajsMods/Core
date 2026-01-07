@@ -27,9 +27,16 @@ func _exit_tree() -> void:
 		_log_file.close()
 
 func _open_log_file() -> void:
-	_log_file = FileAccess.open(log_file_path, FileAccess.WRITE)
+	# Open in READ_WRITE mode and seek to end to append
+	_log_file = FileAccess.open(log_file_path, FileAccess.READ_WRITE)
 	if _log_file:
+		_log_file.seek_end()
 		info("Log file opened at: %s" % log_file_path)
+	else:
+		# If file doesn't exist, create it in WRITE mode
+		_log_file = FileAccess.open(log_file_path, FileAccess.WRITE)
+		if _log_file:
+			info("Log file created at: %s" % log_file_path)
 
 ## Log a debug message
 func debug(message: String) -> void:

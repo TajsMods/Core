@@ -57,4 +57,5 @@ func _on_toggle() -> void:
 	Core.Settings.save_settings()
 	
 	Core.Logger.info("Example module toggled: %s" % (not current))
-	Core.EventBus.emit_signal("setting_changed", "example_module", "enabled", not current)
+	# Emit using the EventBus built-in signal properly
+	Core.EventBus.setting_changed.emit("example_module", "enabled", not current)
