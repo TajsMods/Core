@@ -14,3 +14,29 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/projectSettingsUpdater.xml
+/contentModel.xml
+/modules.xml
+/.idea.TajsView.iml
+# Ignored default folder with query files
+/queries/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+
+.idea/
+
+*.uid
+
+*.import
+
+.vscode/
+
+docs/.vscode
