@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Runtime
+# Author: TajemnikTV
+# Description: Runtime
+# ==============================================================================
 class_name TajsCoreRuntime
 extends Node
 

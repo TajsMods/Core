@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Diagnostics
+# Author: TajemnikTV
+# Description: 
+# ==============================================================================
 class_name TajsCoreDiagnostics
 extends RefCounted
 

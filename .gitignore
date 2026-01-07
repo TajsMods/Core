@@ -1,21 +1,4 @@
-# Godot 4+ specific ignores
-.godot/
-.nomedia
-
-# Godot-specific ignores
-.import/
-export.cfg
-export_credentials.cfg
-
-# Imported translations (automatically generated from CSV files)
-*.translation
-
-# Mono-specific ignores
-.mono/
-data_*/
-mono_crash.*.json
-
-# Default ignored files
+﻿# Default ignored files
 /shelf/
 /workspace.xml
 # Rider ignored files
@@ -36,6 +19,31 @@ mono_crash.*.json
 *.uid
 
 *.import
+
+docs/private/*
+
+# build output
+/docs/dist/
+# generated types
+/docs/astro/
+
+# dependencies
+/docs/node_modules/
+
+# logs
+/docs/npm-debug.log*
+/docs/yarn-debug.log*
+/docs/yarn-error.log*
+/docs/pnpm-debug.log*
+
+
+# environment variables
+/docs/.env
+/docs/.env.production
+
+# macOS-specific files
+/docs/.DS_Store
+
 
 .vscode/
 

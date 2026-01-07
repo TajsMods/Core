@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Migrations
+# Author: TajemnikTV
+# Description: Migrations
+# ==============================================================================
 class_name TajsCoreMigrations
 extends RefCounted
 

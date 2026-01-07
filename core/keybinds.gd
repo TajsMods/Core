@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Keybinds
+# Author: TajemnikTV
+# Description: Keybinds
+# ==============================================================================
 class_name TajsCoreKeybinds
 extends Node
 

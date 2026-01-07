@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Version
+# Author: TajemnikTV
+# Description: Version
+# ==============================================================================
 class_name TajsCoreVersion
 extends RefCounted
 

@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Util
+# Author: TajemnikTV
+# Description: Util
+# ==============================================================================
 class_name TajsCoreUtil
 extends RefCounted
 

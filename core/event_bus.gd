@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Event Bus
+# Author: TajemnikTV
+# Description: Event Bus
+# ==============================================================================
 class_name TajsCoreEventBus
 extends RefCounted
 

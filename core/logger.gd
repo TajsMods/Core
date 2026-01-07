@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Logger
+# Author: TajemnikTV
+# Description: Logger
+# ==============================================================================
 class_name TajsCoreLogger
 extends RefCounted
 

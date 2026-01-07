@@ -1,3 +1,8 @@
+# ==============================================================================
+# Taj's Core - Patches
+# Author: TajemnikTV
+# Description: Patches
+# ==============================================================================
 class_name TajsCorePatches
 extends RefCounted
 
