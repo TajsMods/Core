@@ -25,11 +25,19 @@ func collect() -> Dictionary:
     data["settings"] = _core.settings.get_snapshot(true) if _core != null and _core.settings != null else {}
     data["keybinds"] = _core.keybinds.get_actions_for_ui() if _core != null and _core.keybinds != null else []
     data["keybind_conflicts"] = _core.keybinds.get_conflicts() if _core != null and _core.keybinds != null else []
+    data["keybind_conflicts_summary"] = {
+        "count": data["keybind_conflicts"].size()
+    }
+    if _core != null and _core.node_registry != null:
+        data["nodes"] = {
+            "count": _core.node_registry.get_mod_node_count(),
+            "mods": _core.node_registry.get_mod_nodes()
+        }
     data["patches"] = _core.patches.list_applied() if _core != null and _core.patches != null else []
     data["logs"] = _core.logger.get_entries() if _core != null and _core.logger != null else []
     return data
 
-func export_json(path: String = "") -> String:
+func export_json(path: String = "") -> Dictionary:
     var json_string := JSON.stringify(collect(), "\t")
     var output_path := path
     if output_path == "":
@@ -38,7 +46,7 @@ func export_json(path: String = "") -> String:
     if file != null:
         file.store_string(json_string)
         file.close()
-    return json_string
+    return {"path": output_path, "json": json_string}
 
 func self_test() -> Dictionary:
     var checks: Array = []
@@ -59,9 +67,15 @@ func self_test() -> Dictionary:
         _core.event_bus.emit("core.self_test", {})
         checks.append({"name": "event_bus", "ok": flag})
         ok = ok and flag
-    return {"ok": ok, "checks": checks}
+    var result := {"ok": ok, "checks": checks}
+    _log_info("diagnostics", "Self-test results: %s" % str(result))
+    return result
 
 func _try_get_mod_loader_version() -> String:
     if ClassDB.class_exists("ModLoader") and ClassDB.class_has_method("ModLoader", "get_version"):
         return str(ModLoader.get_version())
     return "unknown"
+
+func _log_info(module_id: String, message: String) -> void:
+    if _logger != null and _logger.has_method("info"):
+        _logger.info(module_id, message)

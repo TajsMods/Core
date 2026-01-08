@@ -1,15 +1,17 @@
 extends Node
 
 const MOD_ID := "TajemnikTV-Core"
-const LOG_NAME := "Core:Main"
-const META_KEY := "core"
+const LOG_NAME := "TajemnikTV-Core:Main"
+const META_KEY := "TajsCore"
 
 var _core
 
 func _init() -> void:
     if Engine.has_meta(META_KEY):
-        _log_warn("Core already initialized, skipping.")
-        return
+        var existing = Engine.get_meta(META_KEY)
+        if existing != null:
+            _log_warn("Core already initialized, skipping.")
+            return
     var base_dir: String = get_script().resource_path.get_base_dir()
     var runtime_script = load(base_dir.path_join("core/runtime.gd"))
     if runtime_script == null:

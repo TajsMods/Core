@@ -6,6 +6,8 @@
 class_name TajsCoreKeybinds
 extends Node
 
+signal binding_changed(action_id: String, shortcuts: Array)
+
 const CONTEXT_ANY := "any"
 const CONTEXT_GAMEPLAY := "gameplay"
 const CONTEXT_UI := "ui"
@@ -27,6 +29,7 @@ func register_action(action_id: String, display_name: String, default_shortcuts:
     if action_id == "":
         _log_warn(module_id, "Action id is required.")
         return false
+    _warn_if_unscoped(action_id, module_id)
     if _actions.has(action_id):
         _log_warn(module_id, "Action '%s' already registered." % action_id)
         return false
@@ -53,6 +56,13 @@ func register_action(action_id: String, display_name: String, default_shortcuts:
     _rebuild_conflicts()
     return true
 
+func register_action_scoped(module_id: String, action_name: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, priority: int = 0) -> bool:
+    if module_id == "" or action_name == "":
+        _log_warn(module_id, "Module id and action name are required.")
+        return false
+    var action_id: String = "%s.%s" % [module_id, action_name]
+    return register_action(action_id, display_name, default_shortcuts, context, callback, module_id, priority)
+
 func get_binding(action_id: String) -> Array:
     if not _actions.has(action_id):
         return []
@@ -69,6 +79,7 @@ func set_binding(action_id: String, shortcuts: Array) -> void:
     overrides[action_id] = _serialize_shortcuts(normalized)
     _save_overrides(overrides)
     _rebuild_conflicts()
+    emit_signal("binding_changed", action_id, normalized)
 
 func reset_to_default(action_id: String) -> void:
     if not _actions.has(action_id):
@@ -78,6 +89,18 @@ func reset_to_default(action_id: String) -> void:
     _apply_binding(action_id, defaults)
     var overrides := _get_overrides()
     overrides.erase(action_id)
+    _save_overrides(overrides)
+    _rebuild_conflicts()
+    emit_signal("binding_changed", action_id, defaults)
+
+func reset_all_to_default() -> void:
+    for action_id in _actions.keys():
+        var defaults: Array = _actions[action_id]["default_shortcuts"]
+        _actions[action_id]["shortcuts"] = defaults
+        _apply_binding(action_id, defaults)
+        emit_signal("binding_changed", action_id, defaults)
+    var overrides := _get_overrides()
+    overrides.clear()
     _save_overrides(overrides)
     _rebuild_conflicts()
 
@@ -289,3 +312,10 @@ func _save_overrides(overrides: Dictionary) -> void:
 func _log_warn(module_id: String, message: String) -> void:
     if _logger != null and _logger.has_method("warn"):
         _logger.warn(module_id, message)
+
+func _warn_if_unscoped(action_id: String, module_id: String) -> void:
+    if not action_id.contains("."):
+        _log_warn(module_id, "Action id '%s' is not namespaced. Use '{module_id}.action'." % action_id)
+        return
+    if module_id != "" and not action_id.begins_with(module_id + "."):
+        _log_warn(module_id, "Action id '%s' should start with '%s.'." % [action_id, module_id])
