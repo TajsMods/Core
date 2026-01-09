@@ -19,6 +19,10 @@ const ALLOWED_CATEGORIES := ["network", "cpu", "gpu", "research", "hacking", "fa
 var _nodes: Dictionary = {}
 var _mod_nodes: Dictionary = {}
 var _pending_windows: Array = []
+var _resource_types: Dictionary = {}
+var _file_types: Dictionary = {}
+var _window_categories: Dictionary = {}
+var _category_items: Dictionary = {}
 var _logger
 var _event_bus
 var _patches
@@ -49,6 +53,57 @@ func register_node(def: Dictionary) -> bool:
 		_try_refresh_menu(node_id)
 
 	_emit_registered(node_id, normalized.get("mod_id", ""))
+	return true
+
+func register_window_type(id: String, config: Dictionary) -> bool:
+	var def := _window_config_to_def(id, config)
+	if def.is_empty():
+		return false
+	return register_node(def)
+
+func unregister_window_type(id: String) -> bool:
+	return unregister_node(id)
+
+func get_window_config(id: String) -> Dictionary:
+	return get_node_def(id)
+
+func get_registered_window_types() -> Array[String]:
+	return _nodes.keys()
+
+func register_resource_type(id: String, config: Dictionary) -> bool:
+	if id == "":
+		return false
+	if not _autoload_ready("Data"):
+		return false
+	Data.resources[id] = config.duplicate(true)
+	_resource_types[id] = config.duplicate(true)
+	_try_register_resource_icon(id, config)
+	return true
+
+func register_file_type(id: String, config: Dictionary) -> bool:
+	if id == "":
+		return false
+	if not _autoload_ready("Data"):
+		return false
+	Data.files[id] = config.duplicate(true)
+	_file_types[id] = config.duplicate(true)
+	return true
+
+func register_window_category(id: String, label: String, icon: String, position: int = -1) -> bool:
+	if id == "":
+		return false
+	_window_categories[id] = {"label": label, "icon": icon, "position": position}
+	if not ALLOWED_CATEGORIES.has(id):
+		ALLOWED_CATEGORIES.append(id)
+	_log_warn("nodes", "Registered custom window category '%s'; UI injection may require custom scenes." % id)
+	return true
+
+func add_to_window_category(category_id: String, window_id: String, position: int = -1) -> bool:
+	if category_id == "" or window_id == "":
+		return false
+	if not _category_items.has(category_id):
+		_category_items[category_id] = []
+	_category_items[category_id].append({"id": window_id, "position": position})
 	return true
 
 func unregister_node(node_id: String) -> bool:
@@ -220,6 +275,50 @@ func _normalize_def(def: Dictionary) -> Dictionary:
 		}
 
 	return normalized
+
+func _window_config_to_def(id: String, config: Dictionary) -> Dictionary:
+	if id == "":
+		return {}
+	var display_name := str(config.get("name", config.get("display_name", "")))
+	if display_name == "":
+		return {}
+	var mod_id := str(config.get("mod_id", _extract_mod_id(id)))
+	var scene_path := str(config.get("scene", ""))
+	if scene_path != "":
+		scene_path = _resolve_mod_path(scene_path, mod_id)
+	var icon_value := str(config.get("icon", ""))
+	var icon_path := ""
+	if icon_value != "":
+		if icon_value.begins_with("res://") or icon_value.find("/") != -1:
+			icon_path = _resolve_mod_path(icon_value, mod_id)
+			icon_value = ""
+	var icon_path_override := str(config.get("icon_path", ""))
+	if icon_path_override != "":
+		icon_path = _resolve_mod_path(icon_path_override, mod_id)
+	var def := {
+		"id": id,
+		"mod_id": mod_id,
+		"display_name": display_name,
+		"description": str(config.get("description", "")),
+		"packed_scene_path": scene_path,
+		"category": str(config.get("category", DEFAULT_CATEGORY)),
+		"sub_category": str(config.get("sub_category", DEFAULT_SUB_CATEGORY)),
+		"group": str(config.get("group", "")),
+		"level": int(config.get("level", 0)),
+		"requirement": str(config.get("requirement", "")),
+		"hidden": bool(config.get("hidden", false)),
+		"attributes": config.get("attributes", DEFAULT_ATTRIBUTES).duplicate(true),
+		"data": config.get("data", {}).duplicate(true),
+		"guide": str(config.get("guide", "")),
+		"tags": config.get("tags", []).duplicate()
+	}
+	if icon_path != "":
+		def["icon_path"] = icon_path
+	elif icon_value != "":
+		def["icon"] = icon_value
+	if config.has("factory") and config["factory"] is Callable:
+		def["factory"] = config["factory"]
+	return def
 
 func _register_data_window(node_id: String, window_def: Dictionary) -> void:
 	if not _autoload_ready("Data"):
@@ -410,6 +509,30 @@ func _normalize_icon_path(icon_path: String) -> String:
 	if not path.ends_with(".png"):
 		path += ".png"
 	return path
+
+func _resolve_mod_path(path: String, mod_id: String) -> String:
+	if path.begins_with("res://"):
+		return path
+	if mod_id == "":
+		return path
+	return TajsCoreUtil.get_mod_path(mod_id).path_join(path)
+
+func _try_register_resource_icon(resource_id: String, config: Dictionary) -> void:
+	if not _autoload_ready("Resources"):
+		return
+	if Resources.icons == null:
+		Resources.icons = {}
+	var icon_name := str(config.get("icon", ""))
+	var icon_path := str(config.get("icon_path", ""))
+	if icon_path == "" and icon_name != "" and icon_name.begins_with("res://"):
+		icon_path = icon_name
+		icon_name = icon_name.get_file().get_basename()
+	if icon_path == "" and icon_name != "":
+		icon_path = "res://textures/icons".path_join(icon_name + ".png")
+	if icon_name == "":
+		icon_name = resource_id
+	if icon_path != "" and ResourceLoader.exists(icon_path):
+		Resources.icons[icon_name + ".png"] = load(icon_path)
 
 func _is_namespaced_id(node_id: String) -> bool:
 	return node_id.find(".") != -1

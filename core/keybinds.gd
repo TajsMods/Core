@@ -11,6 +11,18 @@ signal binding_changed(action_id: String, shortcuts: Array)
 const CONTEXT_ANY := "any"
 const CONTEXT_GAMEPLAY := "gameplay"
 const CONTEXT_UI := "ui"
+const CONTEXT_DESKTOP := "desktop_only"
+const CONTEXT_MENU := "menu_only"
+const CONTEXT_NO_POPUP := "no_popup"
+const CONTEXT_NO_TEXT := "no_text_input"
+
+enum KeybindContext {
+	ALWAYS,
+	DESKTOP_ONLY,
+	MENU_ONLY,
+	NO_POPUP,
+	NO_TEXT_INPUT
+}
 
 var _settings
 var _logger
@@ -18,6 +30,8 @@ var _event_bus
 var _actions: Dictionary = {}
 var _conflicts: Array = []
 var _register_counter: int = 0
+var _categories: Dictionary = {}
+var _hold_actions: Dictionary = {}
 
 func setup(settings, logger, event_bus = null) -> void:
 	_settings = settings
@@ -25,7 +39,7 @@ func setup(settings, logger, event_bus = null) -> void:
 	_event_bus = event_bus
 	set_process_unhandled_input(true)
 
-func register_action(action_id: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, module_id: String, priority: int = 0) -> bool:
+func register_action(action_id: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, module_id: String, priority: int = 0, category_id: String = "") -> bool:
 	if action_id == "":
 		_log_warn(module_id, "Action id is required.")
 		return false
@@ -40,28 +54,79 @@ func register_action(action_id: String, display_name: String, default_shortcuts:
 		var override_events := _normalize_shortcuts(overrides[action_id])
 		if not override_events.is_empty():
 			shortcuts = override_events
+	var normalized_context := _normalize_context(context)
 	_actions[action_id] = {
 		"id": action_id,
 		"display_name": display_name,
 		"module_id": module_id,
-		"context": context,
+		"context": normalized_context,
 		"priority": priority,
 		"registered_at": _register_counter,
 		"callback": callback,
 		"default_shortcuts": normalized_defaults,
-		"shortcuts": shortcuts
+		"shortcuts": shortcuts,
+		"category": category_id,
+		"group": "",
+		"hold": false
 	}
 	_register_counter += 1
 	_apply_binding(action_id, shortcuts)
 	_rebuild_conflicts()
+	if _event_bus != null and _event_bus.has_method("emit"):
+		_event_bus.emit("keybind.registered", {"id": action_id, "module_id": module_id, "context": context})
 	return true
 
-func register_action_scoped(module_id: String, action_name: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, priority: int = 0) -> bool:
+func register_action_scoped(module_id: String, action_name: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, priority: int = 0, category_id: String = "") -> bool:
 	if module_id == "" or action_name == "":
 		_log_warn(module_id, "Module id and action name are required.")
 		return false
 	var action_id: String = "%s.%s" % [module_id, action_name]
-	return register_action(action_id, display_name, default_shortcuts, context, callback, module_id, priority)
+	return register_action(action_id, display_name, default_shortcuts, context, callback, module_id, priority, category_id)
+
+func register_keybind_category(category_id: String, label: String, icon: String) -> void:
+	if category_id == "":
+		return
+	_categories[category_id] = {"label": label, "icon": icon}
+
+func set_keybind_group(action_id: String, group_id: String) -> void:
+	if not _actions.has(action_id):
+		return
+	_actions[action_id]["group"] = group_id
+
+func set_keybind_category(action_id: String, category_id: String) -> void:
+	if not _actions.has(action_id):
+		return
+	_actions[action_id]["category"] = category_id
+
+func register_combo_keybind(id: String, keys: Array[int], callback: Callable, display_name: String = "", context: String = CONTEXT_ANY, module_id: String = "") -> bool:
+	if id == "" or keys.is_empty():
+		return false
+	if display_name == "":
+		display_name = id
+	if module_id == "":
+		module_id = _extract_module_id(id)
+	var event := _build_combo_event(keys)
+	if event == null:
+		return false
+	return register_action(id, display_name, [event], context, callback, module_id)
+
+func register_hold_keybind(id: String, key: int, on_press: Callable, on_release: Callable) -> bool:
+	if id == "" or key == 0:
+		return false
+	var event := InputEventKey.new()
+	event.keycode = key as Key
+	event.pressed = true
+	var ok := register_action(id, id, [event], CONTEXT_ANY, Callable(), _extract_module_id(id))
+	if ok:
+		_actions[id]["hold"] = true
+		_hold_actions[id] = {"press": on_press, "release": on_release, "event": event, "context": CONTEXT_ANY}
+	return ok
+
+func set_keybind_context(action_id: String, context: Variant) -> void:
+	if not _actions.has(action_id):
+		return
+	var normalized := _normalize_context(context)
+	_actions[action_id]["context"] = normalized
 
 func get_binding(action_id: String) -> Array:
 	if not _actions.has(action_id):
@@ -80,6 +145,8 @@ func set_binding(action_id: String, shortcuts: Array) -> void:
 	_save_overrides(overrides)
 	_rebuild_conflicts()
 	emit_signal("binding_changed", action_id, normalized)
+	if _event_bus != null and _event_bus.has_method("emit"):
+		_event_bus.emit("keybind.overridden", {"id": action_id})
 
 func reset_to_default(action_id: String) -> void:
 	if not _actions.has(action_id):
@@ -120,6 +187,9 @@ func get_actions_for_ui() -> Array:
 			"module_id": action["module_id"],
 			"context": action["context"],
 			"priority": action["priority"],
+			"category": action.get("category", ""),
+			"group": action.get("group", ""),
+			"hold": action.get("hold", false),
 			"shortcuts": _format_shortcuts(action["shortcuts"]),
 			"default_shortcuts": _format_shortcuts(action["default_shortcuts"]),
 			"has_conflict": conflict_lookup.has(action["id"])
@@ -130,6 +200,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _actions.is_empty():
 		return
 	if event is InputEventKey:
+		if _handle_hold(event):
+			get_viewport().set_input_as_handled()
+			return
 		if not event.pressed or event.echo:
 			return
 	elif event is InputEventMouseButton:
@@ -139,6 +212,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var matches: Array = []
 	for action in _actions.values():
+		if action.get("hold", false):
+			continue
 		if not _context_allows(action["context"]):
 			continue
 		if InputMap.event_is_action(event, action["id"]):
@@ -151,14 +226,25 @@ func _unhandled_input(event: InputEvent) -> void:
 	var callback: Callable = winner["callback"]
 	if callback != null and callback.is_valid():
 		callback.call()
+		if _event_bus != null and _event_bus.has_method("emit"):
+			_event_bus.emit("keybind.pressed", {"id": winner["id"], "context": winner["context"]})
 		get_viewport().set_input_as_handled()
 
-func _context_allows(context: String) -> bool:
-	match context:
+func _context_allows(context: Variant) -> bool:
+	var normalized := _normalize_context(context)
+	match normalized:
 		CONTEXT_GAMEPLAY:
-			return not _is_text_input_focused()
+			return _is_desktop_active() and not _is_text_input_focused()
 		CONTEXT_UI:
 			return _is_ui_focused()
+		CONTEXT_DESKTOP:
+			return _is_desktop_active()
+		CONTEXT_MENU:
+			return _is_menu_open()
+		CONTEXT_NO_POPUP:
+			return not _is_popup_open()
+		CONTEXT_NO_TEXT:
+			return not _is_text_input_focused()
 		CONTEXT_ANY:
 			return true
 		_:
@@ -173,6 +259,30 @@ func _is_text_input_focused() -> bool:
 	if focus == null:
 		return false
 	return focus is LineEdit or focus is TextEdit or focus is CodeEdit or focus is SpinBox
+
+func _is_desktop_active() -> bool:
+	if Globals == null:
+		return true
+	return Globals.cur_screen == 0
+
+func _is_menu_open() -> bool:
+	var hud := _get_hud()
+	if hud == null:
+		return false
+	if hud.has_method("get"):
+		var menu_val = hud.get("cur_menu")
+		if menu_val != null:
+			return int(menu_val) != Utils.menu_types.NONE
+	return false
+
+func _is_popup_open() -> bool:
+	return false
+
+func _get_hud() -> Node:
+	var tree = Engine.get_main_loop()
+	if tree is SceneTree:
+		return tree.root.get_node_or_null("Main/HUD")
+	return null
 
 func _resolve_conflict(matches: Array) -> Dictionary:
 	var winner = matches[0]
@@ -299,6 +409,71 @@ func _event_signature(event: InputEvent) -> String:
 	if event is InputEventMouseButton:
 		return "mouse:%s:%s:%s:%s:%s" % [event.button_index, event.shift_pressed, event.ctrl_pressed, event.alt_pressed, event.meta_pressed]
 	return event.as_text()
+
+func _normalize_context(context: Variant) -> String:
+	if typeof(context) == TYPE_INT:
+		match int(context):
+			KeybindContext.ALWAYS:
+				return CONTEXT_ANY
+			KeybindContext.DESKTOP_ONLY:
+				return CONTEXT_DESKTOP
+			KeybindContext.MENU_ONLY:
+				return CONTEXT_MENU
+			KeybindContext.NO_POPUP:
+				return CONTEXT_NO_POPUP
+			KeybindContext.NO_TEXT_INPUT:
+				return CONTEXT_NO_TEXT
+			_:
+				return CONTEXT_ANY
+	return str(context)
+
+func _extract_module_id(action_id: String) -> String:
+	if not action_id.contains("."):
+		return ""
+	return action_id.split(".")[0]
+
+func _build_combo_event(keys: Array[int]) -> InputEventKey:
+	var event := InputEventKey.new()
+	for key in keys:
+		match key:
+			KEY_CTRL:
+				event.ctrl_pressed = true
+			KEY_SHIFT:
+				event.shift_pressed = true
+			KEY_ALT:
+				event.alt_pressed = true
+			KEY_META:
+				event.meta_pressed = true
+			_:
+				event.keycode = int(key) as Key
+	event.pressed = true
+	if event.keycode == 0:
+		return null
+	return event
+
+func _handle_hold(event: InputEvent) -> bool:
+	if not (event is InputEventKey):
+		return false
+	for action_id in _hold_actions.keys():
+		var entry: Dictionary = _hold_actions[action_id]
+		if not _context_allows(entry.get("context", CONTEXT_ANY)):
+			continue
+		var target: InputEventKey = entry.get("event", null)
+		if target != null and _event_matches(event, target):
+			var callable: Callable = entry["press"] if event.pressed else entry["release"]
+			if callable != null and callable.is_valid():
+				callable.call()
+			if _event_bus != null and _event_bus.has_method("emit"):
+				_event_bus.emit("keybind.pressed", {"id": action_id, "state": "press" if event.pressed else "release"})
+			return true
+	return false
+
+func _event_matches(event: InputEventKey, target: InputEventKey) -> bool:
+	return event.keycode == target.keycode \
+		and event.shift_pressed == target.shift_pressed \
+		and event.ctrl_pressed == target.ctrl_pressed \
+		and event.alt_pressed == target.alt_pressed \
+		and event.meta_pressed == target.meta_pressed
 
 func _get_overrides() -> Dictionary:
 	if _settings != null and _settings.has_method("get_dict"):
