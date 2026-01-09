@@ -92,6 +92,14 @@ static func parse_number(text: String) -> float:
 		if cleaned.ends_with(suffix):
 			var number_part := cleaned.substr(0, cleaned.length() - suffix.length())
 			return number_part.to_float() * pow(1000.0, i)
+	var latin := Utils.suffixes_latin
+	for k in range(latin.size() - 1, -1, -1):
+		var latin_suffix: String = str(latin[k]).to_lower()
+		if latin_suffix == "":
+			continue
+		if cleaned.ends_with(latin_suffix):
+			var number_part3 := cleaned.substr(0, cleaned.length() - latin_suffix.length())
+			return number_part3.to_float() * pow(1000.0, k)
 	var metric := Utils.metric
 	for j in range(metric.size() - 1, -1, -1):
 		var metric_suffix: String = metric[j].to_lower()
