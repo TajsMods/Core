@@ -47,7 +47,7 @@ static func _compare_pre(a: Array, b: Array) -> int:
 		return 1
 	if not a.is_empty() and b.is_empty():
 		return -1
-	var count := min(a.size(), b.size())
+	var count: int = min(a.size(), b.size())
 	for i in range(count):
 		var ai = a[i]
 		var bi = b[i]

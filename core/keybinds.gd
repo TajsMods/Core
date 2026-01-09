@@ -267,7 +267,7 @@ func _deserialize_shortcut(data: Dictionary) -> InputEvent:
 	match data["type"]:
 		"key":
 			var ev := InputEventKey.new()
-			ev.keycode = int(data.get("keycode", 0))
+			ev.keycode = int(data.get("keycode", 0)) as Key
 			ev.shift_pressed = bool(data.get("shift", false))
 			ev.ctrl_pressed = bool(data.get("ctrl", false))
 			ev.alt_pressed = bool(data.get("alt", false))
@@ -276,7 +276,7 @@ func _deserialize_shortcut(data: Dictionary) -> InputEvent:
 			return ev
 		"mouse":
 			var ev2 := InputEventMouseButton.new()
-			ev2.button_index = int(data.get("button_index", 0))
+			ev2.button_index = int(data.get("button_index", 0)) as MouseButton
 			ev2.shift_pressed = bool(data.get("shift", false))
 			ev2.ctrl_pressed = bool(data.get("ctrl", false))
 			ev2.alt_pressed = bool(data.get("alt", false))
