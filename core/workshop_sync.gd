@@ -184,7 +184,7 @@ func _get_num_subscribed_items(steam) -> int:
 			return steam.getNumSubscribedItems()
 	return 0
 
-func _get_subscribed_items(steam, count: int) -> Array:
+func _get_subscribed_items(steam, _count: int) -> Array:
 	if not steam.has_method("get_method_list"):
 		return []
 	var methods = steam.get_method_list()
@@ -293,11 +293,11 @@ func _notify(icon: String, message: String) -> void:
 			return
 	_log(message)
 
-func _get_root_node(name: String) -> Node:
+func _get_root_node(node_name: String) -> Node:
 	if Engine.get_main_loop():
 		var root = Engine.get_main_loop().root
-		if root and root.has_node(name):
-			return root.get_node(name)
+		if root and root.has_node(node_name):
+			return root.get_node(node_name)
 	return null
 
 func _log(message: String) -> void:
