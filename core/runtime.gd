@@ -23,6 +23,7 @@ var workshop_sync
 var ui_manager
 var node_registry
 var nodes
+var util
 var node_spawner
 var features
 var assets
@@ -100,6 +101,10 @@ func bootstrap() -> void:
 	var patches_script = _load_script(base_dir.path_join("patches.gd"))
 	if patches_script != null:
 		patches = patches_script.new(logger)
+
+	var util_script = _load_script(base_dir.path_join("util.gd"))
+	if util_script != null:
+		util = util_script.new()
 
 	var calculations_script = _load_script(base_dir.path_join("util/calculations.gd"))
 	if calculations_script != null:
