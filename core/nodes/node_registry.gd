@@ -14,7 +14,7 @@ const WINDOW_BUTTON_SCENE := preload("res://scenes/window_button.tscn")
 const WINDOW_MENU_SCRIPT := "res://scripts/windows_menu.gd"
 const NodeDefs := preload("res://mods-unpacked/TajemnikTV-Core/core/nodes/node_defs.gd")
 
-const ALLOWED_CATEGORIES := ["network", "cpu", "gpu", "research", "hacking", "factory", "coding", "utility"]
+var _allowed_categories: Array = ["network", "cpu", "gpu", "research", "hacking", "factory", "coding", "utility"]
 
 var _nodes: Dictionary = {}
 var _mod_nodes: Dictionary = {}
@@ -93,8 +93,8 @@ func register_window_category(id: String, label: String, icon: String, position:
 	if id == "":
 		return false
 	_window_categories[id] = {"label": label, "icon": icon, "position": position}
-	if not ALLOWED_CATEGORIES.has(id):
-		ALLOWED_CATEGORIES.append(id)
+	if not _allowed_categories.has(id):
+		_allowed_categories.append(id)
 	_log_warn("nodes", "Registered custom window category '%s'; UI injection may require custom scenes." % id)
 	return true
 
@@ -228,7 +228,7 @@ func _normalize_def(def: Dictionary) -> Dictionary:
 
 	var category := str(def.get("category", DEFAULT_CATEGORY))
 	var sub_category := str(def.get("sub_category", DEFAULT_SUB_CATEGORY))
-	if not ALLOWED_CATEGORIES.has(category):
+	if not _allowed_categories.has(category):
 		_log_warn("nodes", "Node '%s' category '%s' is not supported; menu entry may be skipped." % [node_id, category])
 	var attributes: Dictionary = def.get("attributes", DEFAULT_ATTRIBUTES).duplicate(true)
 	if not attributes.has("limit"):
