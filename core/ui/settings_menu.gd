@@ -73,7 +73,7 @@ func _build_core_tab() -> void:
 	)
 
 func _build_keybinds_tab() -> void:
-	var keybinds_vbox = _ui.add_tab("Keybinds", "res://textures/icons/keyboard.png")
+	var keybinds_vbox = _ui.add_tab("Keybinds", "res://textures/icons/Keyboard.png")
 
 	if _core == null or _core.keybinds == null:
 		var label = Label.new()
