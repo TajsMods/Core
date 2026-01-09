@@ -1,0 +1,39 @@
+# ==============================================================================
+# Taj's Core - Resource Helpers
+# Author: TajemnikTV
+# Description: Helpers for resource containers and rates.
+# ==============================================================================
+class_name TajsCoreResourceHelpers
+extends RefCounted
+
+func get_resource_by_id(id: String) -> ResourceContainer:
+	if Globals == null or Globals.desktop == null:
+		return null
+	return Globals.desktop.get_resource(id)
+
+func get_all_resources() -> Array[ResourceContainer]:
+	if Globals == null or Globals.desktop == null:
+		return []
+	if Globals.desktop.resources is Dictionary:
+		return Globals.desktop.resources.values()
+	return []
+
+func get_production_rate(resource_id: String) -> float:
+	var res := get_resource_by_id(resource_id)
+	if res == null:
+		return 0.0
+	if res.has_method("get"):
+		var value = res.get("production")
+		if value != null:
+			return float(value)
+	return 0.0
+
+func get_consumption_rate(resource_id: String) -> float:
+	var res := get_resource_by_id(resource_id)
+	if res == null:
+		return 0.0
+	if res.has_method("get"):
+		var value = res.get("required")
+		if value != null:
+			return float(value)
+	return 0.0

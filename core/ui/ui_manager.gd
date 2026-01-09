@@ -185,6 +185,34 @@ func open_icon_browser(callback: Callable, initial_selection: String = "") -> vo
 		browser.set_selected_icon(initial_selection)
 	show_popup("Select Icon", container, [{"text": "Close", "close": true}])
 
+func create_button(text: String, callback: Callable) -> Button:
+	var btn := Button.new()
+	btn.text = text
+	btn.focus_mode = Control.FOCUS_NONE
+	if callback != null and callback.is_valid():
+		btn.pressed.connect(callback)
+	return btn
+
+func create_slider(label: String, value: float, min_val: float, max_val: float, callback: Callable) -> HSlider:
+	var slider := HSlider.new()
+	slider.min_value = min_val
+	slider.max_value = max_val
+	slider.value = value
+	slider.tooltip_text = label
+	slider.focus_mode = Control.FOCUS_NONE
+	if callback != null and callback.is_valid():
+		slider.value_changed.connect(callback)
+	return slider
+
+func create_toggle(label: String, value: bool, callback: Callable) -> CheckButton:
+	var toggle := CheckButton.new()
+	toggle.button_pressed = value
+	toggle.text = label
+	toggle.focus_mode = Control.FOCUS_NONE
+	if callback != null and callback.is_valid():
+		toggle.toggled.connect(callback)
+	return toggle
+
 func register_mod_settings_button(mod_id: String, icon: String, callback: Callable) -> void:
 	var extras_container = _get_extras_container()
 	if extras_container == null:

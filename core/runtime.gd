@@ -35,9 +35,11 @@ var undo_stack
 var node_finder
 var safe_ops
 var calculations
+var resource_helpers
 var hot_reload
 
 var _version_util
+var _extended_globals: Dictionary = {}
 
 func _init() -> void:
 	bootstrap()
@@ -114,6 +116,10 @@ func bootstrap() -> void:
 	if node_finder_script != null:
 		node_finder = node_finder_script.new()
 
+	var resource_helpers_script = _load_script(base_dir.path_join("util/resource_helpers.gd"))
+	if resource_helpers_script != null:
+		resource_helpers = resource_helpers_script.new()
+
 	var safe_ops_script = _load_script(base_dir.path_join("util/safe_ops.gd"))
 	if safe_ops_script != null:
 		safe_ops = safe_ops_script.new()
@@ -178,6 +184,16 @@ func register_module(meta: Dictionary) -> bool:
 	if module_registry == null:
 		return false
 	return module_registry.register_module(meta)
+
+func extend_globals(property: String, value: Variant) -> void:
+	if property == "":
+		return
+	_extended_globals[property] = value
+
+func get_extended_global(property: String, default_value: Variant = null) -> Variant:
+	if _extended_globals.has(property):
+		return _extended_globals[property]
+	return default_value
 
 func get_upgrade_cap(upgrade_id: String) -> int:
 	if upgrade_caps != null:
