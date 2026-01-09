@@ -179,6 +179,7 @@ func open_icon_browser(callback: Callable, initial_selection: String = "") -> vo
 	browser.icon_selected.connect(func(name: String, path: String):
 		if callback != null and callback.is_valid():
 			callback.call(name, path)
+		close_popup()
 	)
 	browser.build_ui(container)
 	if initial_selection != "":

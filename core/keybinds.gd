@@ -127,6 +127,8 @@ func set_keybind_context(action_id: String, context: Variant) -> void:
 		return
 	var normalized := _normalize_context(context)
 	_actions[action_id]["context"] = normalized
+	if _hold_actions.has(action_id):
+		_hold_actions[action_id]["context"] = normalized
 
 func get_binding(action_id: String) -> Array:
 	if not _actions.has(action_id):
