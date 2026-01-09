@@ -51,6 +51,9 @@ func get_config(upgrade_id: String) -> Dictionary:
 		return {}
 	return _caps[upgrade_id].duplicate(true)
 
+func list_caps() -> Dictionary:
+	return _caps.duplicate(true)
+
 func _normalize_config(upgrade_id: String, config: Dictionary) -> Dictionary:
 	var vanilla := int(Data.upgrades[upgrade_id].limit) if Data.upgrades.has(upgrade_id) else 0
 	var normalized := {

@@ -26,6 +26,7 @@ func build_settings_menu() -> void:
 	_build_core_tab()
 	_build_keybinds_tab()
 	_build_mod_manager_tab()
+	_build_diagnostics_tab()
 
 func _build_core_tab() -> void:
 	var core_vbox = _ui.add_tab("Core", "res://textures/icons/cog.png")
@@ -153,6 +154,34 @@ func _build_mod_manager_tab() -> void:
 	scroll.add_child(mods_list)
 
 	_populate_mod_list(mods_list)
+
+func _build_diagnostics_tab() -> void:
+	var diag_vbox = _ui.add_tab("Diagnostics", "res://textures/icons/magnifying_glass.png")
+
+	if _core == null or _core.diagnostics == null:
+		var label = Label.new()
+		label.text = "Diagnostics not available."
+		diag_vbox.add_child(label)
+		return
+
+	var refresh_btn = Button.new()
+	refresh_btn.text = "Refresh Snapshot"
+	refresh_btn.theme_type_variation = "TabButton"
+	refresh_btn.focus_mode = Control.FOCUS_NONE
+	diag_vbox.add_child(refresh_btn)
+
+	var output := TextEdit.new()
+	output.readonly = true
+	output.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	output.custom_minimum_size = Vector2(0, 300)
+	diag_vbox.add_child(output)
+
+	var refresh = func():
+		var data = _core.diagnostics.collect()
+		output.text = JSON.stringify(data, "\t")
+
+	refresh_btn.pressed.connect(refresh)
+	refresh.call()
 
 func _populate_mod_list(container: VBoxContainer) -> void:
 	if not ClassDB.class_exists("ModLoaderMod") or not ClassDB.class_exists("ModLoaderUserProfile"):

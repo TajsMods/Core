@@ -23,6 +23,18 @@ var workshop_sync
 var ui_manager
 var node_registry
 var nodes
+var node_spawner
+var features
+var assets
+var localization
+var theme_manager
+var hook_manager
+var upgrade_caps
+var undo_stack
+var node_finder
+var safe_ops
+var calculations
+var hot_reload
 
 var _version_util
 
@@ -51,6 +63,11 @@ func bootstrap() -> void:
 		_register_core_schema()
 		_apply_logger_settings()
 
+	var features_script = _load_script(base_dir.path_join("features.gd"))
+	if features_script != null and settings != null:
+		features = features_script.new()
+		features.setup(settings)
+
 	var migrations_script = _load_script(base_dir.path_join("migrations.gd"))
 	if migrations_script != null and settings != null:
 		migrations = migrations_script.new(settings, logger, _version_util)
@@ -62,6 +79,18 @@ func bootstrap() -> void:
 		event_bus = event_bus_script.new(logger)
 		_bridge_settings_events()
 
+	var assets_script = _load_script(base_dir.path_join("assets.gd"))
+	if assets_script != null:
+		assets = assets_script.new()
+
+	var localization_script = _load_script(base_dir.path_join("localization.gd"))
+	if localization_script != null:
+		localization = localization_script.new()
+
+	var theme_script = _load_script(base_dir.path_join("theme_manager.gd"))
+	if theme_script != null:
+		theme_manager = theme_script.new()
+
 	var keybinds_script = _load_script(base_dir.path_join("keybinds.gd"))
 	if keybinds_script != null:
 		keybinds = keybinds_script.new()
@@ -72,10 +101,34 @@ func bootstrap() -> void:
 	if patches_script != null:
 		patches = patches_script.new(logger)
 
+	var calculations_script = _load_script(base_dir.path_join("util/calculations.gd"))
+	if calculations_script != null:
+		calculations = calculations_script.new()
+
+	var node_finder_script = _load_script(base_dir.path_join("util/node_finder.gd"))
+	if node_finder_script != null:
+		node_finder = node_finder_script.new()
+
+	var safe_ops_script = _load_script(base_dir.path_join("util/safe_ops.gd"))
+	if safe_ops_script != null:
+		safe_ops = safe_ops_script.new()
+
+	var undo_script = _load_script(base_dir.path_join("util/undo_stack.gd"))
+	if undo_script != null:
+		undo_stack = undo_script.new()
+
+	var upgrade_caps_script = _load_script(base_dir.path_join("mechanics/upgrade_caps.gd"))
+	if upgrade_caps_script != null:
+		upgrade_caps = upgrade_caps_script.new(logger)
+
 	var node_registry_script = _load_script(base_dir.path_join("nodes/node_registry.gd"))
 	if node_registry_script != null:
 		node_registry = node_registry_script.new(logger, event_bus, patches)
 		nodes = node_registry
+
+	var spawner_script = _load_script(base_dir.path_join("nodes/node_spawner.gd"))
+	if spawner_script != null and node_registry != null:
+		node_spawner = spawner_script.new(node_registry, logger)
 
 	var diagnostics_script = _load_script(base_dir.path_join("diagnostics.gd"))
 	if diagnostics_script != null:
@@ -85,6 +138,13 @@ func bootstrap() -> void:
 	if registry_script != null:
 		module_registry = registry_script.new(self, logger, event_bus)
 		modules = module_registry
+
+	var hooks_script = _load_script(base_dir.path_join("hooks/hook_manager.gd"))
+	if hooks_script != null:
+		hook_manager = hooks_script.new()
+		hook_manager.name = "CoreHooks"
+		hook_manager.setup(self)
+		add_child(hook_manager)
 
 	if event_bus != null:
 		event_bus.emit("core.ready", {"version": CORE_VERSION, "api_level": API_LEVEL}, true)
@@ -113,6 +173,18 @@ func register_module(meta: Dictionary) -> bool:
 	if module_registry == null:
 		return false
 	return module_registry.register_module(meta)
+
+func get_upgrade_cap(upgrade_id: String) -> int:
+	if upgrade_caps != null:
+		return upgrade_caps.get_effective_cap(upgrade_id)
+	if Data.upgrades.has(upgrade_id):
+		var limit := int(Data.upgrades[upgrade_id].limit)
+		return -1 if limit == 0 else limit
+	return -1
+
+func register_extended_cap(upgrade_id: String, config: Dictionary) -> void:
+	if upgrade_caps != null:
+		upgrade_caps.register_extended_cap(upgrade_id, config)
 
 func logd(module_id: String, message: String) -> void:
 	if logger != null:
@@ -192,6 +264,11 @@ func _register_core_schema() -> void:
 			"type": "dict",
 			"default": {},
 			"description": "Keybind overrides"
+		},
+		"core.features": {
+			"type": "dict",
+			"default": {},
+			"description": "Feature flag overrides"
 		}
 	}
 	settings.register_schema("core", schema)
@@ -254,6 +331,12 @@ func _init_optional_services(base_dir: String) -> void:
 		ui_manager.name = "CoreUiManager"
 		ui_manager.setup(self, workshop_sync)
 		add_child(ui_manager)
+
+	var hot_reload_script = _load_script(base_dir.path_join("dev/hot_reload.gd"))
+	if hot_reload_script != null:
+		hot_reload = hot_reload_script.new()
+		hot_reload.name = "HotReload"
+		add_child(hot_reload)
 
 func _start_workshop_sync() -> void:
 	if workshop_sync != null:

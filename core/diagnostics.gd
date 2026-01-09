@@ -28,6 +28,20 @@ func collect() -> Dictionary:
 	data["keybind_conflicts_summary"] = {
 		"count": data["keybind_conflicts"].size()
 	}
+	if _core != null and _core.event_bus != null:
+		var event_list: Array = _core.event_bus.list_events() if _core.event_bus.has_method("list_events") else []
+		var counts := {}
+		for evt in event_list:
+			if _core.event_bus.has_method("get_listener_count"):
+				counts[evt] = _core.event_bus.get_listener_count(evt)
+		data["event_bus"] = {
+			"events": event_list,
+			"listener_counts": counts
+		}
+	if _core != null and _core.features != null:
+		data["features"] = _core.features.list_features()
+	if _core != null and _core.upgrade_caps != null and _core.upgrade_caps.has_method("list_caps"):
+		data["upgrade_caps"] = _core.upgrade_caps.list_caps()
 	if _core != null and _core.node_registry != null:
 		data["nodes"] = {
 			"count": _core.node_registry.get_mod_node_count(),

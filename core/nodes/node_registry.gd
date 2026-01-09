@@ -70,6 +70,21 @@ func get_window_config(id: String) -> Dictionary:
 func get_registered_window_types() -> Array[String]:
 	return _nodes.keys()
 
+func set_window_limit(node_id: String, limit: int) -> bool:
+	if not _autoload_ready("Data"):
+		return false
+	var safe_id := _sanitize_id(node_id)
+	if not Data.windows.has(safe_id):
+		return false
+	Data.windows[safe_id]["attributes"]["limit"] = limit
+	if _autoload_ready("Attributes"):
+		if Attributes.window_attributes == null:
+			Attributes.window_attributes = {}
+		if not Attributes.window_attributes.has(safe_id):
+			Attributes.window_attributes[safe_id] = {}
+		Attributes.window_attributes[safe_id]["limit"] = Attribute.new(limit)
+	return true
+
 func register_resource_type(id: String, config: Dictionary) -> bool:
 	if id == "":
 		return false

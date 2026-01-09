@@ -434,6 +434,103 @@ func add_button(parent: Control, text: String, callback: Callable) -> Button:
 
 	return btn
 
+func add_dropdown(parent: Control, label_text: String, options: Array, selected: int, callback: Callable) -> OptionButton:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, 64)
+	parent.add_child(row)
+
+	_track_row(row, label_text, tab_container.get_child_count() - 1)
+
+	var label := Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", 32)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+
+	var dropdown := OptionButton.new()
+	dropdown.focus_mode = Control.FOCUS_NONE
+	for option in options:
+		dropdown.add_item(str(option))
+	dropdown.selected = clampi(selected, 0, max(0, options.size() - 1))
+	dropdown.item_selected.connect(callback)
+	row.add_child(dropdown)
+
+	return dropdown
+
+func add_text_input(parent: Control, label_text: String, value: String, callback: Callable) -> LineEdit:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, 64)
+	parent.add_child(row)
+
+	_track_row(row, label_text, tab_container.get_child_count() - 1)
+
+	var label := Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", 32)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+
+	var input := LineEdit.new()
+	input.text = value
+	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	input.text_changed.connect(callback)
+	row.add_child(input)
+
+	return input
+
+func add_color_picker(parent: Control, label_text: String, value: Color, callback: Callable) -> ColorPickerButton:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, 64)
+	parent.add_child(row)
+
+	_track_row(row, label_text, tab_container.get_child_count() - 1)
+
+	var label := Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", 32)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+
+	var picker := ColorPickerButton.new()
+	picker.color = value
+	picker.color_changed.connect(callback)
+	row.add_child(picker)
+
+	return picker
+
+func add_separator(parent: Control) -> HSeparator:
+	var sep := HSeparator.new()
+	parent.add_child(sep)
+	return sep
+
+func add_section_header(parent: Control, title: String) -> Label:
+	var label := Label.new()
+	label.text = title
+	label.add_theme_font_size_override("font_size", 28)
+	label.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
+	parent.add_child(label)
+	return label
+
+func add_collapsible_section(parent: Control, title: String, expanded: bool = false) -> VBoxContainer:
+	var container := VBoxContainer.new()
+	container.add_theme_constant_override("separation", 6)
+	parent.add_child(container)
+
+	var header := Button.new()
+	header.text = title
+	header.toggle_mode = true
+	header.button_pressed = expanded
+	header.theme_type_variation = "TabButton"
+	container.add_child(header)
+
+	var content := VBoxContainer.new()
+	content.visible = expanded
+	container.add_child(content)
+
+	header.toggled.connect(func(v: bool): content.visible = v)
+
+	return content
+
 # --- Sidebar Collapse/Expand ---
 
 func _on_sidebar_mouse_entered() -> void:

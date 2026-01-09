@@ -12,6 +12,8 @@ var _core
 var _workshop_sync
 var _ui
 var _settings_menu
+var _hud_injector
+var _popup_manager
 
 func setup(core, workshop_sync) -> void:
 	_core = core
@@ -62,6 +64,169 @@ func _setup_for_main(main_node: Node) -> void:
 
 	if _workshop_sync:
 		_workshop_sync.set_restart_callback(Callable(_ui, "show_restart_banner"))
+
+	_setup_hud_services(hud)
+	_emit_hud_ready()
+
+func _setup_hud_services(hud: Node) -> void:
+	var base_dir = get_script().resource_path.get_base_dir()
+	var injector_script = load(base_dir.path_join("hud_injector.gd"))
+	if injector_script != null:
+		_hud_injector = injector_script.new()
+		_hud_injector.name = "CoreHudInjector"
+		_hud_injector.setup(hud)
+		add_child(_hud_injector)
+	var popup_script = load(base_dir.path_join("popup_manager.gd"))
+	if popup_script != null:
+		_popup_manager = popup_script.new()
+		_popup_manager.name = "CorePopupManager"
+		_popup_manager.setup(hud)
+		add_child(_popup_manager)
+
+func add_settings_tab(title: String, icon: String) -> VBoxContainer:
+	if _ui == null:
+		return null
+	return _ui.add_tab(title, icon)
+
+func add_toggle(container: Control, label: String, value: bool, callback: Callable, tooltip: String = "") -> CheckButton:
+	if _ui == null:
+		return null
+	return _ui.add_toggle(container, label, value, callback, tooltip)
+
+func add_slider(container: Control, label: String, value: float, min_val: float, max_val: float, step: float, suffix: String, callback: Callable) -> HSlider:
+	if _ui == null:
+		return null
+	return _ui.add_slider(container, label, value, min_val, max_val, step, suffix, callback)
+
+func add_dropdown(container: Control, label: String, options: Array, selected: int, callback: Callable) -> OptionButton:
+	if _ui == null:
+		return null
+	return _ui.add_dropdown(container, label, options, selected, callback)
+
+func add_button(container: Control, label: String, callback: Callable) -> Button:
+	if _ui == null:
+		return null
+	return _ui.add_button(container, label, callback)
+
+func add_text_input(container: Control, label: String, value: String, callback: Callable) -> LineEdit:
+	if _ui == null:
+		return null
+	return _ui.add_text_input(container, label, value, callback)
+
+func add_color_picker(container: Control, label: String, value: Color, callback: Callable) -> ColorPickerButton:
+	if _ui == null:
+		return null
+	return _ui.add_color_picker(container, label, value, callback)
+
+func add_separator(container: Control) -> HSeparator:
+	if _ui == null:
+		return null
+	return _ui.add_separator(container)
+
+func add_section_header(container: Control, title: String) -> Label:
+	if _ui == null:
+		return null
+	return _ui.add_section_header(container, title)
+
+func add_collapsible_section(container: Control, title: String, expanded: bool = false) -> VBoxContainer:
+	if _ui == null:
+		return null
+	return _ui.add_collapsible_section(container, title, expanded)
+
+func inject_hud_widget(zone: int, widget: Control, priority: int = 0) -> void:
+	if _hud_injector == null:
+		return
+	_hud_injector.inject_widget(zone, widget, priority)
+
+func remove_hud_widget(widget: Control) -> void:
+	if _hud_injector == null:
+		return
+	_hud_injector.remove_widget(widget)
+
+func get_hud_zone(zone: int) -> Control:
+	if _hud_injector == null:
+		return null
+	return _hud_injector.get_zone_container(zone)
+
+func show_popup(title: String, content: Control, buttons: Array[Dictionary]) -> void:
+	if _popup_manager == null:
+		return
+	_popup_manager.show_popup(title, content, buttons)
+
+func show_confirmation(title: String, message: String, on_confirm: Callable, on_cancel: Callable = Callable()) -> void:
+	if _popup_manager == null:
+		return
+	_popup_manager.show_confirmation(title, message, on_confirm, on_cancel)
+
+func show_input_dialog(title: String, prompt: String, default_text: String, on_submit: Callable) -> void:
+	if _popup_manager == null:
+		return
+	_popup_manager.show_input_dialog(title, prompt, default_text, on_submit)
+
+func close_popup() -> void:
+	if _popup_manager == null:
+		return
+	_popup_manager.close_popup()
+
+func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
+	if _popup_manager == null:
+		return
+	var icon_script = load(get_script().resource_path.get_base_dir().path_join("icon_browser.gd"))
+	if icon_script == null:
+		return
+	var browser = icon_script.new()
+	var container := VBoxContainer.new()
+	browser.icon_selected.connect(func(name: String, path: String):
+		if callback != null and callback.is_valid():
+			callback.call(name, path)
+	)
+	browser.build_ui(container)
+	if initial_selection != "":
+		browser.set_selected_icon(initial_selection)
+	show_popup("Select Icon", container, [{"text": "Close", "close": true}])
+
+func register_mod_settings_button(mod_id: String, icon: String, callback: Callable) -> void:
+	var extras_container = _get_extras_container()
+	if extras_container == null:
+		return
+	if extras_container.has_node(mod_id):
+		return
+	var button := Button.new()
+	button.name = mod_id
+	button.custom_minimum_size = Vector2(80, 80)
+	button.focus_mode = Control.FOCUS_NONE
+	button.theme_type_variation = "ButtonMenu"
+	button.toggle_mode = true
+	button.icon = load(icon)
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.expand_icon = true
+	if callback != null and callback.is_valid():
+		button.pressed.connect(callback)
+	extras_container.add_child(button)
+
+func show_notification(icon: String, message: String) -> void:
+	var signals = _get_root_node("Signals")
+	if signals != null and signals.has_signal("notify"):
+		signals.emit_signal("notify", icon, message)
+
+func show_toast(message: String, duration: float = 2.0) -> void:
+	show_notification("info", message)
+
+func _get_extras_container() -> Node:
+	if Engine.get_main_loop() == null:
+		return null
+	var root = Engine.get_main_loop().root
+	if root == null:
+		return null
+	return root.get_node_or_null("Main/HUD/Main/MainContainer/Overlay/ExtrasButtons/Container")
+
+func _emit_hud_ready() -> void:
+	if _core == null or _core.event_bus == null:
+		return
+	if _core.event_bus.has_method("emit_event"):
+		_core.event_bus.emit_event("game.hud_ready", "core", {})
+	elif _core.event_bus.has_method("emit"):
+		_core.event_bus.emit("game.hud_ready", {"source": "core", "timestamp": Time.get_unix_time_from_system(), "data": {}})
 
 func _input(event: InputEvent) -> void:
 	if _ui == null or not _ui.is_visible():
