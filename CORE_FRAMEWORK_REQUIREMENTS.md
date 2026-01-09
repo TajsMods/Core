@@ -47,7 +47,7 @@ The Core framework should provide:
 ## Core Infrastructure
 
 ### ✅ Already Implemented
-- [x] **Runtime singleton** (`TajsCoreRuntime`) - Central access point via `Engine.get_meta("TajsCore")`
+- [x] **Runtime singleton** (`TajsCoreRuntime`) - Central access via `class_name` → `TajsCoreRuntime.instance()`
 - [x] **Logger** - Unified logging with debug levels, file output, ring buffer
 - [x] **Settings** - Schema-based configuration with typed values
 - [x] **Migrations** - Version-based config migrations
@@ -649,7 +649,7 @@ func get_redo_count() -> int
 ## Priority Matrix
 
 ### P0 - Critical (Must Have)
-1. **Stable singleton access** - `TajsCoreRuntime.instance()`
+1. **Stable singleton access** - `TajsCoreRuntime.instance()` (via `class_name`)
 2. **Event bus** - Cross-mod communication
 3. **Settings system** - Schema + persistence
 4. **Logger** - Unified logging

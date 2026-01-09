@@ -356,7 +356,7 @@
 4. **Loading order** - Core must load before dependent mods
 
 ### Design Decisions
-1. **Singleton pattern** - Use Engine.set_meta for global access
+1. **Singleton pattern** - Use `class_name TajsCoreRuntime` + static `instance()` method
 2. **Lazy loading** - Only load optional services when needed
 3. **Event bus over signals** - Better for cross-mod communication
 4. **Schema-based settings** - Type safety and validation
