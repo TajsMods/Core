@@ -62,11 +62,11 @@ func self_test() -> Dictionary:
 		checks.append({"name": "settings_roundtrip", "ok": pass2})
 		ok = ok and pass2
 	if _core != null and _core.event_bus != null:
-		var flag: bool = false
-		_core.event_bus.on("core.self_test", func(_payload): flag = true, self, true)
+		var flag_dict := {"value": false}
+		_core.event_bus.on("core.self_test", func(_payload): flag_dict["value"] = true, self, true)
 		_core.event_bus.emit("core.self_test", {})
-		checks.append({"name": "event_bus", "ok": flag})
-		ok = ok and flag
+		checks.append({"name": "event_bus", "ok": flag_dict["value"]})
+		ok = ok and flag_dict["value"]
 	var result := {"ok": ok, "checks": checks}
 	_log_info("diagnostics", "Self-test results: %s" % str(result))
 	return result

@@ -174,7 +174,7 @@ func _is_text_input_focused() -> bool:
 		return false
 	return focus is LineEdit or focus is TextEdit or focus is CodeEdit or focus is SpinBox
 
-func _resolve_conflict(matches: Array):
+func _resolve_conflict(matches: Array) -> Dictionary:
 	var winner = matches[0]
 	for action in matches:
 		if action["priority"] > winner["priority"]:
@@ -236,7 +236,7 @@ func _serialize_shortcuts(shortcuts: Array) -> Array:
 	var result: Array = []
 	for shortcut in shortcuts:
 		var data := _serialize_shortcut(shortcut)
-		if data != {}:
+		if not data.is_empty():
 			result.append(data)
 	return result
 
