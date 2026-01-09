@@ -220,6 +220,13 @@ func _get_extras_container() -> Node:
 		return null
 	return root.get_node_or_null("Main/HUD/Main/MainContainer/Overlay/ExtrasButtons/Container")
 
+func _get_root_node(name: String) -> Node:
+	if Engine.get_main_loop():
+		var root = Engine.get_main_loop().root
+		if root and root.has_node(name):
+			return root.get_node(name)
+	return null
+
 func _emit_hud_ready() -> void:
 	if _core == null or _core.event_bus == null:
 		return
