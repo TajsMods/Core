@@ -7,6 +7,7 @@ class_name TajsCoreSettings
 extends RefCounted
 
 signal value_changed(key: String, value: Variant, old_value: Variant)
+signal settings_synced(namespace: String)
 
 const CONFIG_PATH := "user://tajs_core_settings.json"
 
@@ -141,6 +142,42 @@ func get_snapshot(redact_sensitive: bool = true) -> Dictionary:
 			if snapshot.has(key):
 				snapshot[key] = "<redacted>"
 	return snapshot
+
+func export_settings(namespace: String) -> String:
+	var values := {}
+	for key in _values.keys():
+		if namespace == "" or key.begins_with(namespace + "."):
+			values[key] = _values[key]
+	return JSON.stringify({"namespace": namespace, "values": values}, "\t")
+
+func import_settings(namespace: String, data: String) -> bool:
+	if data == "":
+		return false
+	var json := JSON.new()
+	var result := json.parse(data)
+	if result != OK:
+		_log_warn("settings", "Import failed: %s" % json.get_error_message())
+		return false
+	var payload = json.get_data()
+	if not (payload is Dictionary):
+		return false
+	var values = payload.get("values", {})
+	if not (values is Dictionary):
+		return false
+	var changed := false
+	for key in values.keys():
+		if namespace != "" and not str(key).begins_with(namespace + "."):
+			continue
+		var old_value = _values.get(key)
+		var new_value = values[key]
+		if old_value != new_value:
+			_values[key] = new_value
+			emit_signal("value_changed", key, new_value, old_value)
+			changed = true
+	if changed:
+		save_settings()
+		emit_signal("settings_synced", namespace)
+	return true
 
 func get_migration_version(ns: String) -> String:
 	if _meta.has("migrations") and _meta["migrations"].has(ns):

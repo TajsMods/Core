@@ -1,0 +1,36 @@
+# ==============================================================================
+# Taj's Core - Localization
+# Author: TajemnikTV
+# Description: Translation helpers for mods.
+# ==============================================================================
+class_name TajsCoreLocalization
+extends RefCounted
+
+func register_translation(resource_path: String) -> bool:
+	if resource_path == "":
+		return false
+	if ClassDB.class_exists("ModLoaderMod"):
+		ModLoaderMod.add_translation(resource_path)
+		return true
+	if not ResourceLoader.exists(resource_path):
+		return false
+	var translation: Translation = load(resource_path)
+	if translation == null:
+		return false
+	TranslationServer.add_translation(translation)
+	return true
+
+func register_mod_translations(mod_id: String, relative_dir: String = "translations") -> int:
+	var count := 0
+	var base := TajsCoreUtil.get_mod_path(mod_id)
+	if base == "":
+		return 0
+	var dir_path := base.path_join(relative_dir)
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return 0
+	for file_name in dir.get_files():
+		if file_name.ends_with(".translation") or file_name.ends_with(".tres"):
+			if register_translation(dir_path.path_join(file_name)):
+				count += 1
+	return count

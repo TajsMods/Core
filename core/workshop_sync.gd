@@ -42,6 +42,8 @@ var _logger = null
 signal sync_started()
 signal sync_completed(updated_count: int)
 signal download_progress(file_id: int, bytes_downloaded: int, bytes_total: int)
+signal download_completed(workshop_id: int, success: bool)
+signal restart_required(reason: String)
 
 func setup(logger = null) -> void:
 	_logger = logger
@@ -254,8 +256,10 @@ func _on_item_downloaded(download_result) -> void:
 	if result == 1:
 		_log("Item " + str(file_id) + " downloaded successfully.")
 		_successful_count += 1
+		emit_signal("download_completed", file_id, true)
 	else:
 		_log("Item " + str(file_id) + " download failed with result: " + str(result))
+		emit_signal("download_completed", file_id, false)
 	emit_signal("download_progress", file_id, 0, 0)
 	if _pending_downloads.is_empty():
 		_finish_sync()
@@ -266,6 +270,7 @@ func _finish_sync() -> void:
 	if _successful_count > 0:
 		_log("Workshop Sync complete. " + str(_successful_count) + " items were updated successfully.")
 		_notify("check", "Workshop updates finished. Restart recommended.")
+		emit_signal("restart_required", "workshop_updates")
 		if _on_restart_required.is_valid():
 			_on_restart_required.call()
 	elif _total_triggered > 0:
@@ -276,6 +281,14 @@ func _finish_sync() -> void:
 func set_restart_callback(callback: Callable) -> void:
 	_on_restart_required = callback
 
+func request_restart(reason: String) -> void:
+	emit_signal("restart_required", reason)
+	if _on_restart_required.is_valid():
+		_on_restart_required.call()
+
+func show_restart_dialog() -> void:
+	_notify("reload", "Restart required")
+
 func set_debug_log_callback(callback: Callable) -> void:
 	_debug_log_callback = callback
 
@@ -284,6 +297,48 @@ func is_steam_available() -> bool:
 
 func is_syncing() -> bool:
 	return _sync_in_progress
+
+func get_subscribed_items() -> Array[Dictionary]:
+	var steam = _get_steam_api()
+	if steam == null:
+		return []
+	var count := _get_num_subscribed_items(steam)
+	if count <= 0:
+		return []
+	var items := _get_subscribed_items(steam, count)
+	var results: Array[Dictionary] = []
+	for file_id in items:
+		var state := int(steam.getItemState(file_id))
+		results.append({
+			"id": file_id,
+			"state": state,
+			"installed": (state & STATE_INSTALLED) != 0
+		})
+	return results
+
+func get_item_details(workshop_id: int) -> Dictionary:
+	var steam = _get_steam_api()
+	if steam == null:
+		return {}
+	if not steam.has_method("getItemInstallInfo"):
+		return {}
+	var info = steam.getItemInstallInfo(workshop_id)
+	if info is Dictionary:
+		return info
+	return {}
+
+func is_item_installed(workshop_id: int) -> bool:
+	var steam = _get_steam_api()
+	if steam == null:
+		return false
+	var state := int(steam.getItemState(workshop_id))
+	return (state & STATE_INSTALLED) != 0
+
+func get_item_install_path(workshop_id: int) -> String:
+	var info := get_item_details(workshop_id)
+	if info.has("folder"):
+		return str(info["folder"])
+	return ""
 
 func _notify(icon: String, message: String) -> void:
 	var signals = _get_root_node("Signals")

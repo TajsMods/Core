@@ -56,6 +56,30 @@ func emit(event: String, payload = null, sticky: bool = false) -> void:
 		if entry["once"]:
 			_listeners[event].erase(entry)
 
+func emit_event(event: String, source: String, data: Dictionary = {}, cancellable: bool = false, sticky: bool = false) -> Dictionary:
+	var payload := {
+		"source": source,
+		"timestamp": Time.get_unix_time_from_system(),
+		"data": data,
+		"cancellable": cancellable,
+		"cancelled": false
+	}
+	emit(event, payload, sticky)
+	return payload
+
+func get_listener_count(event: String) -> int:
+	if not _listeners.has(event):
+		return 0
+	return _listeners[event].size()
+
+func list_events() -> Array:
+	return _listeners.keys()
+
+func get_sticky(event: String) -> Dictionary:
+	if _sticky.has(event):
+		return _sticky[event].duplicate(true)
+	return {}
+
 func _safe_call(entry: Dictionary, payload: Dictionary) -> void:
 	var callable: Callable = entry["callable"]
 	if callable == null or not callable.is_valid():
