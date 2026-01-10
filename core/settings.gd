@@ -7,7 +7,7 @@ class_name TajsCoreSettings
 extends RefCounted
 
 signal value_changed(key: String, value: Variant, old_value: Variant)
-signal settings_synced(namespace: String)
+signal settings_synced(settings_namespace: String)
 
 const CONFIG_PATH := "user://tajs_core_settings.json"
 
@@ -143,14 +143,14 @@ func get_snapshot(redact_sensitive: bool = true) -> Dictionary:
 				snapshot[key] = "<redacted>"
 	return snapshot
 
-func export_settings(namespace: String) -> String:
+func export_settings(settings_namespace: String) -> String:
 	var values := {}
 	for key in _values.keys():
-		if namespace == "" or key.begins_with(namespace + "."):
+		if settings_namespace == "" or key.begins_with(settings_namespace + "."):
 			values[key] = _values[key]
-	return JSON.stringify({"namespace": namespace, "values": values}, "\t")
+	return JSON.stringify({"namespace": settings_namespace, "values": values}, "\t")
 
-func import_settings(namespace: String, data: String) -> bool:
+func import_settings(settings_namespace: String, data: String) -> bool:
 	if data == "":
 		return false
 	var json := JSON.new()
@@ -166,7 +166,7 @@ func import_settings(namespace: String, data: String) -> bool:
 		return false
 	var changed := false
 	for key in values.keys():
-		if namespace != "" and not str(key).begins_with(namespace + "."):
+		if settings_namespace != "" and not str(key).begins_with(settings_namespace + "."):
 			continue
 		var old_value = _values.get(key)
 		var new_value = values[key]
@@ -176,7 +176,7 @@ func import_settings(namespace: String, data: String) -> bool:
 			changed = true
 	if changed:
 		save_settings()
-		emit_signal("settings_synced", namespace)
+		emit_signal("settings_synced", settings_namespace)
 	return true
 
 func get_migration_version(ns: String) -> String:
