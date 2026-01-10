@@ -65,6 +65,7 @@ func _create_root() -> void:
 	_root = Control.new()
 	_root.name = "TajsCorePopups"
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(_root)
 
 func _build_overlay() -> Control:
