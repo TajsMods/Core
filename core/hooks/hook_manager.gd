@@ -25,7 +25,7 @@ func _ready() -> void:
 	_install_hooks()
 
 func _install_hooks() -> void:
-	var base_dir := get_script().resource_path.get_base_dir()
+	var base_dir: String = get_script().resource_path.get_base_dir()
 	window_hooks = _load_hook(base_dir.path_join("window_hooks.gd"), "window_hooks")
 	connection_hooks = _load_hook(base_dir.path_join("connection_hooks.gd"), "connection_hooks")
 	selection_hooks = _load_hook(base_dir.path_join("selection_hooks.gd"), "selection_hooks")
