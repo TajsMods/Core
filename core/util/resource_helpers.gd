@@ -12,11 +12,12 @@ func get_resource_by_id(id: String) -> ResourceContainer:
 	return Globals.desktop.get_resource(id)
 
 func get_all_resources() -> Array[ResourceContainer]:
+	var result: Array[ResourceContainer] = []
 	if Globals == null or Globals.desktop == null:
-		return []
+		return result
 	if Globals.desktop.resources is Dictionary:
-		return Globals.desktop.resources.values()
-	return []
+		result.assign(Globals.desktop.resources.values())
+	return result
 
 func get_production_rate(resource_id: String) -> float:
 	var res := get_resource_by_id(resource_id)

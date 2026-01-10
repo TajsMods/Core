@@ -24,7 +24,7 @@ var ui_manager
 var node_registry
 var nodes
 var util
-var node_spawner
+
 var features
 var assets
 var localization
@@ -137,9 +137,6 @@ func bootstrap() -> void:
 		node_registry = node_registry_script.new(logger, event_bus, patches)
 		nodes = node_registry
 
-	var spawner_script = _load_script(base_dir.path_join("nodes/node_spawner.gd"))
-	if spawner_script != null and node_registry != null:
-		node_spawner = spawner_script.new(node_registry, logger)
 
 	var diagnostics_script = _load_script(base_dir.path_join("diagnostics.gd"))
 	if diagnostics_script != null:

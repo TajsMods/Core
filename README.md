@@ -26,7 +26,7 @@ core.modules.register_module({
 })
 ```
 
-Core services are exposed on the singleton: `core.settings`, `core.migrations`, `core.event_bus`, `core.keybinds`, `core.patches`, `core.diagnostics`, `core.modules`, `core.nodes`, and `core.node_spawner`.
+Core services are exposed on the singleton: `core.settings`, `core.migrations`, `core.event_bus`, `core.keybinds`, `core.patches`, `core.diagnostics`, `core.modules`, and `core.nodes`.
 
 ## Settings UI
 
@@ -73,7 +73,7 @@ core.event_bus.on("settings.changed", Callable(self, "_on_settings_changed"), se
 - Keybinds manager with conflict detection and persistence
 - Patch utilities (apply_once, connect_signal_once)
 - Diagnostics snapshot export
-- Node registry and safe spawner for windows/nodes
+- Node registry for windows/nodes
 
 ## Settings File
 
