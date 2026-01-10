@@ -14,6 +14,9 @@ var logger
 var settings
 var migrations
 var event_bus
+var command_registry
+var commands
+var command_palette
 var keybinds
 var patches
 var diagnostics
@@ -54,7 +57,7 @@ func bootstrap() -> void:
 		return
 	Engine.set_meta(META_KEY, self)
 	var base_dir: String = get_script().resource_path.get_base_dir()
-	# Init order: version -> logger -> settings -> migrations -> event_bus -> keybinds -> patches -> diagnostics -> module_registry -> core.ready
+	# Init order: version -> logger -> settings -> migrations -> event_bus -> commands -> keybinds -> patches -> diagnostics -> module_registry -> core.ready
 	_version_util = _load_script(base_dir.path_join("version.gd"))
 	var logger_script = _load_script(base_dir.path_join("logger.gd"))
 	if logger_script != null:
@@ -81,6 +84,11 @@ func bootstrap() -> void:
 	if event_bus_script != null:
 		event_bus = event_bus_script.new(logger)
 		_bridge_settings_events()
+
+	var command_registry_script = _load_script(base_dir.path_join("commands/command_registry.gd"))
+	if command_registry_script != null:
+		command_registry = command_registry_script.new(logger, event_bus)
+		commands = command_registry
 
 	var assets_script = _load_script(base_dir.path_join("assets.gd"))
 	if assets_script != null:
@@ -220,6 +228,22 @@ func loge(module_id: String, message: String) -> void:
 	if logger != null:
 		logger.error(module_id, message)
 
+func notify(icon: String, message: String) -> void:
+	if ui_manager != null and ui_manager.has_method("show_notification"):
+		ui_manager.show_notification(icon, message)
+		return
+	var signals = _get_autoload("Signals")
+	if signals != null and signals.has_signal("notify"):
+		signals.emit_signal("notify", icon, message)
+
+func play_sound(sound_id: String) -> void:
+	var sound = _get_autoload("Sound")
+	if sound != null and sound.has_method("play"):
+		sound.play(sound_id)
+
+func copy_to_clipboard(text: String) -> void:
+	DisplayServer.clipboard_set(text)
+
 static func instance() -> TajsCoreRuntime:
 	if Engine.has_meta(META_KEY):
 		return Engine.get_meta(META_KEY)
@@ -309,6 +333,16 @@ func _log_fallback(message: String) -> void:
 		logger.warn("core", message)
 	else:
 		print("TajsCore: %s" % message)
+
+func _get_autoload(name: String) -> Object:
+	if Engine.has_singleton(name):
+		return Engine.get_singleton(name)
+	if Engine.get_main_loop() == null:
+		return null
+	var root = Engine.get_main_loop().root
+	if root == null:
+		return null
+	return root.get_node_or_null(name)
 
 func _bridge_settings_events() -> void:
 	if settings == null or event_bus == null:

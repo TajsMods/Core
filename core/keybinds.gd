@@ -37,9 +37,10 @@ func setup(settings, logger, event_bus = null) -> void:
 	_settings = settings
 	_logger = logger
 	_event_bus = event_bus
+	set_process_input(true)
 	set_process_unhandled_input(true)
 
-func register_action(action_id: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, module_id: String, priority: int = 0, category_id: String = "") -> bool:
+func register_action(action_id: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, module_id: String, priority: int = 0, category_id: String = "", use_input: bool = false) -> bool:
 	if action_id == "":
 		_log_warn(module_id, "Action id is required.")
 		return false
@@ -67,7 +68,8 @@ func register_action(action_id: String, display_name: String, default_shortcuts:
 		"shortcuts": shortcuts,
 		"category": category_id,
 		"group": "",
-		"hold": false
+		"hold": false,
+		"use_input": use_input
 	}
 	_register_counter += 1
 	_apply_binding(action_id, shortcuts)
@@ -76,12 +78,12 @@ func register_action(action_id: String, display_name: String, default_shortcuts:
 		_event_bus.emit("keybind.registered", {"id": action_id, "module_id": module_id, "context": context})
 	return true
 
-func register_action_scoped(module_id: String, action_name: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, priority: int = 0, category_id: String = "") -> bool:
+func register_action_scoped(module_id: String, action_name: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, priority: int = 0, category_id: String = "", use_input: bool = false) -> bool:
 	if module_id == "" or action_name == "":
 		_log_warn(module_id, "Module id and action name are required.")
 		return false
 	var action_id: String = "%s.%s" % [module_id, action_name]
-	return register_action(action_id, display_name, default_shortcuts, context, callback, module_id, priority, category_id)
+	return register_action(action_id, display_name, default_shortcuts, context, callback, module_id, priority, category_id, use_input)
 
 func register_keybind_category(category_id: String, label: String, icon: String) -> void:
 	if category_id == "":
@@ -214,6 +216,41 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var matches: Array = []
 	for action in _actions.values():
+		if action.get("use_input", false):
+			continue
+		if action.get("hold", false):
+			continue
+		if not _context_allows(action["context"]):
+			continue
+		if InputMap.event_is_action(event, action["id"]):
+			matches.append(action)
+	if matches.is_empty():
+		return
+	var winner = _resolve_conflict(matches)
+	if winner == null:
+		return
+	var callback: Callable = winner["callback"]
+	if callback != null and callback.is_valid():
+		callback.call()
+		if _event_bus != null and _event_bus.has_method("emit"):
+			_event_bus.emit("keybind.pressed", {"id": winner["id"], "context": winner["context"]})
+		get_viewport().set_input_as_handled()
+
+func _input(event: InputEvent) -> void:
+	if _actions.is_empty():
+		return
+	if event is InputEventKey:
+		if not event.pressed or event.echo:
+			return
+	elif event is InputEventMouseButton:
+		if not event.pressed:
+			return
+	else:
+		return
+	var matches: Array = []
+	for action in _actions.values():
+		if not action.get("use_input", false):
+			continue
 		if action.get("hold", false):
 			continue
 		if not _context_allows(action["context"]):
@@ -451,6 +488,26 @@ func _build_combo_event(keys: Array[int]) -> InputEventKey:
 	event.pressed = true
 	if event.keycode == 0:
 		return null
+	return event
+
+func make_key_event(keycode: int, ctrl: bool = false, shift: bool = false, alt: bool = false, meta: bool = false) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = keycode as Key
+	event.ctrl_pressed = ctrl
+	event.shift_pressed = shift
+	event.alt_pressed = alt
+	event.meta_pressed = meta
+	event.pressed = true
+	return event
+
+func make_mouse_event(button_index: int, ctrl: bool = false, shift: bool = false, alt: bool = false, meta: bool = false) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = button_index as MouseButton
+	event.ctrl_pressed = ctrl
+	event.shift_pressed = shift
+	event.alt_pressed = alt
+	event.meta_pressed = meta
+	event.pressed = true
 	return event
 
 func _handle_hold(event: InputEvent) -> bool:

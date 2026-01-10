@@ -26,7 +26,31 @@ core.modules.register_module({
 })
 ```
 
-Core services are exposed on the singleton: `core.settings`, `core.migrations`, `core.event_bus`, `core.keybinds`, `core.patches`, `core.diagnostics`, `core.modules`, and `core.nodes`.
+Core services are exposed on the singleton: `core.settings`, `core.migrations`, `core.event_bus`, `core.commands`, `core.keybinds`, `core.patches`, `core.diagnostics`, `core.modules`, and `core.nodes`. The optional `core.command_palette` service is registered by the Command Palette UI mod when installed.
+
+Core also provides convenience helpers for common HUD integrations:
+
+```gdscript
+core.notify("check", "Hello from Core")
+core.play_sound("click")
+core.copy_to_clipboard("text to copy")
+```
+
+## Commands
+
+Core includes a command registry for palette-style actions:
+
+```gdscript
+var core = Engine.has_meta("TajsCore") ? Engine.get_meta("TajsCore") : null
+if core == null or core.commands == null:
+    return
+core.commands.register({
+    "id": "yourmod.say_hello",
+    "title": "Say Hello",
+    "keywords": ["hello", "greet"],
+    "run": func(ctx): print("Hello")
+})
+```
 
 ## Settings UI
 
