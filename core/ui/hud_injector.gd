@@ -55,6 +55,7 @@ func _create_zones() -> void:
 	var root := Control.new()
 	root.name = "TajsCoreHudZones"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(root)
 
 	_zones[HudZone.TOP_LEFT] = _make_zone(root, "TopLeft", Vector2(0, 0), Vector2(0, 0))
