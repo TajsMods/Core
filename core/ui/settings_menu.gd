@@ -171,7 +171,7 @@ func _build_diagnostics_tab() -> void:
 	diag_vbox.add_child(refresh_btn)
 
 	var output := TextEdit.new()
-	output.readonly = true
+	output.editable = false
 	output.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	output.custom_minimum_size = Vector2(0, 300)
 	diag_vbox.add_child(output)
