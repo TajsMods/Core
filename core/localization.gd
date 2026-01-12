@@ -26,9 +26,15 @@ func register_mod_translations(mod_id: String, relative_dir: String = "translati
 	if base == "":
 		return 0
 	var dir_path := base.path_join(relative_dir)
+	return register_translations_dir(dir_path)
+
+func register_translations_dir(dir_path: String) -> int:
+	if dir_path == "":
+		return 0
 	var dir := DirAccess.open(dir_path)
 	if dir == null:
 		return 0
+	var count := 0
 	for file_name in dir.get_files():
 		if file_name.ends_with(".translation") or file_name.ends_with(".tres"):
 			if register_translation(dir_path.path_join(file_name)):

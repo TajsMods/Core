@@ -77,12 +77,16 @@ func _log_to_console(level: String, tag: String, message: String) -> void:
 	print("%s %s" % [prefix, message])
 
 func _log_to_file(level: String, tag: String, message: String) -> void:
-	var file := FileAccess.open(_file_path, FileAccess.READ_WRITE)
-	if file == null:
+	var file: FileAccess
+	if FileAccess.file_exists(_file_path):
+		file = FileAccess.open(_file_path, FileAccess.READ_WRITE)
+		if file != null:
+			file.seek_end()
+	else:
 		file = FileAccess.open(_file_path, FileAccess.WRITE)
 	if file == null:
 		return
-	file.seek_end()
-	var line := "%s [%s] %s\n" % [tag, level, message]
+	var timestamp := Time.get_datetime_string_from_system()
+	var line := "[%s] %s [%s] %s\n" % [timestamp, tag, level, message]
 	file.store_string(line)
 	file.close()

@@ -399,14 +399,6 @@ func add_slider(parent: Control, label_text: String, start_val: float, min_val: 
 	slider.value = start_val
 	slider.focus_mode = Control.FOCUS_NONE
 
-	var cfg = _settings_ref
-	slider.gui_input.connect(func(event: InputEvent):
-		if cfg and cfg.has_method("get_bool") and cfg.get_bool("core.ui.disable_slider_scroll", false):
-			if event is InputEventMouseButton:
-				if event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-					slider.accept_event()
-	)
-
 	slider.value_changed.connect(func(v):
 		value_label.text = _format_slider_value(v, suffix)
 		callback.call(v)

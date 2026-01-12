@@ -40,6 +40,19 @@ func setup(settings, logger, event_bus = null) -> void:
 	set_process_input(true)
 	set_process_unhandled_input(true)
 
+
+func register(action_id: String, default_binding, callback: Callable, display_name: String = "", context: String = CONTEXT_ANY, module_id: String = "", priority: int = 0, category_id: String = "", use_input: bool = false) -> bool:
+	var shortcuts: Array = []
+	if default_binding is Array:
+		shortcuts = default_binding
+	elif default_binding is InputEvent:
+		shortcuts = [default_binding]
+	if display_name == "":
+		display_name = action_id
+	if module_id == "":
+		module_id = _extract_module_id(action_id)
+	return register_action(action_id, display_name, shortcuts, context, callback, module_id, priority, category_id, use_input)
+
 func register_action(action_id: String, display_name: String, default_shortcuts: Array, context: String, callback: Callable, module_id: String, priority: int = 0, category_id: String = "", use_input: bool = false) -> bool:
 	if action_id == "":
 		_log_warn(module_id, "Action id is required.")

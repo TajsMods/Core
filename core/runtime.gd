@@ -32,6 +32,11 @@ var features
 var assets
 var localization
 var theme_manager
+var window_scenes
+var file_variations
+var window_menus
+var tree_registry
+var trees
 var hook_manager
 var upgrade_caps
 var undo_stack
@@ -102,6 +107,23 @@ func bootstrap() -> void:
 	if theme_script != null:
 		theme_manager = theme_script.new()
 
+	var window_scenes_script = _load_script(base_dir.path_join("window_scenes.gd"))
+	if window_scenes_script != null:
+		window_scenes = window_scenes_script.new(logger)
+
+	var file_variations_script = _load_script(base_dir.path_join("file_variations.gd"))
+	if file_variations_script != null:
+		file_variations = file_variations_script.new(settings, logger)
+
+	var window_menus_script = _load_script(base_dir.path_join("window_menus.gd"))
+	if window_menus_script != null:
+		window_menus = window_menus_script.new()
+
+	var tree_script = _load_script(base_dir.path_join("tree_registry.gd"))
+	if tree_script != null:
+		tree_registry = tree_script.new()
+		trees = tree_registry
+
 	var keybinds_script = _load_script(base_dir.path_join("keybinds.gd"))
 	if keybinds_script != null:
 		keybinds = keybinds_script.new()
@@ -162,11 +184,12 @@ func bootstrap() -> void:
 		hook_manager.setup(self)
 		add_child(hook_manager)
 
+	_install_modloader_extensions(base_dir)
+
 	if event_bus != null:
 		event_bus.emit("core.ready", {"version": CORE_VERSION, "api_level": API_LEVEL}, true)
 	if logger != null:
 		logger.info("core", "Taj's Core ready (%s)." % CORE_VERSION)
-
 	_init_optional_services(base_dir)
 
 func get_version() -> String:
@@ -282,11 +305,7 @@ func _register_core_schema() -> void:
 			"default": 200,
 			"description": "In-memory log history size"
 		},
-		"core.ui.disable_slider_scroll": {
-			"type": "bool",
-			"default": false,
-			"description": "Prevent mouse wheel from changing slider values in Core UI"
-		},
+
 		"core.workshop.sync_on_startup": {
 			"type": "bool",
 			"default": true,
@@ -393,3 +412,19 @@ func _init_optional_services(base_dir: String) -> void:
 func _start_workshop_sync() -> void:
 	if workshop_sync != null:
 		workshop_sync.start_sync()
+
+func _install_modloader_extensions(base_dir: String) -> void:
+	if not ClassDB.class_exists("ModLoaderMod"):
+		return
+	var paths := [
+		base_dir.path_join("extensions/data.gd"),
+		base_dir.path_join("extensions/desktop.gd"),
+		base_dir.path_join("extensions/windows_menu.gd"),
+		base_dir.path_join("extensions/window_dragger.gd"),
+		base_dir.path_join("extensions/window_container.gd"),
+		base_dir.path_join("extensions/hud.gd"),
+		base_dir.path_join("extensions/main.gd"),
+		base_dir.path_join("extensions/utils.gd")
+	]
+	for path in paths:
+		ModLoaderMod.install_script_extension(path)

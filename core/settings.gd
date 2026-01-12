@@ -80,6 +80,31 @@ func register_schema(module_id: String, schema: Dictionary) -> void:
 	if changed:
 		save_settings()
 
+
+func register_section(section_id: String, defaults: Dictionary) -> void:
+	if section_id == "":
+		return
+	if not (defaults is Dictionary):
+		_log_warn(section_id, "Settings section defaults must be a dictionary.")
+		return
+	var schema := {}
+	for key in defaults.keys():
+		var full_key := "%s.%s" % [section_id, str(key)]
+		schema[full_key] = {"default": defaults[key]}
+	register_schema(section_id, schema)
+
+
+func get_section_value(section_id: String, key: String, default_override = null):
+	if section_id == "" or key == "":
+		return default_override
+	return get_value("%s.%s" % [section_id, key], default_override)
+
+
+func set_section_value(section_id: String, key: String, value) -> void:
+	if section_id == "" or key == "":
+		return
+	set_value("%s.%s" % [section_id, key], value)
+
 func get_value(key: String, default_override = null):
 	if _values.has(key):
 		return _values[key]
@@ -99,6 +124,13 @@ func get_bool(key: String, default_value: bool = false) -> bool:
 		return value
 	_log_warn("settings", "Expected bool for '%s', got %s" % [key, typeof(value)])
 	return default_value
+
+
+func toggle_value(key: String, default_value: bool = false) -> bool:
+	var current := get_bool(key, default_value)
+	var next := not current
+	set_value(key, next)
+	return next
 
 func get_int(key: String, default_value: int = 0) -> int:
 	var value = get_value(key, default_value)

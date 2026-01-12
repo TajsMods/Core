@@ -26,6 +26,37 @@ func load_icon(icon_id: String, mod_id: String = "") -> Texture2D:
 	var path := resolve_icon_path(icon_id, mod_id)
 	return load_texture(path)
 
+func register_icon_dir(path: String, take_over: bool = true) -> int:
+	if path == "":
+		return 0
+	var dir := DirAccess.open(path)
+	if dir == null:
+		return 0
+	var count := 0
+	for file_name in dir.get_files():
+		if not file_name.ends_with(".png"):
+			continue
+		var texture: Texture2D = load(path.path_join(file_name))
+		if texture == null:
+			continue
+		if take_over:
+			texture.take_over_path("res://textures/icons".path_join(file_name))
+		var resources = _get_autoload("Resources")
+		if resources != null:
+			if resources.icons == null:
+				resources.icons = {}
+			resources.icons[file_name] = texture
+		count += 1
+	return count
+
+func _get_autoload(name: String) -> Object:
+	if Engine.has_singleton(name):
+		return Engine.get_singleton(name)
+	var tree = Engine.get_main_loop()
+	if not (tree is SceneTree):
+		return null
+	return tree.get_root().get_node_or_null(name)
+
 func resolve_icon_path(icon_id: String, mod_id: String = "") -> String:
 	if icon_id.begins_with("res://"):
 		return icon_id

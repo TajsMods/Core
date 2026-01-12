@@ -50,9 +50,6 @@ func _build_core_tab() -> void:
 			_core.logger.set_file_logging(v, path)
 	, "Write logs to user://tajs_core.log")
 
-	_ui.add_toggle(core_vbox, "Disable Slider Scroll", _core.settings.get_bool("core.ui.disable_slider_scroll", false), func(v):
-		_core.settings.set_value("core.ui.disable_slider_scroll", v)
-	, "Prevent mouse wheel from changing slider values in this panel.")
 
 	_ui.add_slider(core_vbox, "Log Ring Size", _core.settings.get_int("core.log_ring_size", 200), 50, 500, 10, "", func(v):
 		var size = int(v)

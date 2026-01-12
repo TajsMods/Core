@@ -39,6 +39,7 @@ func register(data: Dictionary) -> bool:
 
 	var command := _build_command(data, id, title)
 	if _commands.has(id):
+		_log_warn("Command '%s' already registered. Replacing existing entry." % id)
 		_remove_from_categories(id, _commands[id])
 
 	_commands[id] = command
@@ -47,6 +48,17 @@ func register(data: Dictionary) -> bool:
 	commands_changed.emit()
 	_emit_event("command.registered", {"id": id, "title": title})
 	return true
+
+
+func register_command(command_id: String, meta: Dictionary = {}, callback: Callable = Callable()) -> bool:
+	var data := meta.duplicate(true)
+	data["id"] = command_id
+	if not data.has("title"):
+		var fallback_title := str(meta.get("name", "")).strip_edges()
+		data["title"] = fallback_title if fallback_title != "" else command_id
+	if callback.is_valid():
+		data["run"] = callback
+	return register(data)
 
 
 func register_many(commands: Array) -> void:
@@ -82,6 +94,14 @@ func get_command(command_id: String) -> Dictionary:
 
 
 func list_commands() -> Array[Dictionary]:
+	return get_all_commands()
+
+
+func list() -> Array[Dictionary]:
+	return get_all_commands()
+
+
+func get_all() -> Array[Dictionary]:
 	return get_all_commands()
 
 
