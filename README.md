@@ -10,7 +10,7 @@ Core registers itself as a global singleton via `Engine` metadata:
 var core = Engine.has_meta("TajsCore") ? Engine.get_meta("TajsCore") : null
 ```
 
-## Depend on Core
+## Usage
 
 In your module entrypoint, grab the Core singleton and verify version:
 
@@ -26,79 +26,139 @@ core.modules.register_module({
 })
 ```
 
-Core services are exposed on the singleton: `core.settings`, `core.migrations`, `core.event_bus`, `core.commands`, `core.keybinds`, `core.patches`, `core.diagnostics`, `core.modules`, and `core.nodes`. The optional `core.command_palette` service is registered by the Command Palette UI mod when installed.
+## Subsystems
 
-Core also provides convenience helpers for common HUD integrations:
+Core services are exposed on the singleton (e.g., `core.nodes`, `core.assets`).
+
+### Node Registry (`core.nodes`)
+
+Register custom windows and resources.
+
+```gdscript
+# Register a simple window node
+core.nodes.register_node({
+    "id": "MyMod.MyWindow",
+    "display_name": "My Window",
+    "category": "utility",
+    "packed_scene_path": "res://scenes/windows/my_window.tscn", 
+    "attributes": { "limit": 1 }
+})
+
+# Register a custom category in the Windows menu
+core.nodes.register_window_category("my_category", "My Stuff", "res://icon.png")
+```
+
+### Window Management
+
+**Window Scenes (`core.window_scenes`)**: Register directories containing window scenes to resolve paths across mods.
+```gdscript
+core.window_scenes.register_mod_dir("MyMod", "scenes/windows")
+```
+
+**Window Menus (`core.window_menus`)**: Add custom buttons/tabs to the OS window menu.
+```gdscript
+core.window_menus.register_tab("MyMod", "my_tab", {
+    "button_name": "My Tab",
+    "icon": "my_icon.png"
+})
+```
+
+### Hooks System (`core.hooks`)
+
+Listen for global lifecycle events.
+
+```gdscript
+# Listen for window creation
+core.event_bus.on("window.created", Callable(self, "_on_window_created"))
+
+# Hook into game load
+core.event_bus.on("save_load.loaded", Callable(self, "_on_game_loaded"))
+```
+
+Supported events: `window.created`, `window.deleted`, `connection.created`, `selection.changed`, `ui.popup`, etc.
+
+### Asset Management (`core.assets`)
+
+Load and cache assets, resolving paths relative to your mod options.
+
+```gdscript
+# Load an icon from your mod's 'textures/icons' folder
+var icon = core.assets.load_icon("my_icon.png", "MyMod")
+```
+
+### Upgrade Caps (`core.upgrade_caps`)
+
+Extend vanilla upgrade limits purely via config.
+
+```gdscript
+core.upgrade_caps.register_extended_cap("processor_speed", {
+    "extended_cap": 20, # Vanilla is 10
+    "cost_multiplier": 1.5
+})
+```
+
+### Tree Registry (`core.tree_registry`)
+
+Inject nodes into Research and Ascension trees.
+
+```gdscript
+core.tree_registry.add_research_node({
+    "name": "MyResearch",
+    "x": 100, "y": 200,
+    "ref": "ExistingNode" # Position relative to this node
+})
+```
+
+### Feature Flags (`core.features`)
+
+Manage toggleable features backed by Core settings.
+
+```gdscript
+core.features.register_feature("my_feature", true, "Enable my cool feature")
+if core.features.is_feature_enabled("my_feature"):
+    pass
+```
+
+### Localization (`core.localization`)
+
+Register translation directories automatically.
+
+```gdscript
+core.localization.register_mod_translations("MyMod", "translations")
+```
+
+### Theme Manager (`core.theme_manager`)
+
+Register and apply UI themes.
+
+```gdscript
+core.theme_manager.register_theme("dark_mode", load("res://themes/dark.tres"))
+core.theme_manager.apply_theme(my_control, "dark_mode")
+```
+
+### File Variations (`core.file_variations`)
+
+Register variation bits for files (advanced usage).
+
+```gdscript
+core.file_variations.register_variations("MyMod", {
+    "rare": { "size_mult": 1.2 }
+})
+```
+
+## Standard Services
+
+*   **Settings (`core.settings`)**: Persistent settings store (`user://tajs_core_settings.json`).
+*   **Keybinds (`core.keybinds`)**: Register remappable keybinds.
+*   **Migrations (`core.migrations`)**: Versioned data migrations.
+*   **Commands (`core.commands`)**: Register palette commands.
+*   **Patches (`core.patches`)**: Utilities like `apply_once` or `connect_signal_once`.
+*   **Diagnostics (`core.diagnostics`)**: Export debug snapshots.
+
+## Helper Functions
 
 ```gdscript
 core.notify("check", "Hello from Core")
 core.play_sound("click")
-core.copy_to_clipboard("text to copy")
+core.copy_to_clipboard("text")
 ```
-
-## Commands
-
-Core includes a command registry for palette-style actions:
-
-```gdscript
-var core = Engine.has_meta("TajsCore") ? Engine.get_meta("TajsCore") : null
-if core == null or core.commands == null:
-    return
-core.commands.register({
-    "id": "yourmod.say_hello",
-    "title": "Say Hello",
-    "keywords": ["hello", "greet"],
-    "run": func(ctx): print("Hello")
-})
-```
-
-## Settings UI
-
-Core adds a settings button in the HUD overlay with tabs for Core settings, Keybinds, and Mod Manager (Workshop sync + mod enable/disable). Downstream keybinds registered via `core.keybinds` appear in the Keybinds tab automatically.
-
-## Keybinds (scoped helper)
-
-```gdscript
-var evt := InputEventKey.new()
-evt.keycode = KEY_F8
-core.keybinds.register_action_scoped(
-    "YourNamespace-YourMod",
-    "toggle_feature",
-    "Toggle Feature",
-    [evt],
-    "gameplay",
-    Callable(self, "_on_toggle_feature"),
-    0
-)
-```
-
-## Migrations
-
-```gdscript
-core.migrations.register_migration("yourmod", "0.2.0", func() -> void:
-    core.settings.set_value("yourmod.new_flag", true)
-)
-core.migrations.run_pending("yourmod")
-```
-
-## Events
-
-```gdscript
-core.event_bus.on("core.ready", Callable(self, "_on_core_ready"), self, true)
-core.event_bus.on("settings.changed", Callable(self, "_on_settings_changed"), self, false)
-```
-
-## Services
-
-- Versioning and compatibility checks
-- Module registry
-- Settings with schema, persistence, and migrations
-- Event bus with sticky events (core.ready)
-- Keybinds manager with conflict detection and persistence
-- Patch utilities (apply_once, connect_signal_once)
-- Diagnostics snapshot export
-- Node registry for windows/nodes
-
-## Settings File
-
-Core stores settings at `user://tajs_core_settings.json`.
