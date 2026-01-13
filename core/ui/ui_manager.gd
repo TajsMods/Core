@@ -184,7 +184,7 @@ func open_icon_browser(callback: Callable, initial_selection: String = "") -> vo
 	browser.build_ui(container)
 	if initial_selection != "":
 		browser.set_selected_icon(initial_selection)
-	show_popup("Select Icon", container, [{"text": "Close", "close": true}])
+	show_popup("Select Icon", container, [ {"text": "Close", "close": true}])
 
 func create_button(text: String, callback: Callable) -> Button:
 	var btn := Button.new()
@@ -275,7 +275,7 @@ func _input(event: InputEvent) -> void:
 			_ui.set_visible(false)
 
 func _log_warn(message: String) -> void:
-	if ClassDB.class_exists("ModLoaderLog"):
+	if TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.warning(message, LOG_NAME)
 	else:
 		print(LOG_NAME + ": " + message)

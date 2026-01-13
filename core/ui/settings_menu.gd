@@ -181,7 +181,7 @@ func _build_diagnostics_tab() -> void:
 	refresh.call()
 
 func _populate_mod_list(container: VBoxContainer) -> void:
-	if not ClassDB.class_exists("ModLoaderMod") or not ClassDB.class_exists("ModLoaderUserProfile"):
+	if not TajsCoreUtil.has_global_class("ModLoaderMod") or not TajsCoreUtil.has_global_class("ModLoaderUserProfile"):
 		var label = Label.new()
 		label.text = "Mod Loader APIs not available."
 		container.add_child(label)
@@ -298,7 +298,7 @@ func _get_root_node(name: String) -> Node:
 func _log_info(message: String) -> void:
 	if _logger != null and _logger.has_method("info"):
 		_logger.info("settings", message)
-	elif ClassDB.class_exists("ModLoaderLog"):
+	elif TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.info(message, LOG_NAME)
 	else:
 		print(LOG_NAME + ": " + message)

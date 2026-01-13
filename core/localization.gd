@@ -9,7 +9,7 @@ extends RefCounted
 func register_translation(resource_path: String) -> bool:
 	if resource_path == "":
 		return false
-	if ClassDB.class_exists("ModLoaderMod"):
+	if TajsCoreUtil.has_global_class("ModLoaderMod"):
 		ModLoaderMod.add_translation(resource_path)
 		return true
 	if not ResourceLoader.exists(resource_path):

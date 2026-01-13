@@ -60,7 +60,7 @@ func _log(level: String, module_id: String, message: String) -> void:
 		_log_to_file(level, tag, message)
 
 func _log_to_console(level: String, tag: String, message: String) -> void:
-	if ClassDB.class_exists("ModLoaderLog"):
+	if TajsCoreUtil.has_global_class("ModLoaderLog"):
 		match level:
 			"debug":
 				ModLoaderLog.debug(message, tag)

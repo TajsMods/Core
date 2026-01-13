@@ -281,7 +281,7 @@ func _emit_event(event_name: String, data: Dictionary) -> void:
 func _log_warn(message: String) -> void:
 	if _logger != null and _logger.has_method("warn"):
 		_logger.warn("commands", message)
-	elif ClassDB.class_exists("ModLoaderLog"):
+	elif TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.warning(message, LOG_NAME)
 	else:
 		print("%s %s" % [LOG_NAME, message])
@@ -290,7 +290,7 @@ func _log_warn(message: String) -> void:
 func _log_error(message: String) -> void:
 	if _logger != null and _logger.has_method("error"):
 		_logger.error("commands", message)
-	elif ClassDB.class_exists("ModLoaderLog"):
+	elif TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.error(message, LOG_NAME)
 	else:
 		print("%s %s" % [LOG_NAME, message])

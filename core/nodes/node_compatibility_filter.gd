@@ -320,7 +320,7 @@ func get_cache_size() -> int:
 func _log_info(message: String) -> void:
 	if _logger != null and _logger.has_method("info"):
 		_logger.info("core", message)
-	elif ClassDB.class_exists("ModLoaderLog"):
+	elif TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.info(message, LOG_NAME)
 	else:
 		print("%s %s" % [LOG_NAME, message])

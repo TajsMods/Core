@@ -44,10 +44,8 @@ func list_features() -> Array:
 
 func _load_overrides() -> void:
 	var overrides := _get_overrides()
-	for feature_id in overrides:
-		if not _features.has(feature_id):
-			_features[feature_id] = {"enabled": bool(overrides[feature_id]), "default": bool(overrides[feature_id]), "description": ""}
-		else:
+	for feature_id in _features:
+		if overrides.has(feature_id):
 			_features[feature_id]["enabled"] = bool(overrides[feature_id])
 
 func _get_overrides() -> Dictionary:

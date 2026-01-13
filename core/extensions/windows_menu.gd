@@ -57,7 +57,7 @@ func _on_add_pressed() -> void:
 func _get_tab_node(tab: int) -> Control:
 	var core := TajsCoreRuntime.instance()
 	if core != null and core.window_menus != null:
-		var custom := core.window_menus.get_panel_for_tab(tab, $Categories)
+		var custom: Control = core.window_menus.get_panel_for_tab(tab, $Categories)
 		if custom != null:
 			return custom
 	if category_tabs.has(tab):

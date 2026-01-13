@@ -24,10 +24,16 @@ static func safe_call(callable: Callable, args: Array = []) -> bool:
 	callable.callv(args)
 	return true
 
+static func has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false
+
 static func get_mod_path(mod_id: String) -> String:
 	if mod_id == "":
 		return ""
-	if ClassDB.class_exists("ModLoaderMod"):
+	if has_global_class("ModLoaderMod"):
 		return ModLoaderMod.get_unpacked_dir().path_join(mod_id)
 	return "res://mods-unpacked".path_join(mod_id)
 

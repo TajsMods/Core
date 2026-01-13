@@ -86,8 +86,10 @@ func self_test() -> Dictionary:
 	return result
 
 func _try_get_mod_loader_version() -> String:
-	if ClassDB.class_exists("ModLoader") and ClassDB.class_has_method("ModLoader", "get_version"):
-		return str(ModLoader.get_version())
+	if TajsCoreUtil.has_global_class("ModLoader"):
+		var mod_loader = load("res://addons/mod_loader/mod_loader.gd")
+		if mod_loader != null and mod_loader.has_method("get_version"):
+			return str(ModLoader.get_version())
 	return "unknown"
 
 func _log_info(module_id: String, message: String) -> void:

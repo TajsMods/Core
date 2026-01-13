@@ -65,7 +65,7 @@ func resolve_scene_path(scene: String) -> String:
 func make_save_filename(scene_path: String) -> String:
 	if scene_path == "":
 		return ""
-	if ClassDB.class_exists("TajsCoreNodeDefs"):
+	if TajsCoreUtil.has_global_class("TajsCoreNodeDefs"):
 		return TajsCoreNodeDefs.make_save_filename(scene_path)
 	var normalized := scene_path
 	if normalized.begins_with("res://") and not normalized.ends_with(SCENE_EXT):

@@ -48,6 +48,11 @@ var hot_reload
 
 var _version_util
 var _extended_globals: Dictionary = {}
+var _base_dir: String = ""
+
+# Runtime patching state for scripts with class_name (can't use install_script_extension)
+var _desktop_patched := false
+var _desktop_patch_failed := false
 
 func _init() -> void:
 	bootstrap()
@@ -56,12 +61,24 @@ func _ready() -> void:
 	if node_registry != null:
 		node_registry.setup_signals()
 
+func _process(_delta: float) -> void:
+	# Runtime patching for Desktop (has class_name, can't use install_script_extension)
+	if not _desktop_patched and not _desktop_patch_failed:
+		if is_instance_valid(Globals.desktop) and patches != null:
+			var desktop_ext := _base_dir.path_join("extensions/desktop.gd")
+			var result: bool = patches.patch_desktop(desktop_ext)
+			if result:
+				_desktop_patched = true
+			else:
+				_desktop_patch_failed = true
+
 func bootstrap() -> void:
 	if Engine.has_meta(META_KEY) and Engine.get_meta(META_KEY) != self:
 		_log_fallback("Core already registered, skipping bootstrap.")
 		return
 	Engine.set_meta(META_KEY, self)
 	var base_dir: String = get_script().resource_path.get_base_dir()
+	_base_dir = base_dir
 	# Init order: version -> logger -> settings -> migrations -> event_bus -> commands -> keybinds -> patches -> diagnostics -> module_registry -> core.ready
 	_version_util = _load_script(base_dir.path_join("version.gd"))
 	var logger_script = _load_script(base_dir.path_join("logger.gd"))
@@ -414,14 +431,17 @@ func _start_workshop_sync() -> void:
 		workshop_sync.start_sync()
 
 func _install_modloader_extensions(base_dir: String) -> void:
-	if not ClassDB.class_exists("ModLoaderMod"):
+	if not TajsCoreUtil.has_global_class("ModLoaderMod"):
 		return
+	# NOTE: Scripts with class_name cannot use install_script_extension() because
+	# ModLoader's take_over_path() creates a conflict. These are handled specially:
+	# - desktop.gd (class_name Desktop) - uses runtime patching in _process()
+	# - window_container.gd (class_name WindowContainer) - not yet reimplemented
+	# See _process() for desktop runtime patching logic.
 	var paths := [
 		base_dir.path_join("extensions/data.gd"),
-		base_dir.path_join("extensions/desktop.gd"),
 		base_dir.path_join("extensions/windows_menu.gd"),
 		base_dir.path_join("extensions/window_dragger.gd"),
-		base_dir.path_join("extensions/window_container.gd"),
 		base_dir.path_join("extensions/hud.gd"),
 		base_dir.path_join("extensions/main.gd"),
 		base_dir.path_join("extensions/utils.gd")

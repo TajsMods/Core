@@ -21,13 +21,13 @@ func _init() -> void:
 	add_child(_core)
 
 func _log_warn(message: String) -> void:
-	if ClassDB.class_exists("ModLoaderLog"):
+	if TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.warning(message, LOG_NAME)
 	else:
 		print("%s %s" % [LOG_NAME, message])
 
 func _log_error(message: String) -> void:
-	if ClassDB.class_exists("ModLoaderLog"):
+	if TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.error(message, LOG_NAME)
 	else:
 		print("%s %s" % [LOG_NAME, message])

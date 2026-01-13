@@ -26,7 +26,7 @@ func check_new_windows() -> void:
 	if new.size() > 0:
 		var categories: Array = []
 		for window_id: String in new:
-			var category := Data.windows[window_id].category
+			var category: String = Data.windows[window_id].category
 			if categories.has(category):
 				continue
 			categories.append(category)
@@ -53,7 +53,7 @@ func check_new_windows() -> void:
 		var core := TajsCoreRuntime.instance()
 		if core != null and core.window_menus != null:
 			for category_id: String in categories:
-				var notice := core.window_menus.get_notice_for_category(category_id)
+				var notice: String = core.window_menus.get_notice_for_category(category_id)
 				if notice != "":
 					Signals.notify.emit(category_id, notice)
 

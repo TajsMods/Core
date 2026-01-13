@@ -709,7 +709,7 @@ func _get_root_node(name: String) -> Node:
 	return null
 
 func _log_warn(message: String) -> void:
-	if ClassDB.class_exists("ModLoaderLog"):
+	if TajsCoreUtil.has_global_class("ModLoaderLog"):
 		ModLoaderLog.warning(message, LOG_NAME)
 	else:
 		print(LOG_NAME + ": " + message)
