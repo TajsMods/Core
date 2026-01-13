@@ -284,6 +284,18 @@ func play_sound(sound_id: String) -> void:
 func copy_to_clipboard(text: String) -> void:
 	DisplayServer.clipboard_set(text)
 
+func register_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
+	"""Registers a settings tab for a mod. Returns null if UI not ready yet."""
+	if ui_manager == null:
+		return null
+	return ui_manager.register_mod_settings_tab(mod_id, display_name, icon_path)
+
+func get_settings_tab(mod_id: String) -> VBoxContainer:
+	"""Returns an existing settings tab container for a mod."""
+	if ui_manager == null:
+		return null
+	return ui_manager.get_mod_settings_tab(mod_id)
+
 static func instance() -> TajsCoreRuntime:
 	if Engine.has_meta(META_KEY):
 		return Engine.get_meta(META_KEY)

@@ -27,6 +27,8 @@ func build_settings_menu() -> void:
 	_build_keybinds_tab()
 	_build_mod_manager_tab()
 	_build_diagnostics_tab()
+	_ui.add_mod_section_separator()
+	_build_mod_settings_tabs()
 
 func _build_core_tab() -> void:
 	var core_vbox = _ui.add_tab("Core", "res://textures/icons/cog.png")
@@ -179,6 +181,160 @@ func _build_diagnostics_tab() -> void:
 
 	refresh_btn.pressed.connect(refresh)
 	refresh.call()
+
+func _build_mod_settings_tabs() -> void:
+	"""Automatically creates a settings tab for each enabled mod (excluding Core)."""
+	if not TajsCoreUtil.has_global_class("ModLoaderMod"):
+		return
+
+	var all_mods = ModLoaderMod.get_mod_data_all()
+	if all_mods == null:
+		return
+
+	# Sort mods alphabetically by display name
+	var sorted_mods = all_mods.keys()
+	sorted_mods.sort_custom(func(a, b):
+		var name_a = _get_mod_display_name(all_mods[a].manifest)
+		var name_b = _get_mod_display_name(all_mods[b].manifest)
+		return str(name_a).naturalnocasecmp_to(str(name_b)) < 0
+	)
+
+	for mod_id in sorted_mods:
+		# Skip Core - it has its own dedicated tabs
+		if mod_id == "TajemnikTV-Core":
+			continue
+
+		var mod_data = all_mods[mod_id]
+		# Only create tabs for active mods
+		if not mod_data.is_active:
+			continue
+
+		var manifest = mod_data.manifest
+		var display_name = _get_mod_display_name(manifest)
+		var icon_path = _get_mod_icon_path(manifest, mod_id)
+
+		var mod_vbox = _ui.add_mod_tab(display_name, icon_path)
+		if mod_vbox == null:
+			continue
+
+		# 1. Check for schemas registered via Core Settings API (Priority)
+		var core_schema = {}
+		if _core != null and _core.settings != null:
+			core_schema = _core.settings.get_schemas_for_namespace(mod_id)
+
+		if not core_schema.is_empty():
+			_generate_settings_from_schema(mod_vbox, core_schema)
+			continue
+
+		# 2. Check for config_schema from manifest (Fallback)
+		var config_schema = _get_mod_config_schema(manifest)
+		if config_schema != null and not config_schema.is_empty():
+			# TODO: Auto-generate settings UI from manifest config_schema
+			var placeholder_label = Label.new()
+			placeholder_label.text = "Settings available (manifest schema found)."
+			placeholder_label.add_theme_font_size_override("font_size", 24)
+			placeholder_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6, 0.8))
+			mod_vbox.add_child(placeholder_label)
+			continue
+
+		# 3. No settings found
+		var no_settings_label = Label.new()
+		no_settings_label.text = "No configurable settings."
+		no_settings_label.add_theme_font_size_override("font_size", 24)
+		no_settings_label.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8, 0.7))
+		mod_vbox.add_child(no_settings_label)
+
+func _generate_settings_from_schema(container: VBoxContainer, schema: Dictionary) -> void:
+	var keys = schema.keys()
+	keys.sort()
+
+	for key in keys:
+		var entry = schema[key]
+		if not (entry is Dictionary):
+			continue
+
+		var type = entry.get("type", "string")
+		var description = entry.get("description", key)
+		var default_val = entry.get("default", null)
+		var current_val = _core.settings.get_value(key, default_val)
+
+		# If description contains dots (like a key), try to make it prettier?
+		# For now use description as label.
+		var label_text = description
+
+		match type:
+			"bool":
+				_ui.add_toggle(container, label_text, bool(current_val), func(v):
+					_core.settings.set_value(key, v)
+				)
+			"int":
+				# TODO: Sliders if min/max defined in schema
+				_ui.add_text_input(container, label_text, str(current_val), func(text):
+					if text.is_valid_int():
+						_core.settings.set_value(key, int(text))
+				)
+			"float":
+				_ui.add_text_input(container, label_text, str(current_val), func(text):
+					if text.is_valid_float():
+						_core.settings.set_value(key, float(text))
+				)
+			"string":
+				_ui.add_text_input(container, label_text, str(current_val), func(text):
+					_core.settings.set_value(key, text)
+				)
+			_:
+				var unknown_label = Label.new()
+				unknown_label.text = "%s: Unknown type '%s'" % [label_text, type]
+				container.add_child(unknown_label)
+
+func _get_mod_display_name(manifest) -> String:
+	"""Extracts display name from mod manifest, handling both Object and Dictionary types."""
+	if manifest is Dictionary:
+		return manifest.get("name", "Unknown Mod")
+	elif manifest != null and "name" in manifest:
+		return str(manifest.name)
+	return "Unknown Mod"
+
+func _get_mod_icon_path(manifest, mod_id: String) -> String:
+	"""Gets mod icon path from manifest or returns empty for default puzzle icon."""
+	var extra = null
+	if manifest is Dictionary:
+		extra = manifest.get("extra", {})
+	elif manifest != null and "extra" in manifest:
+		extra = manifest.extra
+
+	if extra is Dictionary:
+		var godot_extra = extra.get("godot", {})
+		if godot_extra is Dictionary and godot_extra.has("image"):
+			var image_path = godot_extra.get("image", "")
+			if image_path != null and image_path != "" and ResourceLoader.exists(image_path):
+				return image_path
+
+	# Try to find an icon in the mod's folder
+	var mod_dir = "res://mods-unpacked/" + mod_id
+	var potential_icons = ["/icon.png", "/icon.svg", "/icon.tres"]
+	for icon in potential_icons:
+		var full_path = mod_dir + icon
+		if ResourceLoader.exists(full_path):
+			return full_path
+
+	return "" # Will fall back to puzzle icon
+
+func _get_mod_config_schema(manifest) -> Dictionary:
+	"""Extracts config_schema from mod manifest."""
+	var extra = null
+	if manifest is Dictionary:
+		extra = manifest.get("extra", {})
+	elif manifest != null and "extra" in manifest:
+		extra = manifest.extra
+
+	if extra is Dictionary:
+		var godot_extra = extra.get("godot", {})
+		if godot_extra is Dictionary:
+			var schema = godot_extra.get("config_schema", {})
+			if schema is Dictionary:
+				return schema
+	return {}
 
 func _populate_mod_list(container: VBoxContainer) -> void:
 	if not TajsCoreUtil.has_global_class("ModLoaderMod") or not TajsCoreUtil.has_global_class("ModLoaderUserProfile"):

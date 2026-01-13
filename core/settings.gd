@@ -164,6 +164,19 @@ func get_dict(key: String, default_value: Dictionary = {}) -> Dictionary:
 	_log_warn("settings", "Expected dictionary for '%s', got %s" % [key, typeof(value)])
 	return default_value
 
+func get_schemas_for_namespace(ns_prefix: String) -> Dictionary:
+	"""Returns all registered schema entries that start with the given namespace prefix."""
+	var result := {}
+	var prefix := ns_prefix + "." if not ns_prefix.ends_with(".") else ns_prefix
+	for key in _schemas.keys():
+		if key.begins_with(prefix):
+			result[key] = _schemas[key]
+	return result
+
+func get_all_schemas() -> Dictionary:
+	"""Returns all registered schemas."""
+	return _schemas.duplicate(true)
+
 func get_snapshot(redact_sensitive: bool = true) -> Dictionary:
 	var snapshot := _values.duplicate(true)
 	if not redact_sensitive:

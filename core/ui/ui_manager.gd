@@ -14,6 +14,7 @@ var _ui
 var _settings_menu
 var _hud_injector
 var _popup_manager
+var _mod_tabs: Dictionary = {} # mod_id -> VBoxContainer
 
 func setup(core, workshop_sync) -> void:
 	_core = core
@@ -87,6 +88,34 @@ func add_settings_tab(title: String, icon: String) -> VBoxContainer:
 	if _ui == null:
 		return null
 	return _ui.add_tab(title, icon)
+
+func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
+	"""
+	Registers a settings tab for a mod. Returns the VBoxContainer to add settings widgets to.
+	
+	Parameters:
+	- mod_id: The unique mod identifier (e.g., "TajemnikTV-CommandPalette")
+	- display_name: Human-readable name shown in the tab (e.g., "Command Palette")
+	- icon_path: Optional path to tab icon. Defaults to puzzle icon if empty.
+	
+	Returns: VBoxContainer to add settings widgets, or null if UI not ready.
+	"""
+	if _ui == null:
+		return null
+	if _mod_tabs.has(mod_id):
+		return _mod_tabs[mod_id]
+	var container = _ui.add_mod_tab(display_name, icon_path)
+	if container != null:
+		_mod_tabs[mod_id] = container
+	return container
+
+func get_mod_settings_tab(mod_id: String) -> VBoxContainer:
+	"""Returns the existing settings tab container for a mod, or null if not registered."""
+	return _mod_tabs.get(mod_id, null)
+
+func has_mod_settings_tab(mod_id: String) -> bool:
+	"""Returns true if the mod has already registered a settings tab."""
+	return _mod_tabs.has(mod_id)
 
 func add_toggle(container: Control, label: String, value: bool, callback: Callable, tooltip: String = "") -> CheckButton:
 	if _ui == null:

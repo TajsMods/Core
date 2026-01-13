@@ -38,6 +38,11 @@ var _sidebar_expanded := false
 var _sidebar_tween: Tween = null
 var _search_container: Control = null
 
+# Mod Tab Section State
+const DEFAULT_MOD_ICON := "res://textures/icons/puzzle.png"
+var _mod_section_started := false
+var _mod_section_separator: Control = null
+
 var _is_animating := false
 var _tween: Tween = null
 
@@ -243,6 +248,27 @@ func add_tab(name: String, icon_path: String) -> VBoxContainer:
 	_tab_buttons.append(btn)
 
 	return vbox
+
+func add_mod_section_separator() -> void:
+	"""Adds a visual separator between Core tabs and mod tabs in the sidebar."""
+	if _mod_section_started:
+		return
+	_mod_section_started = true
+
+	var sep := HSeparator.new()
+	sep.name = "ModSectionSeparator"
+	sep.custom_minimum_size = Vector2(0, 20)
+	sep.add_theme_constant_override("separation", 8)
+	tab_buttons_container.add_child(sep)
+	_mod_section_separator = sep
+
+func add_mod_tab(display_name: String, icon_path: String = "") -> VBoxContainer:
+	"""Adds a tab for a mod in the mod section. Uses puzzle icon if no icon specified."""
+	if not _mod_section_started:
+		add_mod_section_separator()
+
+	var effective_icon := icon_path if icon_path != "" and ResourceLoader.exists(icon_path) else DEFAULT_MOD_ICON
+	return add_tab(display_name, effective_icon)
 
 func _on_tab_selected(index: int) -> void:
 	tab_container.current_tab = index
