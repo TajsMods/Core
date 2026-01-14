@@ -1,7 +1,7 @@
 # ==============================================================================
 # Taj's Core - Keybinds
 # Author: TajemnikTV
-# Description: Keybinds
+# Description: Adds keybinds functionality to the Core
 # ==============================================================================
 class_name TajsCoreKeybinds
 extends Node

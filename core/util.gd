@@ -1,7 +1,7 @@
 # ==============================================================================
 # Taj's Core - Util
 # Author: TajemnikTV
-# Description: Util
+# Description: Adds utility functions to the Core
 # ==============================================================================
 class_name TajsCoreUtil
 extends RefCounted

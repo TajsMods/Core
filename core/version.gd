@@ -1,7 +1,7 @@
 # ==============================================================================
 # Taj's Core - Version
 # Author: TajemnikTV
-# Description: Version
+# Description: Adds versioning functionality to the Core
 # ==============================================================================
 class_name TajsCoreVersion
 extends RefCounted
