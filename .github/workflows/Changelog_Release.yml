@@ -1,0 +1,271 @@
+name: Release + Workshop (+Changelog)
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "export/TajemnikTV-Core.zip"
+  workflow_dispatch: {}
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      title: ${{ steps.meta.outputs.title }}
+      version: ${{ steps.meta.outputs.version }}
+      notes: ${{ steps.notes.outputs.notes }}
+      steam_note: ${{ steps.notes.outputs.steam_note }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Read manifest.json (version + tag)
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP="export/TajemnikTV-Core.zip"
+          test -f "$ZIP" || (echo "Missing $ZIP" && exit 1)
+
+          MANIFEST="$(git ls-files | grep -E '(^|/)manifest\.json$' | head -n 1 || true)"
+          test -n "$MANIFEST" || (echo "No manifest.json found in repo" && exit 1)
+
+          NAMESPACE="$(jq -r '.namespace // empty' "$MANIFEST")"
+          NAME="$(jq -r '.name // empty' "$MANIFEST")"
+          VER="$(jq -r '.version_number // empty' "$MANIFEST")"
+
+          test -n "$NAME" || (echo "manifest.json: missing .name" && exit 1)
+          test -n "$VER"  || (echo "manifest.json: missing .version_number" && exit 1)
+
+          if [ -n "$NAMESPACE" ]; then MOD_ID="${NAMESPACE}-${NAME}"; else MOD_ID="${NAME}"; fi
+          SAFE_ID="$(echo "$MOD_ID" | tr ' ' '-' | tr -cd '[:alnum:]._-' )"
+
+          TAG="${SAFE_ID}-v${VER}"
+
+          echo "tag=$TAG"      >> "$GITHUB_OUTPUT"
+          echo "title=v${VER}" >> "$GITHUB_OUTPUT"    # Only version in title 
+          echo "version=$VER"  >> "$GITHUB_OUTPUT"
+
+      - name: Generate CHANGELOG entry if missing (Gemini) + prepare notes
+        id: notes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : "${GEMINI_API_KEY:?Missing GEMINI_API_KEY secret}"
+          MODEL="${GEMINI_MODEL}"
+
+          VER="${{ steps.meta.outputs.version }}"
+          TODAY="$(date +%F)"
+
+          test -f CHANGELOG.md || (echo "Missing CHANGELOG.md" && exit 1)
+
+          # Extract existing section (if present)
+          EXISTING="$(awk -v ver="$VER" '
+            BEGIN {found=0}
+            $0 ~ "^##[[:space:]]*\\[" ver "\\][[:space:]]*-" {found=1; next}
+            found && $0 ~ "^##[[:space:]]*\\[[0-9]" {exit}
+            found {print}
+          ' CHANGELOG.md || true)"
+
+          # Consider empty template as missing (no real bullets)
+          NONEMPTY="$(printf "%s\n" "$EXISTING" \
+            | sed '/^[[:space:]]*$/d' \
+            | grep -E '^- ' -m 1 || true)"
+
+          NEEDS_GEN="false"
+          if ! grep -qE "^##[[:space:]]*\\[$VER\\][[:space:]]*-" CHANGELOG.md; then
+            NEEDS_GEN="true"
+          elif [ -z "$NONEMPTY" ]; then
+            NEEDS_GEN="true"
+          fi
+
+          NOTES=""
+          if [ "$NEEDS_GEN" = "true" ]; then
+            echo "CHANGELOG for [$VER] missing/blank -> generating via Gemini..."
+
+            # Range = commits since the last tag (more reliable than file detection)
+            # This fixes issues where a "whole ass changelog" is generated for the full history
+            LAST_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+
+            if [ -n "$LAST_TAG" ]; then
+              echo "Found previous tag: $LAST_TAG"
+              RANGE="${LAST_TAG}..HEAD"
+            else
+              echo "No previous tag found. Using full history."
+              RANGE="HEAD"
+            fi
+
+            COMMITS="$(git log --no-merges --pretty=format:'%s' $RANGE | head -n 120 || true)"
+            [ -n "$COMMITS" ] || COMMITS="(No commits found.)"
+
+            SYS_INSTR=$(cat <<'SYSEOF'
+          You are writing release notes for a game mod.
+
+          Return Markdown in EXACT structure:
+
+          ### Added
+          - ...
+
+          ### Changed
+          - ...
+
+          ### Removed
+          - ...
+
+          ### Fixed
+          - ...
+
+          ---
+
+          Rules:
+          - Only output that Markdown. No intro or outro text.
+          - Only use information present in the commit list; DO NOT invent features.
+          - If you cannot infer anything for a section, put "- N/A".
+          - Do NOT add extra headings like "Changelog" or template text.
+          - Ignore CI/build/refactor noise unless it affects players.
+          SYSEOF
+          )
+
+            USER_TEXT="$(printf "Version: %s\nDate: %s\n\nCommits (newest first):\n%s\n" \
+              "$VER" "$TODAY" "$(printf "%s\n" "$COMMITS" | sed 's/^/- /')")"
+
+            PAYLOAD="$(jq -n \
+              --arg sys "$SYS_INSTR" \
+              --arg user "$USER_TEXT" \
+              '{
+                "system_instruction": { "parts": [ { "text": $sys } ] },
+                "contents": [ { "role": "user", "parts": [ { "text": $user } ] } ],
+                "generationConfig": { "temperature": 0.2 }
+              }')"
+
+            RESP="$(curl -sS \
+              -H "x-goog-api-key: ${GEMINI_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -X POST \
+              -d "$PAYLOAD" \
+              "https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent")"
+
+            NOTES="$(printf "%s" "$RESP" | jq -r '.candidates[0].content.parts[0].text // empty')"
+            if [ -z "$(printf "%s" "$NOTES" | tr -d '[:space:]')" ]; then
+              echo "Gemini returned empty response (or blocked). Full response:"
+              echo "$RESP"
+              exit 1
+            fi
+
+            # Minor sanitizer: if model wrote "Added" instead of "### Added"
+            NOTES="$(printf "%s\n" "$NOTES" | sed -E \
+              's/^Added$/### Added/; s/^Changed$/### Changed/; s/^Removed$/### Removed/; s/^Fixed$/### Fixed/')"
+
+            # Prepend new entry to CHANGELOG.md
+            {
+              echo "## [$VER] - $TODAY"
+              echo
+              printf "%s\n" "$NOTES"
+              echo
+              cat CHANGELOG.md
+            } > CHANGELOG.md.new
+            mv CHANGELOG.md.new CHANGELOG.md
+
+          else
+            echo "CHANGELOG for [$VER] already has content -> using existing."
+            NOTES="$EXISTING"
+          fi
+
+          # Steam changeNote length safety
+          STEAM_NOTE="$(printf "%s" "$NOTES" | head -c 7000)"
+
+          {
+            echo "notes<<EOF"
+            printf "%s\n" "$NOTES"
+            echo "EOF"
+            echo "steam_note<<EOF"
+            printf "%s\n" "$STEAM_NOTE"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit CHANGELOG.md (if changed)
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "docs: update CHANGELOG for v${{ steps.meta.outputs.version }}"
+          file_pattern: CHANGELOG.md
+
+  github_release:
+    runs-on: ubuntu-latest
+    needs: [prep]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create/Update GitHub Release + upload asset (versioned name)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTES: ${{ needs.prep.outputs.notes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP="export/TajemnikTV-Core.zip"
+          test -f "$ZIP" || (echo "Missing $ZIP" && exit 1)
+
+          TAG="${{ needs.prep.outputs.tag }}"
+          TITLE="${{ needs.prep.outputs.title }}"
+          VER="${{ needs.prep.outputs.version }}"
+
+          # Versioned file name in release assets (label only)
+          ASSET_NAME="TajemnikTV-Core-v${VER}.zip"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${ZIP}#${ASSET_NAME}" --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES"
+          else
+            gh release create "$TAG" "${ZIP}#${ASSET_NAME}" \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --target "$GITHUB_SHA" \
+              --latest
+          fi
+
+  steam_workshop:
+    runs-on: ubuntu-latest
+    needs: [prep, github_release]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage Workshop payload (zip only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf workshop_upload
+          mkdir -p workshop_upload
+
+          # I hope steam accepts different file names
+          VER="${{ needs.prep.outputs.version }}"
+          cp "export/TajemnikTV-Core.zip" "workshop_upload/TajemnikTV-Core-v${VER}.zip"
+
+      - name: Upload to Steam Workshop (steamcmd)
+        uses: m00nl1ght-dev/steam-workshop-deploy@v4
+        with:
+          username: ${{ secrets.STEAM_USERNAME }}
+          configVdf: ${{ secrets.STEAM_CONFIG_VDF }}
+          path: workshop_upload
+          appId: "3606890"
+          publishedFileId: "3642717456"
+          changeNote: ${{ needs.prep.outputs.steam_note }}
