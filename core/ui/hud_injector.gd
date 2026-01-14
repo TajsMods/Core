@@ -85,14 +85,18 @@ func _make_zone(parent: Control, name: String, anchor: Vector2, pivot: Vector2) 
 	zone.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	if anchor.x >= 1.0:
 		zone.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		zone.position.x = -25
 	elif anchor.x <= 0.0:
 		zone.grow_horizontal = Control.GROW_DIRECTION_END
+		zone.position.x = 8
 	else:
 		zone.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	if anchor.y >= 1.0:
 		zone.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		zone.position.y = -8
 	elif anchor.y <= 0.0:
 		zone.grow_vertical = Control.GROW_DIRECTION_END
+		zone.position.y = 8
 	else:
 		zone.grow_vertical = Control.GROW_DIRECTION_BOTH
 	if zone is BoxContainer:
