@@ -31,6 +31,8 @@ func inject_widget(zone: int, widget: Control, priority: int = 0) -> void:
 	widget.set_meta("priority", priority)
 	container.add_child(widget)
 	_sort_by_priority(container)
+	if container is Control:
+		container.custom_minimum_size = container.get_combined_minimum_size()
 
 func remove_widget(widget: Control) -> void:
 	if widget == null:
@@ -38,6 +40,8 @@ func remove_widget(widget: Control) -> void:
 	var parent := widget.get_parent()
 	if parent != null:
 		parent.remove_child(widget)
+		if parent is Control:
+			parent.custom_minimum_size = parent.get_combined_minimum_size()
 
 func get_zone_container(zone: int) -> Control:
 	if _zones.has(zone):
@@ -79,6 +83,25 @@ func _make_zone(parent: Control, name: String, anchor: Vector2, pivot: Vector2) 
 	zone.position = Vector2(0, 0)
 	zone.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	zone.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	if anchor.x >= 1.0:
+		zone.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	elif anchor.x <= 0.0:
+		zone.grow_horizontal = Control.GROW_DIRECTION_END
+	else:
+		zone.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	if anchor.y >= 1.0:
+		zone.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	elif anchor.y <= 0.0:
+		zone.grow_vertical = Control.GROW_DIRECTION_END
+	else:
+		zone.grow_vertical = Control.GROW_DIRECTION_BOTH
+	if zone is BoxContainer:
+		if anchor.x >= 1.0:
+			zone.alignment = BoxContainer.ALIGNMENT_END
+		elif anchor.x <= 0.0:
+			zone.alignment = BoxContainer.ALIGNMENT_BEGIN
+		else:
+			zone.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(zone)
 	return zone
 

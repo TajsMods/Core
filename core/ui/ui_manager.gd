@@ -15,6 +15,7 @@ var _settings_menu
 var _hud_injector
 var _popup_manager
 var _mod_tabs: Dictionary = {} # mod_id -> VBoxContainer
+var _pending_mod_tabs: Dictionary = {} # mod_id -> {name, icon}
 
 func setup(core, workshop_sync) -> void:
 	_core = core
@@ -100,11 +101,19 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
 	
 	Returns: VBoxContainer to add settings widgets, or null if UI not ready.
 	"""
-	if _ui == null:
-		return null
 	if _mod_tabs.has(mod_id):
 		return _mod_tabs[mod_id]
-	var container = _ui.add_mod_tab(display_name, icon_path)
+	if _ui == null:
+		_pending_mod_tabs[mod_id] = {"name": display_name, "icon": icon_path}
+		return null
+	var effective_name := display_name
+	var effective_icon := icon_path
+	if _pending_mod_tabs.has(mod_id):
+		var entry: Dictionary = _pending_mod_tabs[mod_id]
+		effective_name = entry.get("name", display_name)
+		effective_icon = entry.get("icon", icon_path)
+		_pending_mod_tabs.erase(mod_id)
+	var container = _ui.add_mod_tab(effective_name, effective_icon)
 	if container != null:
 		_mod_tabs[mod_id] = container
 	return container
@@ -115,7 +124,7 @@ func get_mod_settings_tab(mod_id: String) -> VBoxContainer:
 
 func has_mod_settings_tab(mod_id: String) -> bool:
 	"""Returns true if the mod has already registered a settings tab."""
-	return _mod_tabs.has(mod_id)
+	return _mod_tabs.has(mod_id) or _pending_mod_tabs.has(mod_id)
 
 func add_toggle(container: Control, label: String, value: bool, callback: Callable, tooltip: String = "") -> CheckButton:
 	if _ui == null:

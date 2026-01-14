@@ -73,7 +73,7 @@ func _build_core_tab() -> void:
 	)
 
 func _build_keybinds_tab() -> void:
-	var keybinds_vbox = _ui.add_tab("Keybinds", "res://textures/icons/Keyboard.png")
+	var keybinds_vbox = _ui.add_tab("Keybinds", "res://mods-unpacked/TajemnikTV-Core/textures/icons/Keyboard.png")
 
 	if _core == null or _core.keybinds == null:
 		var label = Label.new()
@@ -212,6 +212,10 @@ func _build_mod_settings_tabs() -> void:
 		var manifest = mod_data.manifest
 		var display_name = _get_mod_display_name(manifest)
 		var icon_path = _get_mod_icon_path(manifest, mod_id)
+
+		if _core != null and _core.ui_manager != null and _core.ui_manager.has_mod_settings_tab(mod_id):
+			_core.ui_manager.register_mod_settings_tab(mod_id, display_name, icon_path)
+			continue
 
 		var mod_vbox = _ui.add_mod_tab(display_name, icon_path)
 		if mod_vbox == null:

@@ -205,9 +205,14 @@ func add_mod_button(callback: Callable) -> void:
 	extras_container.add_child(settings_button)
 	extras_container.move_child(settings_button, 0)
 
-func add_tab(name: String, icon_path: String) -> VBoxContainer:
+func add_tab(p_name: String, icon_path: String) -> VBoxContainer:
+	# Guard against empty names - skip tab creation entirely
+	if p_name.strip_edges().is_empty():
+		_log_warn("Skipping tab with empty name (icon: %s)" % icon_path)
+		return null
+	
 	var scroll := ScrollContainer.new()
-	scroll.name = name
+	scroll.name = p_name
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 
 	var margin := MarginContainer.new()
@@ -224,7 +229,7 @@ func add_tab(name: String, icon_path: String) -> VBoxContainer:
 	tab_container.add_child(scroll)
 
 	var btn := Button.new()
-	btn.name = name + "Tab"
+	btn.name = p_name + "Tab"
 	btn.text = ""
 	btn.custom_minimum_size = Vector2(SIDEBAR_WIDTH_COLLAPSED, 50)
 	btn.focus_mode = Control.FOCUS_NONE
