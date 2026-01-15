@@ -30,7 +30,7 @@ func register_dir(dir_path: String) -> bool:
 	return true
 
 func register_mod_dir(mod_id: String, relative_dir: String = "scenes/windows") -> bool:
-	var base := TajsCoreUtil.get_mod_path(mod_id)
+	var base := _get_mod_path(mod_id)
 	if base == "":
 		return false
 	return register_dir(base.path_join(relative_dir))
@@ -65,7 +65,7 @@ func resolve_scene_path(scene: String) -> String:
 func make_save_filename(scene_path: String) -> String:
 	if scene_path == "":
 		return ""
-	if TajsCoreUtil.has_global_class("TajsCoreNodeDefs"):
+	if _has_global_class("TajsCoreNodeDefs"):
 		return TajsCoreNodeDefs.make_save_filename(scene_path)
 	var normalized := scene_path
 	if normalized.begins_with("res://") and not normalized.ends_with(SCENE_EXT):
@@ -116,3 +116,18 @@ func _normalize_filename(filename: String) -> String:
 func _log_warn(module_id: String, message: String) -> void:
 	if _logger != null and _logger.has_method("warn"):
 		_logger.warn(module_id, message)
+
+
+func _get_mod_path(mod_id: String) -> String:
+	if mod_id == "":
+		return ""
+	if _has_global_class("ModLoaderMod"):
+		return ModLoaderMod.get_unpacked_dir().path_join(mod_id)
+	return "res://mods-unpacked".path_join(mod_id)
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false

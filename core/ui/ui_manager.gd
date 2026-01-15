@@ -318,7 +318,14 @@ func _input(event: InputEvent) -> void:
 			_ui.set_visible(false)
 
 func _log_warn(message: String) -> void:
-	if TajsCoreUtil.has_global_class("ModLoaderLog"):
+	if _has_global_class("ModLoaderLog"):
 		ModLoaderLog.warning(message, LOG_NAME)
 	else:
 		print(LOG_NAME + ": " + message)
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false

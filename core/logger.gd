@@ -60,7 +60,7 @@ func _log(level: String, module_id: String, message: String) -> void:
 		_log_to_file(level, tag, message)
 
 func _log_to_console(level: String, tag: String, message: String) -> void:
-	if TajsCoreUtil.has_global_class("ModLoaderLog"):
+	if _has_global_class("ModLoaderLog"):
 		match level:
 			"debug":
 				ModLoaderLog.debug(message, tag)
@@ -90,3 +90,10 @@ func _log_to_file(level: String, tag: String, message: String) -> void:
 	var line := "[%s] %s [%s] %s\n" % [timestamp, tag, level, message]
 	file.store_string(line)
 	file.close()
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false

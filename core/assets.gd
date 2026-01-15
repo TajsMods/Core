@@ -62,11 +62,26 @@ func resolve_icon_path(icon_id: String, mod_id: String = "") -> String:
 		return icon_id
 	if icon_id.ends_with(".png"):
 		if mod_id != "":
-			return TajsCoreUtil.get_mod_path(mod_id).path_join(icon_id)
+			return _get_mod_path(mod_id).path_join(icon_id)
 		return "res://textures/icons".path_join(icon_id)
 	if mod_id != "":
-		return TajsCoreUtil.get_mod_path(mod_id).path_join("textures/icons").path_join(icon_id + ".png")
+		return _get_mod_path(mod_id).path_join("textures/icons").path_join(icon_id + ".png")
 	return "res://textures/icons".path_join(icon_id + ".png")
 
 func clear_cache() -> void:
 	_cache.clear()
+
+
+func _get_mod_path(mod_id: String) -> String:
+	if mod_id == "":
+		return ""
+	if _has_global_class("ModLoaderMod"):
+		return ModLoaderMod.get_unpacked_dir().path_join(mod_id)
+	return "res://mods-unpacked".path_join(mod_id)
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false

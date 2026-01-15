@@ -13,6 +13,13 @@ func save() -> Dictionary:
 func _get_save_filename() -> String:
 	if scene_file_path == "":
 		return ""
-	if TajsCoreUtil.has_global_class("TajsCoreNodeDefs"):
+	if _has_global_class("TajsCoreNodeDefs"):
 		return TajsCoreNodeDefs.make_save_filename(scene_file_path)
 	return scene_file_path.get_file()
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false

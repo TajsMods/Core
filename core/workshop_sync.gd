@@ -358,9 +358,16 @@ func _get_root_node(node_name: String) -> Node:
 func _log(message: String) -> void:
 	if _logger != null and _logger.has_method("info"):
 		_logger.info("workshop", message)
-	elif TajsCoreUtil.has_global_class("ModLoaderLog"):
+	elif _has_global_class("ModLoaderLog"):
 		ModLoaderLog.info(message, LOG_NAME)
 	else:
 		print(LOG_NAME + ": " + message)
 	if _debug_log_callback.is_valid():
 		_debug_log_callback.call(message)
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false

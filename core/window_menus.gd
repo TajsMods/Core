@@ -183,7 +183,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 	var sub_map: Dictionary = {}
 	var rows: Array = tab["rows"]
 	if rows.is_empty():
-		rows = [{"default": tab["tab_id"]}]
+		rows = [ {"default": tab["tab_id"]}]
 	for row_index in range(rows.size()):
 		var row_def: Dictionary = rows[row_index]
 		var row_name := "Row%d" % row_index
@@ -243,10 +243,10 @@ func _resolve_icon_path(icon_value: String, mod_id: String) -> String:
 		return icon_value
 	if icon_value.ends_with(".png"):
 		if mod_id != "":
-			return TajsCoreUtil.get_mod_path(mod_id).path_join(icon_value)
+			return _get_mod_path(mod_id).path_join(icon_value)
 		return "res://textures/icons".path_join(icon_value)
 	if mod_id != "":
-		return TajsCoreUtil.get_mod_path(mod_id).path_join("textures/icons").path_join(icon_value + ".png")
+		return _get_mod_path(mod_id).path_join("textures/icons").path_join(icon_value + ".png")
 	return "res://textures/icons".path_join(icon_value + ".png")
 
 func _normalize_rows(config: Dictionary) -> Array:
@@ -270,3 +270,18 @@ func _make_key(mod_id: String, tab_id: String) -> String:
 	if tab_id.begins_with(mod_id + "."):
 		return tab_id
 	return "%s.%s" % [mod_id, tab_id]
+
+
+func _get_mod_path(mod_id: String) -> String:
+	if mod_id == "":
+		return ""
+	if _has_global_class("ModLoaderMod"):
+		return ModLoaderMod.get_unpacked_dir().path_join(mod_id)
+	return "res://mods-unpacked".path_join(mod_id)
+
+
+func _has_global_class(class_name_str: String) -> bool:
+	for entry in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == class_name_str:
+			return true
+	return false
