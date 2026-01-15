@@ -1,21 +1,33 @@
 {
-    "name": "Core",
-    "namespace": "TajemnikTV",
-    "version_number": "1.0.0",
-    "description": "Core framework services for Taj's mods.",
-    "website_url": "https://github.com/Taj-s-Mods-Upload-Labs/Core",
-    "dependencies": [],
-    "extra": {
-        "godot": {
-            "authors": ["TajemnikTV"],
-            "tags": ["framework", "core"],
-            "description_rich": "",
-            "optional_dependencies": [],
-            "load_before": [],
-            "incompatibilities": [],
-            "compatible_mod_loader_version": ["7.0.0"],
-            "compatible_game_version": ["2.0.21"],
-            "config_schema": {}
-        }
-    }
+	"dependencies": [],
+	"description": "Core framework services.",
+	"extra": {
+		"godot": {
+			"authors": [
+				"TajemnikTV"
+			],
+			"compatible_game_version": [
+				"2.0.21"
+			],
+			"compatible_mod_loader_version": [
+				"7.0.0"
+			],
+			"config_schema": {
+
+			},
+			"description_rich": "",
+			"image": null,
+			"incompatibilities": [],
+			"load_before": [],
+			"optional_dependencies": [],
+			"tags": [
+				"framework",
+				"core"
+			]
+		}
+	},
+	"name": "Core",
+	"namespace": "TajemnikTV",
+	"version_number": "1.0.1",
+	"website_url": "https://github.com/Taj-s-Mods-Upload-Labs/Core"
 }
