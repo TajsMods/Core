@@ -35,7 +35,7 @@ func _resolve_window_path(filename: String, resolver) -> String:
 	return "res://scenes/windows/".path_join(filename)
 
 func _get_scene_resolver():
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_scenes != null:
 		return core.window_scenes
 	return null

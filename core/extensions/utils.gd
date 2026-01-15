@@ -29,13 +29,13 @@ func get_resource_symbols(type: String, variation: int) -> String:
 	var symbols = super (type, variation)
 	if symbols == null:
 		symbols = ""
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.file_variations != null:
 		symbols += core.file_variations.get_symbols(type, variation)
 	return symbols
 
 func _get_core_variation_multiplier(variation: int, key: String) -> float:
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core == null or core.file_variations == null:
 		return 1.0
 	return core.file_variations.get_multiplier(variation, key)

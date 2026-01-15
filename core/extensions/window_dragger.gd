@@ -24,7 +24,7 @@ func _resolve_window_scene(window_id: String) -> String:
 	var scene := str(Data.windows[window_id].scene)
 	if scene == "":
 		return ""
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_scenes != null:
 		return core.window_scenes.resolve_scene_path(scene)
 	var file_name := scene

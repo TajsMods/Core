@@ -1,7 +1,7 @@
 extends "res://scripts/windows_menu.gd"
 
 func _ready() -> void:
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_menus != null:
 		core.window_menus.ensure_tabs($Categories)
 	super ()
@@ -55,7 +55,7 @@ func _on_add_pressed() -> void:
 		Signals.set_menu.emit(0, 0)
 
 func _get_tab_node(tab: int) -> Control:
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_menus != null:
 		var custom: Control = core.window_menus.get_panel_for_tab(tab, $Categories)
 		if custom != null:
@@ -70,7 +70,7 @@ func _resolve_window_scene(window_id: String) -> String:
 	var scene := str(Data.windows[window_id].scene)
 	if scene == "":
 		return ""
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_scenes != null:
 		return core.window_scenes.resolve_scene_path(scene)
 	var file_name := scene

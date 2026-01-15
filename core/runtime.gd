@@ -45,6 +45,7 @@ var safe_ops
 var calculations
 var resource_helpers
 var hot_reload
+var boot_screen
 
 var _version_util
 var _extended_globals: Dictionary = {}
@@ -208,6 +209,7 @@ func bootstrap() -> void:
 		event_bus.emit("core.ready", {"version": CORE_VERSION, "api_level": API_LEVEL}, true)
 	if logger != null:
 		logger.info("core", "Taj's Core ready (%s)." % CORE_VERSION)
+	_init_boot_screen(base_dir)
 	_init_optional_services(base_dir)
 
 func get_version() -> String:
@@ -360,6 +362,11 @@ func _register_core_schema() -> void:
 			"type": "dict",
 			"default": {},
 			"description": "Feature flag overrides"
+		},
+		"core.boot_screen_enabled": {
+			"type": "bool",
+			"default": false,
+			"description": "Enable custom boot screen"
 		}
 	}
 	settings.register_schema("core", schema)
@@ -442,6 +449,12 @@ func _init_optional_services(base_dir: String) -> void:
 func _start_workshop_sync() -> void:
 	if workshop_sync != null:
 		workshop_sync.start_sync()
+
+func _init_boot_screen(base_dir: String) -> void:
+	var boot_screen_script = _load_script(base_dir.path_join("features/boot_screen_feature.gd"))
+	if boot_screen_script != null:
+		boot_screen = boot_screen_script.new()
+		boot_screen.setup(self)
 
 func _install_modloader_extensions(base_dir: String) -> void:
 	if not TajsCoreUtil.has_global_class("ModLoaderMod"):

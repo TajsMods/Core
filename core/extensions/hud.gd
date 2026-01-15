@@ -10,14 +10,14 @@ func update_buttons() -> void:
 	super ()
 	var menu_buttons := _get_menu_buttons()
 	var windows_menu := _get_windows_menu()
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_menus != null and menu_buttons != null and windows_menu != null:
 		core.window_menus.update_button_states(menu_buttons, windows_menu)
 
 func update_unlockables() -> void:
 	super ()
 	var menu_buttons := _get_menu_buttons()
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_menus != null and menu_buttons != null:
 		core.window_menus.update_unlocks(menu_buttons)
 
@@ -50,7 +50,7 @@ func check_new_windows() -> void:
 				"utility":
 					Signals.notify.emit("tools", "new_windows_utilities")
 
-		var core := TajsCoreRuntime.instance()
+		var core = Engine.get_meta("TajsCore", null)
 		if core != null and core.window_menus != null:
 			for category_id: String in categories:
 				var notice: String = core.window_menus.get_notice_for_category(category_id)
@@ -63,7 +63,7 @@ func _build_core_window_buttons() -> void:
 	var menu_buttons := _get_menu_buttons()
 	if menu_buttons == null:
 		return
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.window_menus != null:
 		core.window_menus.build_buttons(menu_buttons)
 

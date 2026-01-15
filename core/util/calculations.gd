@@ -33,7 +33,7 @@ func calculate_max_affordable(upgrade: String, current_level: int, currency: flo
 func get_effective_cap(upgrade: String) -> int:
 	if upgrade == "" or not Data.upgrades.has(upgrade):
 		return -1
-	var core := TajsCoreRuntime.instance()
+	var core = Engine.get_meta("TajsCore", null)
 	if core != null and core.has_method("get_upgrade_cap"):
 		return core.get_upgrade_cap(upgrade)
 	var limit := int(Data.upgrades[upgrade].limit)
