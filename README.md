@@ -157,8 +157,8 @@ core.file_variations.register_variations("MyMod", {
 
 ## Helper Functions
 
-```gdscript
 core.notify("check", "Hello from Core")
-core.play_sound("click")
-core.copy_to_clipboard("text")
-```
+
+## Credits
+
+Free icons from [Streamline](https://streamlinehq.com/free-icons)
