@@ -39,7 +39,7 @@ var tree_registry
 var trees
 var hook_manager
 var upgrade_caps
-var undo_stack
+var undo_manager
 var node_finder
 var safe_ops
 var calculations
@@ -171,9 +171,10 @@ func bootstrap() -> void:
 	if safe_ops_script != null:
 		safe_ops = safe_ops_script.new()
 
-	var undo_script = _load_script(base_dir.path_join("util/undo_stack.gd"))
+	var undo_script = _load_script(base_dir.path_join("util/undo_manager.gd"))
 	if undo_script != null:
-		undo_stack = undo_script.new()
+		undo_manager = undo_script.new(logger)
+		undo_manager.setup()
 
 	var upgrade_caps_script = _load_script(base_dir.path_join("mechanics/upgrade_caps.gd"))
 	if upgrade_caps_script != null:

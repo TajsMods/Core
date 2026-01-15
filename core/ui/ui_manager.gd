@@ -102,7 +102,12 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
 	Returns: VBoxContainer to add settings widgets, or null if UI not ready.
 	"""
 	if _mod_tabs.has(mod_id):
-		return _mod_tabs[mod_id]
+		var cached_tab = _mod_tabs[mod_id]
+		if is_instance_valid(cached_tab):
+			return cached_tab
+		else:
+			# Tab was freed (e.g., on reload), remove stale reference
+			_mod_tabs.erase(mod_id)
 	if _ui == null:
 		_pending_mod_tabs[mod_id] = {"name": display_name, "icon": icon_path}
 		return null
