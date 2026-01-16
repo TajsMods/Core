@@ -6,7 +6,7 @@
 class_name TajsCoreRuntime
 extends Node
 
-const CORE_VERSION := "1.1.0"
+var CORE_VERSION: String = "0.0.0"
 const API_LEVEL := 1
 const META_KEY := "TajsCore"
 
@@ -81,6 +81,7 @@ func bootstrap() -> void:
     Engine.set_meta(META_KEY, self)
     var base_dir: String = get_script().resource_path.get_base_dir()
     _base_dir = base_dir
+    CORE_VERSION = _read_version_from_manifest(base_dir.get_base_dir().path_join("manifest.json"))
     # Init order: version -> logger -> settings -> migrations -> event_bus -> commands -> keybinds -> patches -> diagnostics -> module_registry -> core.ready
     _version_util = _load_script(base_dir.path_join("version.gd"))
     var logger_script = _load_script(base_dir.path_join("logger.gd"))
@@ -388,6 +389,27 @@ func _load_script(path: String):
     if script == null:
         _log_fallback("Failed to load script: %s" % path)
     return script
+
+func _read_version_from_manifest(path: String) -> String:
+    if not FileAccess.file_exists(path):
+        _log_fallback("Manifest not found: %s" % path)
+        return "0.0.0"
+        
+    var file = FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        _log_fallback("Failed to open manifest: %s" % path)
+        return "0.0.0"
+
+    var content = file.get_as_text()
+    var json = JSON.new()
+    var error = json.parse(content)
+    if error == OK:
+        var data = json.data
+        if data is Dictionary and data.has("version_number"):
+            return data["version_number"]
+            
+    _log_fallback("Failed to parse manifest version: %s" % path)
+    return "0.0.0"
 
 func _log_fallback(message: String) -> void:
     if logger != null:
