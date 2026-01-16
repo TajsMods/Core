@@ -6,7 +6,7 @@
 class_name TajsCoreRuntime
 extends Node
 
-const CORE_VERSION := "1.0.0"
+const CORE_VERSION := "1.1.0"
 const API_LEVEL := 1
 const META_KEY := "TajsCore"
 
@@ -43,6 +43,7 @@ var undo_manager
 var node_finder
 var safe_ops
 var calculations
+var economy_helpers
 var resource_helpers
 var hot_reload
 var boot_screen
@@ -159,6 +160,10 @@ func bootstrap() -> void:
     var calculations_script = _load_script(base_dir.path_join("util/calculations.gd"))
     if calculations_script != null:
         calculations = calculations_script.new()
+
+    var economy_helpers_script = _load_script(base_dir.path_join("util/economy_helpers.gd"))
+    if economy_helpers_script != null:
+        economy_helpers = economy_helpers_script.new()
 
     var node_finder_script = _load_script(base_dir.path_join("util/node_finder.gd"))
     if node_finder_script != null:
