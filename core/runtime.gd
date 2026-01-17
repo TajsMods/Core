@@ -45,8 +45,10 @@ var safe_ops
 var calculations
 var economy_helpers
 var resource_helpers
+var connectivity_helpers
 var hot_reload
 var boot_screen
+var desktop_layers
 
 var _version_util
 var _extended_globals: Dictionary = {}
@@ -174,6 +176,10 @@ func bootstrap() -> void:
     if resource_helpers_script != null:
         resource_helpers = resource_helpers_script.new()
 
+    var connectivity_script = _load_script(base_dir.path_join("util/connectivity_helpers.gd"))
+    if connectivity_script != null:
+        connectivity_helpers = connectivity_script.new()
+
     var safe_ops_script = _load_script(base_dir.path_join("util/safe_ops.gd"))
     if safe_ops_script != null:
         safe_ops = safe_ops_script.new()
@@ -208,6 +214,11 @@ func bootstrap() -> void:
         hook_manager.name = "CoreHooks"
         hook_manager.setup(self)
         add_child(hook_manager)
+
+    var desktop_layers_script = _load_script(base_dir.path_join("desktop_layers.gd"))
+    if desktop_layers_script != null:
+        desktop_layers = desktop_layers_script.new(logger, event_bus)
+        desktop_layers.setup()
 
     _install_modloader_extensions(base_dir)
 
