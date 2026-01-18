@@ -128,6 +128,9 @@ func bootstrap() -> void:
     var theme_script = _load_script(base_dir.path_join("theme_manager.gd"))
     if theme_script != null:
         theme_manager = theme_script.new()
+        # Apply tooltip styling to match in-game UI design
+        if theme_manager.has_method("apply_tooltip_styling"):
+            call_deferred("_apply_tooltip_styling")
 
     var window_scenes_script = _load_script(base_dir.path_join("window_scenes.gd"))
     if window_scenes_script != null:
@@ -316,6 +319,15 @@ func get_settings_tab(mod_id: String) -> VBoxContainer:
         return null
     return ui_manager.get_mod_settings_tab(mod_id)
 
+func get_game_theme() -> Theme:
+    """Returns the game's main.tres theme for consistent font and styling."""
+    if theme_manager != null:
+        return theme_manager.get_game_theme()
+    # Fallback if theme_manager not ready
+    if ResourceLoader.exists("res://themes/main.tres"):
+        return load("res://themes/main.tres")
+    return null
+
 static func instance() -> TajsCoreRuntime:
     if Engine.has_meta(META_KEY):
         return Engine.get_meta(META_KEY)
@@ -493,6 +505,10 @@ func _init_optional_services(base_dir: String) -> void:
 func _start_workshop_sync() -> void:
     if workshop_sync != null:
         workshop_sync.start_sync()
+
+func _apply_tooltip_styling() -> void:
+    if theme_manager != null and theme_manager.has_method("apply_tooltip_styling"):
+        theme_manager.apply_tooltip_styling()
 
 func _init_boot_screen(base_dir: String) -> void:
     var boot_screen_script = _load_script(base_dir.path_join("features/boot_screen_feature.gd"))

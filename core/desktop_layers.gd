@@ -7,7 +7,7 @@
 # ==============================================================================
 extends RefCounted
 
-const LOG_NAME := "TajsCore:DesktopLayers"
+const LOG_NAME := "DesktopLayers"
 
 # Layer position constants - these define where in the Desktop's child order the layer is inserted
 enum LayerPosition {
