@@ -53,12 +53,18 @@ func _build_core_tab() -> void:
     , "Write logs to user://tajs_core.log")
 
 
-    _ui.add_slider(core_vbox, "Log Ring Size", _core.settings.get_int("core.log_ring_size", 200), 50, 500, 10, "", func(v):
+    var log_slider = _ui.add_slider(core_vbox, "Log Ring Size", _core.settings.get_int("core.log_ring_size", 200), 50, 500, 10, "", func(v):
         var size = int(v)
-        _core.settings.set_value("core.log_ring_size", size)
+        _core.settings.set_value("core.log_ring_size", size, false)
         if _core.logger != null:
             _core.logger.set_ring_size(size)
     )
+    if log_slider != null:
+        log_slider.drag_ended.connect(func(changed: bool):
+            if not changed:
+                return
+            _core.settings.set_value("core.log_ring_size", int(log_slider.value), true)
+        )
 
     _ui.add_button(core_vbox, "Export Diagnostics", func():
         if _core.diagnostics != null:
@@ -217,17 +223,24 @@ func _build_mod_settings_tabs() -> void:
             _core.ui_manager.register_mod_settings_tab(mod_id, display_name, icon_path)
             continue
 
-        var mod_vbox = _ui.add_mod_tab(display_name, icon_path)
+        var core_schema := {}
+        if _core != null and _core.settings != null:
+            core_schema = _core.settings.get_schemas_for_namespace(mod_id)
+            if core_schema.is_empty() and _core.settings.has_method("get_schemas_for_module"):
+                core_schema = _core.settings.get_schemas_for_module(mod_id)
+
+        var tab_id: String = mod_id
+        if not core_schema.is_empty():
+            tab_id = _infer_schema_namespace(core_schema, mod_id)
+
+        var tab_kind := "schema" if not core_schema.is_empty() else "manual"
+        var mod_vbox = _ui.add_mod_tab_ex(display_name, icon_path, tab_id, tab_kind)
         if mod_vbox == null:
             continue
 
         # 1. Check for schemas registered via Core Settings API (Priority)
-        var core_schema = {}
-        if _core != null and _core.settings != null:
-            core_schema = _core.settings.get_schemas_for_namespace(mod_id)
-
         if not core_schema.is_empty():
-            _generate_settings_from_schema(mod_vbox, core_schema)
+            _ui.build_schema_tab(mod_vbox, _core.settings, tab_id, core_schema)
             continue
 
         # 2. Check for config_schema from manifest (Fallback)
@@ -339,6 +352,32 @@ func _get_mod_config_schema(manifest) -> Dictionary:
             if schema is Dictionary:
                 return schema
     return {}
+
+func _infer_schema_namespace(schema: Dictionary, fallback: String) -> String:
+    if schema.is_empty():
+        return fallback
+    var keys: Array = schema.keys()
+    if keys.size() == 1:
+        var single_key := str(keys[0])
+        var last_dot := single_key.rfind(".")
+        return single_key.substr(0, last_dot) if last_dot > 0 else fallback
+
+    var common_parts: Array = str(keys[0]).split(".")
+    for idx in range(1, keys.size()):
+        var parts: Array = str(keys[idx]).split(".")
+        var max_parts := min(common_parts.size(), parts.size())
+        var new_common: Array = []
+        for i in range(max_parts):
+            if common_parts[i] == parts[i]:
+                new_common.append(common_parts[i])
+            else:
+                break
+        common_parts = new_common
+        if common_parts.is_empty():
+            return fallback
+    if common_parts.is_empty():
+        return fallback
+    return ".".join(common_parts)
 
 func _populate_mod_list(container: VBoxContainer) -> void:
     if not _has_global_class("ModLoaderMod") or not _has_global_class("ModLoaderUserProfile"):
