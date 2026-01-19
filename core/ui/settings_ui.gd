@@ -1045,7 +1045,17 @@ func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, l
             option_labels.append(str(option))
     for i in range(option_labels.size()):
         dropdown.add_item(option_labels[i])
-    var selected_idx := option_values.find(value)
+    # JSON loads integers as floats, so we need to coerce when comparing against int option values
+    var lookup_value = value
+    if typeof(value) == TYPE_FLOAT and not option_values.is_empty():
+        var all_int := true
+        for ov in option_values:
+            if typeof(ov) != TYPE_INT:
+                all_int = false
+                break
+        if all_int:
+            lookup_value = int(value)
+    var selected_idx := option_values.find(lookup_value)
     if selected_idx < 0:
         selected_idx = 0
     dropdown.select(selected_idx)
