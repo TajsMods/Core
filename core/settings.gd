@@ -594,6 +594,8 @@ func _apply_value(key: String, value: Variant, save: bool, emit_change: bool) ->
     var old_value = _values.get(key)
     var new_value = _duplicate_if_collection(value)
     if _values.has(key) and old_value == new_value:
+        # Value unchanged, but still flush pending saves if requested
+        _flush_pending_if_ready(save)
         return false
     _values[key] = new_value
     _pending_save = true
