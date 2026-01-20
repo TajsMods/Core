@@ -7,8 +7,10 @@ class_name TajsCoreSettingsUI
 extends RefCounted
 
 const LOG_NAME := "TajemnikTV-Core:UI"
-const DEFAULT_PANEL_WIDTH := 980.0
-const PANEL_MARGIN := 20.0
+# Panel sizing - matches game's native Menus container
+const MENUS_OFFSET_LEFT := -1180.0 # Same as HUD/Main/MainContainer/Overlay/Menus
+const MENUS_OFFSET_RIGHT := -100.0 # 100px margin from right edge
+const PANEL_INNER_MARGIN := 20.0 # Inner margin for panel content
 const PANEL_MIN_WIDTH := 560.0
 
 signal action_triggered(key: String)
@@ -77,11 +79,15 @@ func _create_ui_structure() -> void:
     root_control = Control.new()
     root_control.name = "TajsCoreMenus"
     root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    # Match the game's Menus container anchoring (right side, full height)
     root_control.anchor_left = 1.0
     root_control.anchor_right = 1.0
     root_control.anchor_bottom = 1.0
-    root_control.offset_left = - DEFAULT_PANEL_WIDTH - PANEL_MARGIN
-    root_control.offset_right = - PANEL_MARGIN
+    # Use same offsets as the game's native Menus container
+    root_control.offset_left = MENUS_OFFSET_LEFT
+    root_control.offset_right = MENUS_OFFSET_RIGHT
+    root_control.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+    root_control.grow_vertical = Control.GROW_DIRECTION_BOTH
 
     var overlay = _hud_node.get_node_or_null("Main/MainContainer/Overlay")
     if overlay:
@@ -94,9 +100,12 @@ func _create_ui_structure() -> void:
     settings_panel.name = "TajsCoreSettingsPanel"
     settings_panel.visible = false
     settings_panel.theme_type_variation = "ShadowPanelContainer"
+    # Fill the parent control with a small inner margin (matching native panels)
     settings_panel.anchor_right = 1.0
     settings_panel.anchor_bottom = 1.0
-    settings_panel.offset_right = 0.0
+    settings_panel.offset_right = - PANEL_INNER_MARGIN
+    settings_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+    settings_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
     root_control.add_child(settings_panel)
 
     var main_vbox = VBoxContainer.new()
@@ -108,12 +117,19 @@ func _create_ui_structure() -> void:
     _create_title_panel(main_vbox)
     _create_content_panel(main_vbox)
     _create_footer_panel(main_vbox)
-    _update_panel_layout()
+    # Connect to viewport resize to match game's dynamic scaling
     var viewport = root_control.get_viewport()
     if viewport != null:
-        var resize_handler := Callable(self, "_update_panel_layout")
+        var resize_handler := Callable(self, "_on_viewport_resized")
         if not viewport.size_changed.is_connected(resize_handler):
             viewport.size_changed.connect(resize_handler)
+
+func _on_viewport_resized() -> void:
+    # The panel automatically scales with resolution because we're using the same
+    # anchor/offset setup as the native Menus container. The HUD's update_size()
+    # scales Main which contains our panel, so no additional logic is needed here.
+    # This callback is kept for potential future adjustments.
+    pass
 
 func _create_title_panel(parent: Control) -> void:
     var title_panel := Panel.new()
@@ -1805,16 +1821,11 @@ func _refresh_filter_state() -> void:
     _filter_rows(_search_field.text if _search_field else "")
 
 func _update_panel_layout() -> void:
-    if root_control == null:
-        return
-    var viewport = root_control.get_viewport()
-    if viewport == null:
-        return
-    var size := viewport.get_visible_rect().size
-    var max_width := max(PANEL_MIN_WIDTH, size.x - PANEL_MARGIN * 2.0)
-    var panel_width := min(DEFAULT_PANEL_WIDTH, max_width)
-    root_control.offset_right = - PANEL_MARGIN
-    root_control.offset_left = - panel_width - PANEL_MARGIN
+    # This function is kept for backwards compatibility.
+    # The panel now uses fixed offsets matching the game's native Menus container,
+    # so it automatically scales with resolution through the HUD's scale system.
+    # No dynamic width calculation is needed.
+    pass
 # --- Sidebar Collapse/Expand ---
 
 func _on_sidebar_mouse_entered() -> void:
