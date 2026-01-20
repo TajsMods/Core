@@ -732,11 +732,42 @@ func add_separator(parent: Control) -> HSeparator:
     parent.add_child(sep)
     return sep
 
+func add_section_separator_small(parent: Control) -> HSeparator:
+    # Small separator placed under section headers
+    var sep := HSeparator.new()
+    sep.custom_minimum_size = Vector2(0, 12)
+    # Create a StyleBoxLine for actual thickness control
+    var style := StyleBoxLine.new()
+    style.color = Color(0.627, 0.776, 0.812, 0.5) # Match the theme color with some transparency
+    style.thickness = 2
+    style.grow_begin = 0
+    style.grow_end = 0
+    sep.add_theme_stylebox_override("separator", style)
+    parent.add_child(sep)
+    return sep
+
+func add_section_separator_large(parent: Control) -> HSeparator:
+    # Larger separator placed at the end of sections
+    var sep := HSeparator.new()
+    sep.custom_minimum_size = Vector2(0, 24)
+    # Create a StyleBoxLine for actual thickness control
+    var style := StyleBoxLine.new()
+    style.color = Color(0.627, 0.776, 0.812, 0.8) # Match the theme color, more visible
+    style.thickness = 3
+    style.grow_begin = 0
+    style.grow_end = 0
+    sep.add_theme_stylebox_override("separator", style)
+    parent.add_child(sep)
+    return sep
+
 func add_section_header(parent: Control, title: String) -> Label:
     var label := Label.new()
-    label.text = title
-    label.add_theme_font_size_override("font_size", 28)
-    label.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
+    label.text = title.to_upper() # Force uppercase for section headers
+    label.add_theme_font_size_override("font_size", 36) # Larger than settings (32px)
+    label.add_theme_color_override("font_color", Color(0.627, 0.776, 0.812, 1.0)) # Theme accent color
+    label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    label.custom_minimum_size = Vector2(0, 48) # Add vertical padding
     parent.add_child(label)
     return label
 
@@ -787,9 +818,14 @@ func build_schema_tab(container: VBoxContainer, settings_ref, ns_prefix: String,
         return str(a).naturalnocasecmp_to(str(b)) < 0
     )
 
+    var category_count := categories.size()
+    var category_idx := 0
     for category in categories:
         var header = add_section_header(container, str(category))
         _track_row(header, str(category), tab_index)
+        # Add small separator under the section header
+        var small_sep = add_section_separator_small(container)
+        _track_row(small_sep, str(category), tab_index)
         var keys: Array = grouped[category]
         keys.sort_custom(func(a, b):
             return str(a).naturalnocasecmp_to(str(b)) < 0
@@ -798,6 +834,11 @@ func build_schema_tab(container: VBoxContainer, settings_ref, ns_prefix: String,
             var entry = schema.get(key, {})
             if entry is Dictionary:
                 _build_schema_entry(container, tab_index, str(key), entry)
+        # Add large separator at the end of the section (except for the last section)
+        category_idx += 1
+        if category_idx < category_count:
+            var large_sep = add_section_separator_large(container)
+            _track_row(large_sep, str(category), tab_index)
 
     _filter_rows(_search_field.text if _search_field else "")
     _rebuild_restart_required_state()
