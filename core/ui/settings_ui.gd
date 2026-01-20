@@ -827,9 +827,7 @@ func build_schema_tab(container: VBoxContainer, settings_ref, ns_prefix: String,
         var small_sep = add_section_separator_small(container)
         _track_row(small_sep, str(category), tab_index)
         var keys: Array = grouped[category]
-        keys.sort_custom(func(a, b):
-            return str(a).naturalnocasecmp_to(str(b)) < 0
-        )
+        keys = _sort_keys_by_dependency(keys, schema)
         for key in keys:
             var entry = schema.get(key, {})
             if entry is Dictionary:
@@ -842,6 +840,69 @@ func build_schema_tab(container: VBoxContainer, settings_ref, ns_prefix: String,
 
     _filter_rows(_search_field.text if _search_field else "")
     _rebuild_restart_required_state()
+
+func _sort_keys_by_dependency(keys: Array, schema: Dictionary) -> Array:
+    # Sort keys so that settings depending on other settings appear after their parent.
+    # First, do an alphabetical sort as a baseline.
+    var sorted_keys: Array = keys.duplicate()
+    sorted_keys.sort_custom(func(a, b):
+        return str(a).naturalnocasecmp_to(str(b)) < 0
+    )
+    
+    # Build a dependency graph: for each key, find what it depends on
+    var depends_on_map: Dictionary = {} # key -> parent key it depends on (if any)
+    var dependents_map: Dictionary = {} # parent key -> array of keys that depend on it
+    
+    for key in sorted_keys:
+        var entry = schema.get(str(key), {})
+        if entry is Dictionary:
+            var dep = entry.get("depends_on", {})
+            if dep is Dictionary and dep.has("key"):
+                var parent_key := str(dep.get("key", ""))
+                if parent_key != "":
+                    depends_on_map[str(key)] = parent_key
+                    if not dependents_map.has(parent_key):
+                        dependents_map[parent_key] = []
+                    dependents_map[parent_key].append(str(key))
+    
+    # Now reorder: place each key, then immediately place its dependents (recursively)
+    var result: Array = []
+    var visited: Dictionary = {}
+    
+    for key in sorted_keys:
+        _add_key_with_dependents(str(key), result, visited, depends_on_map, dependents_map, sorted_keys, schema)
+    
+    return result
+
+func _add_key_with_dependents(key: String, result: Array, visited: Dictionary, depends_on_map: Dictionary, dependents_map: Dictionary, all_keys: Array, schema: Dictionary) -> void:
+    if visited.has(key):
+        return
+    # If this key depends on something, ensure the parent is added first
+    if depends_on_map.has(key):
+        var parent_key: String = depends_on_map[key]
+        if not visited.has(parent_key) and all_keys.has(parent_key):
+            _add_key_with_dependents(parent_key, result, visited, depends_on_map, dependents_map, all_keys, schema)
+    
+    # Re-check after parent processing - the parent may have already added us as a dependent
+    if visited.has(key):
+        return
+    
+    # Don't add if not in our category's key list
+    if not all_keys.has(key):
+        return
+    
+    visited[key] = true
+    result.append(key)
+    
+    # Add all dependents of this key immediately after it
+    if dependents_map.has(key):
+        var dependents: Array = dependents_map[key].duplicate()
+        # Sort dependents alphabetically
+        dependents.sort_custom(func(a, b):
+            return str(a).naturalnocasecmp_to(str(b)) < 0
+        )
+        for dep_key in dependents:
+            _add_key_with_dependents(str(dep_key), result, visited, depends_on_map, dependents_map, all_keys, schema)
 
 func _build_schema_entry(container: VBoxContainer, tab_index: int, key: String, entry: Dictionary) -> void:
     if _settings_ref == null:
