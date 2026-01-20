@@ -48,7 +48,6 @@ var calculations
 var economy_helpers
 var resource_helpers
 var connectivity_helpers
-var hot_reload
 var boot_screen
 var desktop_layers
 
@@ -507,12 +506,6 @@ func _init_optional_services(base_dir: String) -> void:
         ui_manager.name = "CoreUiManager"
         ui_manager.setup(self, workshop_sync)
         add_child(ui_manager)
-
-    var hot_reload_script = _load_script(base_dir.path_join("dev/hot_reload.gd"))
-    if hot_reload_script != null:
-        hot_reload = hot_reload_script.new()
-        hot_reload.name = "HotReload"
-        add_child(hot_reload)
 
 func _start_workshop_sync() -> void:
     if workshop_sync != null:
