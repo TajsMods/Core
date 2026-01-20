@@ -17,6 +17,8 @@ var event_bus
 var command_registry
 var commands
 var command_palette
+var command_palette_controller
+var command_palette_overlay
 var keybinds
 var patches
 var diagnostics
@@ -111,6 +113,7 @@ func bootstrap() -> void:
     if event_bus_script != null:
         event_bus = event_bus_script.new(logger)
         _bridge_settings_events()
+        _bind_command_palette_events()
 
     var command_registry_script = _load_script(base_dir.path_join("commands/command_registry.gd"))
     if command_registry_script != null:
@@ -461,10 +464,19 @@ func _bridge_settings_events() -> void:
         return
     settings.value_changed.connect(Callable(self, "_on_settings_changed"))
 
+func _bind_command_palette_events() -> void:
+    if event_bus == null:
+        return
+    event_bus.on("command_palette.ready", Callable(self, "_on_command_palette_ready"), self, true)
+
 func _on_settings_changed(key: String, value: Variant, old_value: Variant) -> void:
     if event_bus == null:
         return
     event_bus.emit("settings.changed", {"key": key, "old": old_value, "new": value})
+
+func _on_command_palette_ready(payload: Dictionary) -> void:
+    command_palette_controller = payload.get("controller", null)
+    command_palette_overlay = payload.get("overlay", null)
 
 func _register_core_migrations() -> void:
     if migrations == null or settings == null:
