@@ -14,6 +14,7 @@ const CONFIG_PATH := "user://tajs_core_settings.json"
 var _values: Dictionary = {}
 var _meta: Dictionary = {}
 var _schemas: Dictionary = {}
+var _restart_baseline: Dictionary = {}
 var _batch_depth: int = 0
 var _pending_save := false
 var _logger
@@ -116,10 +117,28 @@ func register_schema(module_id: String, schema: Dictionary, namespace_prefix: St
                 if sanitized.ok or sanitized.used_default:
                     if _apply_value(str(key), sanitized.value, false, false):
                         changed = true
+            _register_restart_baseline(str(key), stored)
         else:
             _log_warn(module_id, "Settings schema entry for '%s' must be a dictionary." % key)
     if changed:
         _flush_pending_if_ready(true)
+
+func is_restart_pending(key: String) -> bool:
+    if not _restart_baseline.has(key):
+        return false
+    var schema_entry := _get_schema_entry(key)
+    var default_value = _get_schema_default_from_entry(schema_entry) if schema_entry.has("default") else null
+    var current_value = _values.get(key, default_value)
+    return current_value != _restart_baseline[key]
+
+func _register_restart_baseline(key: String, schema_entry: Dictionary) -> void:
+    if not schema_entry.get("requires_restart", false):
+        return
+    if _restart_baseline.has(key):
+        return
+    var default_value = _get_schema_default_from_entry(schema_entry) if schema_entry.has("default") else null
+    var value = _values.get(key, default_value)
+    _restart_baseline[key] = _duplicate_if_collection(value)
 
 
 func register_section(section_id: String, defaults: Dictionary) -> void:

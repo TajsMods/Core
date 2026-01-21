@@ -1534,15 +1534,22 @@ func _update_changed_badge_for_key(key: String, badge: Control) -> void:
         changed = not _settings_ref.is_default(key)
     badge.visible = changed
 
+func _is_restart_pending_for_key(key: String) -> bool:
+    if _settings_ref == null:
+        return false
+    if _settings_ref.has_method("is_restart_pending"):
+        return _settings_ref.is_restart_pending(key)
+    if _settings_ref.has_method("is_default"):
+        return not _settings_ref.is_default(key)
+    return false
+
 func _register_restart_requirement(key: String, schema_entry: Dictionary) -> void:
     if not schema_entry.get("requires_restart", false):
         return
-    if _settings_ref == null or not _settings_ref.has_method("is_default"):
-        return
-    if _settings_ref.is_default(key):
-        _restart_required_changed.erase(key)
-    else:
+    if _is_restart_pending_for_key(key):
         _restart_required_changed[key] = true
+    else:
+        _restart_required_changed.erase(key)
     _restart_from_settings = _restart_required_changed.size() > 0
 
 func _is_event_suppressed(key: String) -> bool:
@@ -1875,7 +1882,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
 
 func _rebuild_restart_required_state() -> void:
     _restart_required_changed.clear()
-    if _settings_ref == null or not _settings_ref.has_method("is_default"):
+    if _settings_ref == null:
         _restart_from_settings = false
         _update_restart_banner_state()
         return
@@ -1883,23 +1890,23 @@ func _rebuild_restart_required_state() -> void:
         var entry: Dictionary = _controls_by_key[key]
         var schema_entry: Dictionary = entry.get("schema", {})
         if schema_entry.get("requires_restart", false):
-            if not _settings_ref.is_default(str(key)):
+            if _is_restart_pending_for_key(str(key)):
                 _restart_required_changed[str(key)] = true
     _restart_from_settings = _restart_required_changed.size() > 0
     _update_restart_banner_state()
 
 func _update_restart_requirement_for_key(key: String) -> void:
-    if _settings_ref == null or not _settings_ref.has_method("is_default"):
+    if _settings_ref == null:
         return
     if not _controls_by_key.has(key):
         return
     var schema_entry: Dictionary = _controls_by_key[key].get("schema", {})
     if not schema_entry.get("requires_restart", false):
         return
-    if _settings_ref.is_default(key):
-        _restart_required_changed.erase(key)
-    else:
+    if _is_restart_pending_for_key(key):
         _restart_required_changed[key] = true
+    else:
+        _restart_required_changed.erase(key)
     _restart_from_settings = _restart_required_changed.size() > 0
     _update_restart_banner_state()
 
