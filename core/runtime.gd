@@ -16,6 +16,8 @@ var migrations
 var event_bus
 var command_registry
 var commands
+var context_menu
+var context_menus
 var command_palette
 var command_palette_controller
 var command_palette_overlay
@@ -119,6 +121,11 @@ func bootstrap() -> void:
     if command_registry_script != null:
         command_registry = command_registry_script.new(logger, event_bus)
         commands = command_registry
+
+    var context_menu_script = _load_script(base_dir.path_join("context_menu/context_menu_service.gd"))
+    if context_menu_script != null:
+        context_menu = context_menu_script.new(logger, event_bus)
+        context_menus = context_menu
 
     var assets_script = _load_script(base_dir.path_join("assets.gd"))
     if assets_script != null:
