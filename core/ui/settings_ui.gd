@@ -1013,7 +1013,7 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
     header.add_child(label)
 
     var value_label := Label.new()
-    value_label.text = _format_schema_value(value, entry_type)
+    value_label.text = _format_schema_value(value, entry_type, schema_entry)
     value_label.add_theme_font_size_override("font_size", 24)
     header.add_child(value_label)
 
@@ -1036,7 +1036,7 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
         if _settings_ref == null:
             return
         var next_value = int(v) if entry_type == "int" else v
-        value_label.text = _format_schema_value(next_value, entry_type)
+        value_label.text = _format_schema_value(next_value, entry_type, schema_entry)
         if _is_event_suppressed(key):
             return
         _settings_ref.set_value(key, next_value, false)
@@ -1438,12 +1438,28 @@ func _build_schema_action(container: VBoxContainer, tab_index: int, key: String,
     )
     row.add_child(action_btn)
 
-func _format_schema_value(value: Variant, entry_type: String) -> String:
+func _format_schema_value(value: Variant, entry_type: String, schema_entry: Dictionary = {}) -> String:
+    var suffix := str(schema_entry.get("suffix", ""))
+    var precision_val = schema_entry.get("precision", schema_entry.get("decimals", -1))
+    var precision := -1
+    if typeof(precision_val) == TYPE_INT or typeof(precision_val) == TYPE_FLOAT:
+        precision = int(precision_val)
+
+    var formatted := ""
     if entry_type == "int":
-        return str(int(value))
-    if entry_type == "float":
-        return str(snapped(float(value), 0.01))
-    return str(value)
+        formatted = str(int(value))
+    elif entry_type == "float":
+        var float_value := float(value)
+        if precision >= 0:
+            formatted = String.num(float_value, precision)
+        else:
+            formatted = str(snapped(float_value, 0.01))
+    else:
+        formatted = str(value)
+
+    if suffix != "":
+        formatted += suffix
+    return formatted
 
 func _infer_schema_type(default_value: Variant) -> String:
     match typeof(default_value):
@@ -1830,6 +1846,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
     var badge = entry.get("badge", null)
     var value_label = entry.get("value_label", null)
     var entry_type := str(entry.get("entry_type", ""))
+    var schema_entry: Dictionary = entry.get("schema", {})
 
     _with_suppressed_event(key, func():
         match kind:
@@ -1844,7 +1861,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
                         control.value = float(value)
                     if value_label != null:
                         var display_value = int(value) if entry_type == "int" else value
-                        value_label.text = _format_schema_value(display_value, entry_type)
+                        value_label.text = _format_schema_value(display_value, entry_type, schema_entry)
             "numeric":
                 if control and control is LineEdit:
                     control.text = str(value)
