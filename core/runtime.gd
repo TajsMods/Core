@@ -46,6 +46,7 @@ var node_finder
 var safe_ops
 var calculations
 var economy_helpers
+var node_limit_helpers
 var resource_helpers
 var connectivity_helpers
 var boot_screen
@@ -172,6 +173,10 @@ func bootstrap() -> void:
     var economy_helpers_script = _load_script(base_dir.path_join("util/economy_helpers.gd"))
     if economy_helpers_script != null:
         economy_helpers = economy_helpers_script.new()
+
+    var node_limit_helpers_script = _load_script(base_dir.path_join("util/node_limit_helpers.gd"))
+    if node_limit_helpers_script != null:
+        node_limit_helpers = node_limit_helpers_script.new()
 
     var node_finder_script = _load_script(base_dir.path_join("util/node_finder.gd"))
     if node_finder_script != null:

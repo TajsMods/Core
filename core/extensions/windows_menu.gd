@@ -46,13 +46,29 @@ func add_window(w: String) -> void:
     Signals.create_window.emit(window)
 
 func _on_add_pressed() -> void:
-    if Globals.max_window_count >= Utils.MAX_WINDOW:
+    if _is_node_limit_reached(1):
         Signals.notify.emit("exclamation", "build_limit_reached")
         Sound.play("error")
         return
     elif Utils.can_add_window(cur_window):
         add_window(cur_window)
         Signals.set_menu.emit(0, 0)
+
+func _on_window_selected(w: String) -> void:
+    if Globals.platform == 2 or Globals.platform == 3:
+        if w == cur_window:
+            set_window("")
+        else:
+            set_window(w)
+    elif not w.is_empty():
+        if _is_node_limit_reached(1):
+            Signals.notify.emit("exclamation", "build_limit_reached")
+            Sound.play("error")
+            return
+        elif Utils.can_add_window(w):
+            add_window(w)
+            if not Input.is_key_pressed(KEY_SHIFT):
+                Signals.set_menu.emit(0, 0)
 
 func _get_tab_node(tab: int) -> Control:
     var core = Engine.get_meta("TajsCore", null)
@@ -77,3 +93,15 @@ func _resolve_window_scene(window_id: String) -> String:
     if not file_name.ends_with(".tscn"):
         file_name += ".tscn"
     return "res://scenes/windows".path_join(file_name)
+
+func _is_node_limit_reached(additional: int) -> bool:
+    var helper = _get_node_limit_helpers()
+    if helper != null and helper.has_method("can_add_nodes"):
+        return not helper.can_add_nodes(additional)
+    return Globals.max_window_count + max(additional, 0) > Utils.MAX_WINDOW
+
+func _get_node_limit_helpers() -> Object:
+    var core = Engine.get_meta("TajsCore", null)
+    if core != null and core.has_method("get"):
+        return core.get("node_limit_helpers")
+    return null

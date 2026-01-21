@@ -34,8 +34,28 @@ func get_resource_symbols(type: String, variation: int) -> String:
 		symbols += core.file_variations.get_symbols(type, variation)
 	return symbols
 
+func can_add_window(window: String) -> bool:
+	if not super (window):
+		return false
+	var limit := _get_node_limit()
+	if limit >= 0 and Globals.max_window_count >= limit:
+		return false
+	return true
+
 func _get_core_variation_multiplier(variation: int, key: String) -> float:
 	var core = Engine.get_meta("TajsCore", null)
 	if core == null or core.file_variations == null:
 		return 1.0
 	return core.file_variations.get_multiplier(variation, key)
+
+func _get_node_limit() -> int:
+	var helper = _get_node_limit_helpers()
+	if helper != null and helper.has_method("get_node_limit"):
+		return helper.get_node_limit()
+	return Utils.MAX_WINDOW
+
+func _get_node_limit_helpers() -> Object:
+	var core = Engine.get_meta("TajsCore", null)
+	if core != null and core.has_method("get"):
+		return core.get("node_limit_helpers")
+	return null
