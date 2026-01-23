@@ -77,7 +77,7 @@ func _build_overlay() -> Control:
 
 func _build_panel(title: String, content: Control, buttons: Array[Dictionary]) -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(420, 200)
+	panel.custom_minimum_size = Vector2(400, 180) # Reduced from 420x200
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = Vector2.ZERO
 
@@ -87,7 +87,7 @@ func _build_panel(title: String, content: Control, buttons: Array[Dictionary]) -
 
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 26)
+	title_label.add_theme_font_size_override("font_size", 20) # Reduced from 26
 	vbox.add_child(title_label)
 
 	if content != null:
@@ -102,6 +102,7 @@ func _build_panel(title: String, content: Control, buttons: Array[Dictionary]) -
 		var btn := Button.new()
 		btn.text = str(entry.get("text", "OK"))
 		btn.focus_mode = Control.FOCUS_NONE
+		btn.add_theme_font_size_override("font_size", 14) # Smaller buttons
 		var cb: Callable = entry.get("callback", Callable())
 		var should_close: bool = bool(entry.get("close", true))
 		btn.pressed.connect(func():

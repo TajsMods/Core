@@ -36,6 +36,7 @@ var features
 var assets
 var localization
 var theme_manager
+var icon_registry
 var window_scenes
 var file_variations
 var window_menus
@@ -130,6 +131,9 @@ func bootstrap() -> void:
     var assets_script = _load_script(base_dir.path_join("assets.gd"))
     if assets_script != null:
         assets = assets_script.new()
+    var icon_registry_script = _load_script(base_dir.path_join("icon_registry.gd"))
+    if icon_registry_script != null:
+        icon_registry = icon_registry_script.new(assets)
 
     var localization_script = _load_script(base_dir.path_join("localization.gd"))
     if localization_script != null:
@@ -341,6 +345,9 @@ func get_game_theme() -> Theme:
     if ResourceLoader.exists("res://themes/main.tres"):
         return load("res://themes/main.tres")
     return null
+
+func get_icon_registry(): # Returns TajsCoreIconRegistry (Variant to avoid parse errors)
+    return icon_registry
 
 static func instance() -> TajsCoreRuntime:
     if Engine.has_meta(META_KEY):

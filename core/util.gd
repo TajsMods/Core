@@ -37,6 +37,11 @@ static func get_mod_path(mod_id: String) -> String:
 		return ModLoaderMod.get_unpacked_dir().path_join(mod_id)
 	return "res://mods-unpacked".path_join(mod_id)
 
+static func get_unpacked_mods_dir() -> String:
+	if has_global_class("ModLoaderMod"):
+		return ModLoaderMod.get_unpacked_dir()
+	return "res://mods-unpacked"
+
 static func get_mod_data_path(mod_id: String) -> String:
 	if mod_id == "":
 		return "user://mods"

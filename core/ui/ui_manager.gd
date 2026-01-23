@@ -214,22 +214,14 @@ func close_popup() -> void:
     _popup_manager.close_popup()
 
 func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
-    if _popup_manager == null:
-        return
-    var icon_script = load(get_script().resource_path.get_base_dir().path_join("icon_browser.gd"))
-    if icon_script == null:
-        return
-    var browser = icon_script.new()
-    var container := VBoxContainer.new()
-    browser.icon_selected.connect(func(name: String, path: String):
-        if callback != null and callback.is_valid():
-            callback.call(name, path)
-        close_popup()
+    TajsCoreIconBrowser.open({
+        "initial_selected_id": initial_selection,
+        "allow_clear": false
+    }, func(selected_id: String, entry: Dictionary):
+        if selected_id == null or callback == null or not callback.is_valid():
+            return
+        callback.call(entry.get("name", entry.get("display_name", "")), entry.get("path", ""))
     )
-    browser.build_ui(container)
-    if initial_selection != "":
-        browser.set_selected_icon(initial_selection)
-    show_popup("Select Icon", container, [ {"text": "Close", "close": true}])
 
 func create_button(text: String, callback: Callable) -> Button:
     var btn := Button.new()
