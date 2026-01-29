@@ -7,6 +7,7 @@ class_name TajsCoreUiManager
 extends Node
 
 const LOG_NAME := "TajemnikTV-Core:UIManager"
+const IconBrowserScript := preload("res://mods-unpacked/TajemnikTV-Core/core/ui/icon_browser.gd")
 
 var _core
 var _workshop_sync
@@ -214,7 +215,7 @@ func close_popup() -> void:
     _popup_manager.close_popup()
 
 func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
-    TajsCoreIconBrowser.open({
+    IconBrowserScript.open({
         "initial_selected_id": initial_selection,
         "allow_clear": false
     }, func(selected_id: String, entry: Dictionary):
