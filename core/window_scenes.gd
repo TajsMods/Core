@@ -6,6 +6,8 @@
 class_name TajsCoreWindowScenes
 extends RefCounted
 
+const NodeDefs = preload("nodes/node_defs.gd")
+
 const BASE_DIR := "res://scenes/windows"
 const SCENE_EXT := ".tscn"
 
@@ -66,7 +68,7 @@ func make_save_filename(scene_path: String) -> String:
 	if scene_path == "":
 		return ""
 	if _has_global_class("TajsCoreNodeDefs"):
-		return TajsCoreNodeDefs.make_save_filename(scene_path)
+		return NodeDefs.make_save_filename(scene_path)
 	var normalized := scene_path
 	if normalized.begins_with("res://") and not normalized.ends_with(SCENE_EXT):
 		normalized += SCENE_EXT

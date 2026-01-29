@@ -86,7 +86,7 @@ var _is_creating_buttons: bool = false
 var _button_create_batch_size: int = 50 # Buttons to create per batch
 
 func _init() -> void:
-    var core := TajsCoreRuntime.instance()
+    var core = Engine.get_meta("TajsCore")
     if core != null:
         _registry = core.get_icon_registry()
     _default_texture = _resolve_texture(_registry.get_default_icon_id() if _registry != null else "")
@@ -96,7 +96,7 @@ func _init() -> void:
     _texture_cache.clear()
 
 static func open(options: Dictionary = {}, callback: Callable = Callable()) -> bool:
-    var core := TajsCoreRuntime.instance()
+    var core = Engine.get_meta("TajsCore")
     if core == null or core.ui_manager == null:
         return false
     var opts := {}
@@ -707,7 +707,7 @@ func _on_clear_pressed() -> void:
 func _close_parent_popup() -> void:
     if not _owns_popup:
         return
-    var core := TajsCoreRuntime.instance()
+    var core = Engine.get_meta("TajsCore")
     if core == null or core.ui_manager == null:
         return
     core.ui_manager.close_popup()

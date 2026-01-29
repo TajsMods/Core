@@ -6,6 +6,8 @@
 class_name TajsCoreIconRegistry
 extends Node
 
+const Util = preload("util.gd")
+
 const DEFAULT_ICON_PATH := "res://textures/icons/puzzle.png"
 const DEFAULT_ICON_ID := "base:puzzle.png"
 const ICON_EXTENSIONS := [".png"]
@@ -13,14 +15,14 @@ const GROUP_BASE := "base"
 const GROUP_CORE := "core"
 const GROUP_MODS := "mods"
 
-var _assets: TajsCoreAssets
+var _assets
 var _icons: Array = []
 var _icons_by_id: Dictionary = {}
 var _custom_sources: Dictionary = {}
 var _source_labels: Dictionary = {}
 var _cache_ready: bool = false
 
-func _init(assets: TajsCoreAssets = null) -> void:
+func _init(assets = null) -> void:
 	_assets = assets
 	_register_builtin_sources()
 
@@ -126,8 +128,8 @@ func _build_index() -> void:
 	_cache_ready = true
 
 func _register_builtin_sources() -> void:
-	register_source(GROUP_BASE, "Base Game", Callable(self, "_list_base_icons"))
-	register_source(GROUP_CORE, "Core", Callable(self, "_list_core_icons"))
+	register_source(GROUP_BASE, "Base Game", Callable(self , "_list_base_icons"))
+	register_source(GROUP_CORE, "Core", Callable(self , "_list_core_icons"))
 
 func _index_builtin_sources() -> void:
 	for source_id in [GROUP_BASE, GROUP_CORE]:
@@ -172,7 +174,7 @@ func _load_texture(path: String) -> Texture2D:
 	if path == "":
 		return null
 	if _assets != null:
-		var tex := _assets.load_texture(path)
+		var tex: Texture2D = _assets.load_texture(path)
 		if tex != null:
 			return tex
 	if ResourceLoader.exists(path):
@@ -188,7 +190,7 @@ func _list_core_icons() -> Array:
 
 func _list_mod_icons() -> Array:
 	var results := []
-	var base_dir := TajsCoreUtil.get_unpacked_mods_dir()
+	var base_dir := Util.get_unpacked_mods_dir()
 	var dir := DirAccess.open(base_dir)
 	if dir == null:
 		return results
