@@ -1,11 +1,17 @@
 class_name TajsCoreUndoCommand
 extends RefCounted
 
+## Maximum time between commands to allow merging (ms)
+const MERGE_WINDOW_MS: int = 1000
+
 ## Description of the command (shown in UI logs)
 var description: String = "Unknown Command"
 
 ## Creation timestamp (used for merging)
-var timestamp: int = Time.get_ticks_msec()
+var timestamp: int = 0
+
+func _init() -> void:
+	timestamp = Time.get_ticks_msec()
 
 ## Execute the command (used for redo)
 ## Returns true on success

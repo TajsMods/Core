@@ -209,6 +209,7 @@ func bootstrap() -> void:
     if undo_script != null:
         undo_manager = undo_script.new(logger)
         undo_manager.setup()
+        _register_undo_keybinds()
 
     var upgrade_caps_script = _load_script(base_dir.path_join("mechanics/upgrade_caps.gd"))
     if upgrade_caps_script != null:
@@ -417,6 +418,13 @@ func _register_core_schema() -> void:
             "type": "bool",
             "default": false,
             "description": "Enable custom boot screen"
+        },
+        "core.undo_enabled": {
+            "type": "bool",
+            "default": true,
+            "label": "Enable Undo/Redo",
+            "description": "Enable undo/redo functionality (Ctrl+Z / Ctrl+Y).",
+            "category": "Editing"
         }
     }
     settings.register_schema("core", schema)
@@ -503,6 +511,68 @@ func _register_core_migrations() -> void:
         if settings.get_value("core.debug", null) == null and settings.get_value("core.debug_log", null) != null:
             settings.set_value("core.debug", settings.get_bool("core.debug_log", false))
     )
+
+func _register_undo_keybinds() -> void:
+    if keybinds == null or undo_manager == null:
+        return
+    
+    # Register "Editing" category for undo/redo keybinds
+    keybinds.register_keybind_category("core_editing", "Editing", "res://textures/icons/return.png")
+    
+    # Undo (Ctrl+Z)
+    keybinds.register_action_scoped(
+        "TajemnikTV-Core",
+        "undo",
+        "Undo",
+        [keybinds.make_key_event(KEY_Z, true)],
+        keybinds.CONTEXT_NO_TEXT,
+        Callable(self, "_on_undo"),
+        10,
+        "core_editing"
+    )
+    
+    # Redo (Ctrl+Y)
+    keybinds.register_action_scoped(
+        "TajemnikTV-Core",
+        "redo",
+        "Redo",
+        [keybinds.make_key_event(KEY_Y, true)],
+        keybinds.CONTEXT_NO_TEXT,
+        Callable(self, "_on_redo"),
+        10,
+        "core_editing"
+    )
+    
+    # Redo Alt (Ctrl+Shift+Z)
+    keybinds.register_action_scoped(
+        "TajemnikTV-Core",
+        "redo_alt",
+        "Redo (Alt)",
+        [keybinds.make_key_event(KEY_Z, true, true)],
+        keybinds.CONTEXT_NO_TEXT,
+        Callable(self, "_on_redo"),
+        10,
+        "core_editing"
+    )
+    
+    if logger != null:
+        logger.info("core", "Undo/Redo keybinds registered (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z)")
+
+func _on_undo() -> void:
+    if undo_manager == null:
+        return
+    if settings != null and not settings.get_bool("core.undo_enabled", true):
+        return
+    if undo_manager.can_undo():
+        undo_manager.undo()
+
+func _on_redo() -> void:
+    if undo_manager == null:
+        return
+    if settings != null and not settings.get_bool("core.undo_enabled", true):
+        return
+    if undo_manager.can_redo():
+        undo_manager.redo()
 
 func _init_optional_services(base_dir: String) -> void:
     if settings == null:
