@@ -63,7 +63,7 @@ func setup(config: Dictionary = {}) -> void:
     # Defer signal connection to ensure Signals autoload exists
     # The undo_manager is created early during Core bootstrap, before autoloads are ready
     _try_connect_signals_deferred()
-    
+
     _log_debug("UndoManager setup initiated (signal connection deferred)")
 
 func _try_connect_signals_deferred() -> void:
@@ -74,7 +74,7 @@ func _try_connect_signals_deferred() -> void:
         # Can't do much without main loop, try call_deferred as last resort
         _try_connect_signals_once.call_deferred()
         return
-    
+
     # SceneTree has process_frame signal
     if main_loop.has_signal("process_frame"):
         main_loop.process_frame.connect(_try_connect_signals_once, CONNECT_ONE_SHOT)
@@ -85,17 +85,17 @@ func _try_connect_signals_deferred() -> void:
 func _try_connect_signals_once() -> void:
     if _signals_connected:
         return
-    
+
     var main_loop = Engine.get_main_loop()
     if main_loop == null:
         return
-    
+
     var signals_node = main_loop.root.get_node_or_null("Signals")
     if signals_node:
         _connect_signals(signals_node)
         _signals_connected = true
         _log_debug("Connected to Signals autoload (deferred)")
-        
+
         # Also set up Windows child tracking now
         _setup_windows_tracking()
     else:
@@ -158,66 +158,66 @@ func undo() -> bool:
     if not _enabled:
         _notify("exclamation", "Undo/Redo disabled")
         return false
-    
+
     if _undo_stack.is_empty():
         _notify("exclamation", "Nothing to undo")
         return false
-    
+
     var command = _undo_stack.pop_back()
     _log_debug("Undoing command: %s, valid: %s" % [command.get_description(), command.is_valid()])
-    
+
     if not command.is_valid():
         _notify("exclamation", "Cannot undo: invalid state")
         notification_requested.emit("exclamation", "Cannot undo: invalid state")
         return false
-        
+
     _is_undoing_or_redoing = true
     var success = command.undo()
     _is_undoing_or_redoing = false
-    
+
     _log_debug("Undo result: %s" % success)
-    
+
     if success:
         _redo_stack.push_back(command)
         undo_performed.emit(command.get_description())
         history_changed.emit()
     else:
         _notify("exclamation", "Undo failed")
-    
+
     return success
 
 func redo() -> bool:
     if not _enabled:
         _notify("exclamation", "Undo/Redo disabled")
         return false
-    
+
     if _redo_stack.is_empty():
         _notify("exclamation", "Nothing to redo")
         return false
-        
+
     var command = _redo_stack.pop_back()
-    
+
     if not command.is_valid():
         _notify("exclamation", "Cannot redo: invalid state")
         notification_requested.emit("exclamation", "Cannot redo: invalid state")
         return false
-        
+
     _is_undoing_or_redoing = true
     var success = command.execute()
     _is_undoing_or_redoing = false
-    
+
     if success:
         _undo_stack.push_back(command)
         redo_performed.emit(command.get_description())
         history_changed.emit()
     else:
         _notify("exclamation", "Redo failed")
-        
+
     return success
 
 func push_command(command) -> void:
     if not _enabled: return
-    
+
     if _transaction_depth > 0:
         _transaction_commands.append(command)
         _log_debug("Command added to transaction: %s" % command.get_description())
@@ -233,7 +233,7 @@ func begin_action(name: String) -> void:
 func commit_action() -> void:
     if _transaction_depth <= 0: return
     _transaction_depth -= 1
-    
+
     if _transaction_depth == 0 and not _transaction_commands.is_empty():
         if _transaction_commands.size() == 1:
             _push_internal(_transaction_commands[0])
@@ -262,7 +262,7 @@ func record_call(do_func: Callable, undo_func: Callable, label: String = "") -> 
 func record_pause_change(window_states_before: Dictionary, window_states_after: Dictionary) -> void:
     if not _enabled: return
     if window_states_before.is_empty(): return
-    
+
     var cmd = PauseNodesCommandScript.new()
     cmd.setup(window_states_before, window_states_after)
     push_command(cmd)
@@ -277,13 +277,13 @@ func _push_internal(command) -> void:
         if top.has_method("merge_with") and top.merge_with(command):
             _log_debug("Command merged with previous: %s" % command.get_description())
             return
-            
+
     _undo_stack.push_back(command)
     _redo_stack.clear()
-    
+
     while _undo_stack.size() > MAX_HISTORY_SIZE:
         _undo_stack.pop_front()
-    
+
     _log_debug("Command pushed to undo stack: %s (stack size: %d)" % [command.get_description(), _undo_stack.size()])
     history_changed.emit()
 
@@ -328,7 +328,7 @@ func _connect_signals(signals: Node) -> void:
     if signals.has_signal("boot"):
         if not signals.boot.is_connected(_on_boot):
             signals.boot.connect(_on_boot)
-    
+
     if not signals.dragging_set.is_connected(_on_dragging_set):
         signals.dragging_set.connect(_on_dragging_set)
     if not signals.connection_created.is_connected(_on_connection_created):
@@ -353,9 +353,9 @@ func _on_boot() -> void:
 func _on_dragging_set() -> void:
     if not _enabled or not _recording: return
     if _is_undoing_or_redoing: return
-    
+
     _log_debug("dragging_set signal: Globals.dragging=%s, _is_dragging=%s" % [Globals.dragging, _is_dragging])
-    
+
     if Globals.dragging and not _is_dragging:
         _is_dragging = true
         _snapshot_all_window_positions()
@@ -369,7 +369,7 @@ func _snapshot_all_window_positions() -> void:
     _drag_start_positions.clear()
     var windows = _get_windows_container()
     if not windows: return
-    
+
     for child in windows.get_children():
         if is_instance_valid(child):
             _drag_start_positions[child] = child.position
@@ -379,7 +379,7 @@ func _snapshot_all_window_sizes() -> void:
     _drag_start_size_positions.clear()
     var windows = _get_windows_container()
     if not windows: return
-    
+
     for child in windows.get_children():
         if is_instance_valid(child) and "size" in child:
             _drag_start_sizes[child] = child.size
@@ -387,10 +387,10 @@ func _snapshot_all_window_sizes() -> void:
 
 func _create_move_command_if_changed() -> void:
     if _drag_start_positions.is_empty(): return
-    
+
     var before_pos: Dictionary = {}
     var after_pos: Dictionary = {}
-    
+
     for window in _drag_start_positions:
         if not is_instance_valid(window): continue
         var start = _drag_start_positions[window]
@@ -401,43 +401,43 @@ func _create_move_command_if_changed() -> void:
             var start_size = _drag_start_sizes[window]
             if "size" in window and start_size.distance_to(window.size) > 0.1:
                 size_changed = true
-        
+
         if not size_changed and start.distance_to(end) > 0.1:
             before_pos[window.name] = start
             after_pos[window.name] = end
-            
+
     if not before_pos.is_empty():
         var cmd = MoveNodesCommandScript.new()
         cmd.setup(before_pos, after_pos)
         push_command(cmd)
-        
+
     _drag_start_positions.clear()
 
 func _create_resize_command_if_changed() -> void:
     if _drag_start_sizes.is_empty(): return
-    
+
     var before_data: Dictionary = {}
     var after_data: Dictionary = {}
-    
+
     for window in _drag_start_sizes:
         if not is_instance_valid(window): continue
         if not "size" in window: continue
-        
+
         var start_size = _drag_start_sizes[window]
         var start_pos = _drag_start_size_positions.get(window, window.position)
         var end_size = window.size
         var end_pos = window.position
-        
+
         # Check if size actually changed
         if start_size.distance_to(end_size) > 0.1:
             before_data[window.name] = {"size": start_size, "position": start_pos}
             after_data[window.name] = {"size": end_size, "position": end_pos}
-    
+
     if not before_data.is_empty():
         var cmd = ResizeNodesCommandScript.new()
         cmd.setup(before_data, after_data)
         push_command(cmd)
-    
+
     _drag_start_sizes.clear()
     _drag_start_size_positions.clear()
 
@@ -446,11 +446,11 @@ func _on_connection_created(out_id: String, in_id: String) -> void:
     var out_node = _resolve_node(out_id)
     var in_node = _resolve_node(in_id)
     if not out_node or not in_node: return
-    
+
     var out_win = _get_window(out_node)
     var in_win = _get_window(in_node)
     if not out_win or not in_win: return
-    
+
     var cmd = ConnectCommandScript.new()
     cmd.setup(out_win.name, str(out_win.get_path_to(out_node)), in_win.name, str(in_win.get_path_to(in_node)))
     push_command(cmd)
@@ -460,11 +460,11 @@ func _on_connection_deleted(out_id: String, in_id: String) -> void:
     var out_node = _resolve_node(out_id)
     var in_node = _resolve_node(in_id)
     if not out_node or not in_node: return
-    
+
     var out_win = _get_window(out_node)
     var in_win = _get_window(in_node)
     if not out_win or not in_win: return
-    
+
     var cmd = DisconnectCommandScript.new()
     cmd.setup(out_win.name, str(out_win.get_path_to(out_node)), in_win.name, str(in_win.get_path_to(in_node)))
     push_command(cmd)
@@ -473,10 +473,10 @@ func _on_window_created(window: Node) -> void:
     _log_debug("window_created signal received: %s, in_tree: %s, ignore: %s" % [window.name, window.is_inside_tree(), _should_ignore_signal()])
     if not window.is_inside_tree(): return
     if _should_ignore_signal(): return
-    
+
     # Hook signals for this new window
     _hook_window_signals(window)
-    
+
     var cmd = NodeCreatedCommandScript.new()
     cmd.setup(window.name)
     push_command(cmd)
@@ -485,14 +485,14 @@ func _on_window_created(window: Node) -> void:
 func _on_window_deleted(window: Node) -> void:
     _log_debug("window_deleted signal received: %s, ignore: %s" % [window.name, _should_ignore_signal()])
     if _should_ignore_signal(): return
-    
+
     # Clean up color snapshot
     _group_color_snapshots.erase(window)
-    
+
     var export_data = {}
     if window.has_method("export"):
         export_data = window.export()
-    
+
     var importing = window.get("importing") if "importing" in window else false
     var cmd = NodeDeletedCommandScript.new()
     cmd.setup(window.name, export_data, window.position, importing)
@@ -511,12 +511,12 @@ func _hook_window_signals(window: Node) -> void:
         # Snapshot current color
         if "color" in window:
             _group_color_snapshots[window] = window.color
-    
+
     # Hook group_changed for full group tracking (name, icon, pattern changes)
     if window.has_signal("group_changed"):
         if not window.group_changed.is_connected(_on_group_node_changed.bind(window)):
             window.group_changed.connect(_on_group_node_changed.bind(window))
-    
+
     # Snapshot window data for group tracking (any window with save() method)
     if window.has_method("save"):
         var window_name = str(window.name)
@@ -526,15 +526,15 @@ func _on_group_color_changed(window: Node) -> void:
     if _should_ignore_signal(): return
     if not is_instance_valid(window): return
     if not "color" in window: return
-    
+
     var before = _group_color_snapshots.get(window, 0)
     var after = window.color
-    
+
     if before != after:
         var cmd = GroupColorCommandScript.new()
         cmd.setup(window.name, before, after)
         push_command(cmd)
-    
+
     # Update snapshot for next change
     _group_color_snapshots[window] = after
 
@@ -542,24 +542,24 @@ func _on_group_node_changed(window: Node) -> void:
     if _should_ignore_signal(): return
     if not is_instance_valid(window): return
     if not window.has_method("save"): return
-    
+
     var window_name = str(window.name)
     var after = window.save()
-    
+
     if not _window_clean_data.has(window_name):
         _window_clean_data[window_name] = after
         return
-    
+
     var before = _window_clean_data[window_name]
-    
+
     # Compare using hash for efficiency
     if before.hash() == after.hash():
         return
-    
+
     var cmd = GroupNodeChangedCommandScript.new()
     cmd.setup(window_name, before, after)
     push_command(cmd)
-    
+
     # Update snapshot for next change
     _window_clean_data[window_name] = after
 

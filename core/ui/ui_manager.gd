@@ -96,12 +96,12 @@ func add_settings_tab(title: String, icon: String) -> VBoxContainer:
 func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
     """
     Registers a settings tab for a mod. Returns the VBoxContainer to add settings widgets to.
-    
+
     Parameters:
     - mod_id: The unique mod identifier (e.g., "TajemnikTV-CommandPalette")
     - display_name: Human-readable name shown in the tab (e.g., "Command Palette")
     - icon_path: Optional path to tab icon. Defaults to puzzle icon if empty.
-    
+
     Returns: VBoxContainer to add settings widgets, or null if UI not ready.
     """
     if _mod_tabs.has(mod_id):

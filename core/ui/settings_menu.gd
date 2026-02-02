@@ -473,7 +473,7 @@ func _generate_settings_from_schema(container: VBoxContainer, schema: Dictionary
                 container.add_child(unknown_label)
 
 func _get_mod_display_name(manifest) -> String:
-    # Extracts display name from mod manifest, handling both Object and Dictionary types 
+    # Extracts display name from mod manifest, handling both Object and Dictionary types
     var display_name := ""
     if manifest is Dictionary:
         display_name = str(manifest.get("display_name", manifest.get("name", "")))
@@ -491,19 +491,19 @@ func _is_valid_mod(mod_id: String, manifest) -> bool:
     # Skip hidden directories (start with .)
     if mod_id.begins_with("."):
         return false
-    
+
     # Skip entries with no manifest at all
     if manifest == null:
         return false
-    
+
     # Check if manifest has meaningful data
     var display_name := _get_mod_display_name(manifest)
     var version := _get_mod_version(manifest)
-    
+
     # If both name is "Unknown Mod" and version is empty or "0.0.0", likely not a real mod
     if display_name == "Unknown Mod" and (version == "" or version == "0.0.0"):
         return false
-    
+
     return true
 
 func _get_mod_icon_path(manifest, mod_id: String) -> String:
@@ -532,7 +532,7 @@ func _get_mod_icon_path(manifest, mod_id: String) -> String:
     return "" # Will fall back to puzzle icon
 
 func _get_mod_config_schema(manifest) -> Dictionary:
-    # Extracts config_schema from mod manifest 
+    # Extracts config_schema from mod manifest
     var extra = null
     if manifest is Dictionary:
         extra = manifest.get("extra", {})
@@ -803,14 +803,14 @@ func _render_mod_details(manifest, mod_id: String) -> void:
         var is_active := false
         if all_mods != null and all_mods.has(mod_id):
             is_active = all_mods[mod_id].is_active
-        
+
         # Disconnect any previous signals
         for conn in _mod_details_enable_toggle.toggled.get_connections():
             _mod_details_enable_toggle.toggled.disconnect(conn.callable)
-        
+
         _mod_details_enable_toggle.set_pressed_no_signal(is_active)
         _mod_details_enable_toggle.text = "Enabled" if is_active else "Disabled"
-        
+
         # Core cannot be disabled from its own menu
         if mod_id == TAJS_CORE_MOD_ID:
             _mod_details_enable_toggle.disabled = true
@@ -818,17 +818,17 @@ func _render_mod_details(manifest, mod_id: String) -> void:
         else:
             _mod_details_enable_toggle.disabled = false
             _mod_details_enable_toggle.tooltip_text = ""
-        
+
         var toggle_mod_id: String = mod_id
         _mod_details_enable_toggle.toggled.connect(func(active: bool):
             _mod_details_enable_toggle.text = "Enabled" if active else "Disabled"
-            
+
             var success := false
             if active:
                 success = ModLoaderUserProfile.enable_mod(toggle_mod_id)
             else:
                 success = ModLoaderUserProfile.disable_mod(toggle_mod_id)
-            
+
             if not success:
                 _mod_details_enable_toggle.set_pressed_no_signal(not active)
                 _mod_details_enable_toggle.text = "Enabled" if not active else "Disabled"

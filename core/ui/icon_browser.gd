@@ -127,7 +127,7 @@ func build_ui(parent: Control, options: Dictionary = {}) -> void:
     # Allow the browser to fill available width
     parent.custom_minimum_size = Vector2(0, 0)
     parent.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    
+
     var opts := options if typeof(options) == TYPE_DICTIONARY else {}
     _options = opts.duplicate(true)
     _owns_popup = bool(opts.get("owns_popup", false))
@@ -422,7 +422,7 @@ func _rebuild_grid() -> void:
     # Cancel any pending batch operations
     _pending_button_create_index = 0
     _is_creating_buttons = false
-    
+
     for btn in _buttons:
         if is_instance_valid(btn):
             btn.queue_free()
@@ -430,12 +430,12 @@ func _rebuild_grid() -> void:
     _last_rebuild_scroll = -1000.0
     if _grid == null:
         return
-    
+
     var total_icons := _filtered_icons.size()
     if total_icons == 0:
         update_layout()
         return
-    
+
     # Create first batch immediately for instant feedback
     var first_batch := mini(total_icons, _button_create_batch_size)
     for i in range(first_batch):
@@ -445,9 +445,9 @@ func _rebuild_grid() -> void:
         _buttons.append(btn)
         if _selected_entry != null and _selected_entry.get("stable_id", "") == entry.get("stable_id", ""):
             btn.button_pressed = true
-    
+
     update_layout()
-    
+
     # Schedule remaining buttons to be created in batches
     if total_icons > first_batch:
         _pending_button_create_index = first_batch
@@ -471,10 +471,10 @@ func _create_next_button_batch() -> void:
     if not _is_creating_buttons or _grid == null or not is_instance_valid(_grid):
         _is_creating_buttons = false
         return
-    
+
     var total_icons := _filtered_icons.size()
     var end_index := mini(_pending_button_create_index + _button_create_batch_size, total_icons)
-    
+
     for i in range(_pending_button_create_index, end_index):
         var entry: Dictionary = _filtered_icons[i]
         var btn := _create_icon_button(entry, i)
@@ -482,9 +482,9 @@ func _create_next_button_batch() -> void:
         _buttons.append(btn)
         if _selected_entry != null and _selected_entry.get("stable_id", "") == entry.get("stable_id", ""):
             btn.button_pressed = true
-    
+
     _pending_button_create_index = end_index
-    
+
     if _pending_button_create_index < total_icons:
         _schedule_next_button_batch()
     else:
@@ -504,14 +504,14 @@ func _create_icon_button(entry: Dictionary, index: int) -> Button:
     btn.custom_minimum_size = Vector2(icon_size, icon_size)
     btn.expand_icon = true
     btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    
+
     var icon_id: String = entry.get("stable_id", "")
     # Use cached texture or placeholder
     if _texture_cache.has(icon_id):
         btn.icon = _texture_cache[icon_id]
     else:
         btn.icon = _placeholder_texture
-    
+
     btn.tooltip_text = entry.get("name", entry.get("display_name", ""))
     btn.set_meta("icon_id", icon_id)
     btn.set_meta("entry_index", index)
@@ -531,9 +531,9 @@ func _on_scroll_changed(value: float) -> void:
 func _queue_visible_texture_loads() -> void:
     if _is_loading_batch or _grid == null:
         return
-    
+
     _pending_texture_loads.clear()
-    
+
     # Find buttons that need textures loaded
     for btn in _buttons:
         if not is_instance_valid(btn):
@@ -543,7 +543,7 @@ func _queue_visible_texture_loads() -> void:
             continue
         if btn.icon == _placeholder_texture:
             _pending_texture_loads.append({"button": btn, "icon_id": icon_id})
-    
+
     if _pending_texture_loads.size() > 0:
         _load_next_texture_batch()
 
@@ -552,18 +552,18 @@ func _load_next_texture_batch() -> void:
     if _pending_texture_loads.is_empty():
         _is_loading_batch = false
         return
-    
+
     _is_loading_batch = true
     var batch_count := mini(_pending_texture_loads.size(), _load_batch_size)
-    
+
     for i in range(batch_count):
         var item: Dictionary = _pending_texture_loads.pop_front()
         var btn: Button = item.get("button")
         var icon_id: String = item.get("icon_id")
-        
+
         if not is_instance_valid(btn):
             continue
-        
+
         # Load texture
         var tex: Texture2D = null
         var resolved := _resolve_icon(icon_id)
@@ -571,14 +571,14 @@ func _load_next_texture_batch() -> void:
             tex = resolved.texture
         else:
             tex = _default_texture
-        
+
         # Cache and apply
         _texture_cache[icon_id] = tex
         if is_instance_valid(btn) and btn.get_meta("icon_id") == icon_id:
             btn.icon = tex
-    
+
     _is_loading_batch = false
-    
+
     # Continue loading remaining in next frame using a timer
     if _pending_texture_loads.size() > 0 and _grid != null and is_instance_valid(_grid):
         var timer := _grid.get_tree().create_timer(0.01)

@@ -848,11 +848,11 @@ func _sort_keys_by_dependency(keys: Array, schema: Dictionary) -> Array:
     sorted_keys.sort_custom(func(a, b):
         return str(a).naturalnocasecmp_to(str(b)) < 0
     )
-    
+
     # Build a dependency graph: for each key, find what it depends on
     var depends_on_map: Dictionary = {} # key -> parent key it depends on (if any)
     var dependents_map: Dictionary = {} # parent key -> array of keys that depend on it
-    
+
     for key in sorted_keys:
         var entry = schema.get(str(key), {})
         if entry is Dictionary:
@@ -864,14 +864,14 @@ func _sort_keys_by_dependency(keys: Array, schema: Dictionary) -> Array:
                     if not dependents_map.has(parent_key):
                         dependents_map[parent_key] = []
                     dependents_map[parent_key].append(str(key))
-    
+
     # Now reorder: place each key, then immediately place its dependents (recursively)
     var result: Array = []
     var visited: Dictionary = {}
-    
+
     for key in sorted_keys:
         _add_key_with_dependents(str(key), result, visited, depends_on_map, dependents_map, sorted_keys, schema)
-    
+
     return result
 
 func _add_key_with_dependents(key: String, result: Array, visited: Dictionary, depends_on_map: Dictionary, dependents_map: Dictionary, all_keys: Array, schema: Dictionary) -> void:
@@ -882,18 +882,18 @@ func _add_key_with_dependents(key: String, result: Array, visited: Dictionary, d
         var parent_key: String = depends_on_map[key]
         if not visited.has(parent_key) and all_keys.has(parent_key):
             _add_key_with_dependents(parent_key, result, visited, depends_on_map, dependents_map, all_keys, schema)
-    
+
     # Re-check after parent processing - the parent may have already added us as a dependent
     if visited.has(key):
         return
-    
+
     # Don't add if not in our category's key list
     if not all_keys.has(key):
         return
-    
+
     visited[key] = true
     result.append(key)
-    
+
     # Add all dependents of this key immediately after it
     if dependents_map.has(key):
         var dependents: Array = dependents_map[key].duplicate()
@@ -1703,31 +1703,31 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
     if panel_script == null:
         _log_warn("Failed to load color picker panel.")
         return
-    
+
     # Create overlay that covers the entire screen
     var overlay := CanvasLayer.new()
     overlay.layer = 100 # Above most UI
     _hud_node.get_tree().root.add_child(overlay)
-    
+
     # Semi-transparent background to dim the rest of the screen
     var bg := ColorRect.new()
     bg.color = Color(0, 0, 0, 0.5)
     bg.set_anchors_preset(Control.PRESET_FULL_RECT)
     bg.mouse_filter = Control.MOUSE_FILTER_STOP
     overlay.add_child(bg)
-    
+
     # Center container for picker + button
     var center := CenterContainer.new()
     center.set_anchors_preset(Control.PRESET_FULL_RECT)
     center.mouse_filter = Control.MOUSE_FILTER_IGNORE
     overlay.add_child(center)
-    
+
     # VBox to hold picker and close button
     var vbox := VBoxContainer.new()
     vbox.add_theme_constant_override("separation", 16)
     vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
     center.add_child(vbox)
-    
+
     # Title label
     var title_label := Label.new()
     title_label.text = "Pick Color"
@@ -1735,7 +1735,7 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
     title_label.add_theme_font_size_override("font_size", 28)
     title_label.add_theme_color_override("font_color", Color.WHITE)
     vbox.add_child(title_label)
-    
+
     # Create the color picker panel
     var panel = panel_script.new()
     if panel.has_method("setup"):
@@ -1743,7 +1743,7 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
     if panel.has_method("set_color"):
         panel.call("set_color", start_color)
     vbox.add_child(panel)
-    
+
     # Helper function to save current color and close
     var close_and_save := func():
         # Get the current color from the panel and save it
@@ -1751,7 +1751,7 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
             var current_color: Color = panel.call("get_color")
             _set_color_map_value(setting_key, option_id, current_color, true)
         overlay.queue_free()
-    
+
     # Close button below the picker
     var close_btn := Button.new()
     close_btn.text = "Close"
@@ -1760,7 +1760,7 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
     close_btn.add_theme_font_size_override("font_size", 20)
     close_btn.pressed.connect(close_and_save)
     vbox.add_child(close_btn)
-    
+
     # Also close when clicking the background
     bg.gui_input.connect(func(event: InputEvent):
         if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -1773,7 +1773,7 @@ func _show_popup(title: String, content: Control, buttons: Array[Dictionary]) ->
         return
     if _hud_node == null:
         return
-    
+
     # Create a Window instead of AcceptDialog for better control
     var popup := Window.new()
     popup.title = title
@@ -1782,7 +1782,7 @@ func _show_popup(title: String, content: Control, buttons: Array[Dictionary]) ->
     popup.wrap_controls = true
     popup.unresizable = false
     popup.close_requested.connect(func(): popup.queue_free())
-    
+
     # Create a styled panel as background
     var panel := PanelContainer.new()
     var panel_style := StyleBoxFlat.new()
@@ -1790,23 +1790,23 @@ func _show_popup(title: String, content: Control, buttons: Array[Dictionary]) ->
     panel_style.set_content_margin_all(16)
     panel.add_theme_stylebox_override("panel", panel_style)
     popup.add_child(panel)
-    
+
     # Main container for content and buttons
     var container := VBoxContainer.new()
     container.add_theme_constant_override("separation", 12)
     panel.add_child(container)
-    
+
     # Add content
     if content != null:
         content.size_flags_vertical = Control.SIZE_EXPAND_FILL
         container.add_child(content)
-    
+
     # Add button row
     var btn_row := HBoxContainer.new()
     btn_row.alignment = BoxContainer.ALIGNMENT_END
     btn_row.add_theme_constant_override("separation", 10)
     container.add_child(btn_row)
-    
+
     for entry in buttons:
         var btn := Button.new()
         btn.text = str(entry.get("text", "OK"))
@@ -1821,17 +1821,17 @@ func _show_popup(title: String, content: Control, buttons: Array[Dictionary]) ->
                 popup.queue_free()
         )
         btn_row.add_child(btn)
-    
+
     # Calculate size based on content
     var content_size := Vector2(560, 360)
     if content != null:
         content_size.x = max(content_size.x, content.custom_minimum_size.x + 64)
         content_size.y = max(content_size.y, content.custom_minimum_size.y + 100)
     popup.size = content_size
-    
+
     # Make panel fill the window
     panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-    
+
     _hud_node.get_tree().root.add_child(popup)
     popup.popup_centered()
 

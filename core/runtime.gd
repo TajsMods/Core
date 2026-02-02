@@ -446,7 +446,7 @@ func _read_version_from_manifest(path: String) -> String:
     if not FileAccess.file_exists(path):
         _log_fallback("Manifest not found: %s" % path)
         return "0.0.0"
-        
+
     var file = FileAccess.open(path, FileAccess.READ)
     if file == null:
         _log_fallback("Failed to open manifest: %s" % path)
@@ -459,7 +459,7 @@ func _read_version_from_manifest(path: String) -> String:
         var data = json.data
         if data is Dictionary and data.has("version_number"):
             return data["version_number"]
-            
+
     _log_fallback("Failed to parse manifest version: %s" % path)
     return "0.0.0"
 
@@ -515,10 +515,10 @@ func _register_core_migrations() -> void:
 func _register_undo_keybinds() -> void:
     if keybinds == null or undo_manager == null:
         return
-    
+
     # Register "Editing" category for undo/redo keybinds
     keybinds.register_keybind_category("core_editing", "Editing", "res://textures/icons/return.png")
-    
+
     # Undo (Ctrl+Z)
     keybinds.register_action_scoped(
         "TajemnikTV-Core",
@@ -530,7 +530,7 @@ func _register_undo_keybinds() -> void:
         10,
         "core_editing"
     )
-    
+
     # Redo (Ctrl+Y)
     keybinds.register_action_scoped(
         "TajemnikTV-Core",
@@ -542,7 +542,7 @@ func _register_undo_keybinds() -> void:
         10,
         "core_editing"
     )
-    
+
     # Redo Alt (Ctrl+Shift+Z)
     keybinds.register_action_scoped(
         "TajemnikTV-Core",
@@ -554,7 +554,7 @@ func _register_undo_keybinds() -> void:
         10,
         "core_editing"
     )
-    
+
     if logger != null:
         logger.info("core", "Undo/Redo keybinds registered (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z)")
 
