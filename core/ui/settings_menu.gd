@@ -559,7 +559,7 @@ func _infer_schema_namespace(schema: Dictionary, fallback: String) -> String:
     var common_parts: Array = str(keys[0]).split(".")
     for idx in range(1, keys.size()):
         var parts: Array = str(keys[idx]).split(".")
-        var max_parts := min(common_parts.size(), parts.size())
+        var max_parts: int = min(common_parts.size(), parts.size())
         var new_common: Array = []
         for i in range(max_parts):
             if common_parts[i] == parts[i]:

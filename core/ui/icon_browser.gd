@@ -39,9 +39,13 @@ var _buttons: Array = []
 var _tab_buttons: Dictionary = {}
 var _search_box: LineEdit
 var _grid: GridContainer
-var _preview_texture: TextureRect
-var _preview_label: Label
-var _preview_meta: Label
+# Preview UI removed - kept for API compatibility
+@warning_ignore("unused_private_class_variable")
+var _preview_texture: TextureRect = null
+@warning_ignore("unused_private_class_variable")
+var _preview_label: Label = null
+@warning_ignore("unused_private_class_variable")
+var _preview_meta: Label = null
 var _select_btn: Button
 var _clear_btn: Button
 var _selected_entry: Variant = null # Can be Dictionary or null
@@ -69,14 +73,18 @@ var _auto_confirm_on_click: bool = false
 var _suppress_auto_confirm: bool = false
 
 # Virtualization / lazy loading
+@warning_ignore("unused_private_class_variable")
 var _visible_start_row: int = 0
+@warning_ignore("unused_private_class_variable")
 var _visible_end_row: int = 0
 var _texture_cache: Dictionary = {}
 var _pending_texture_loads: Array = []
 var _load_batch_size: int = 20 # Icons to load per batch
 var _is_loading_batch: bool = false
 var _placeholder_texture: Texture2D = null
+@warning_ignore("unused_private_class_variable")
 var _grid_spacer: Control = null # Spacer at top for virtual scrolling
+@warning_ignore("unused_private_class_variable")
 var _max_visible_buttons: int = 9999 # No limit - we use placeholders for fast creation
 var _current_scroll_value: float = 0.0
 var _last_rebuild_scroll: float = -1000.0
@@ -105,17 +113,17 @@ static func open(options: Dictionary = {}, callback: Callable = Callable()) -> b
     if callback.is_valid():
         opts["selection_callback"] = callback
     else:
-        var alt := opts.get("selection_callback", null)
+        var alt: Variant = opts.get("selection_callback", null)
         if alt == null and opts.has("on_selected"):
             opts["selection_callback"] = opts["on_selected"]
     opts["owns_popup"] = true
     opts["show_select_button"] = false # Hide redundant Select button
     var container := VBoxContainer.new()
     # Use get_script() to instantiate from within the same class
-    var browser_script = load("res://mods-unpacked/TajemnikTV-Core/core/ui/icon_browser.gd")
-    var browser = browser_script.new()
+    var browser_script: Variant = load("res://mods-unpacked/TajemnikTV-Core/core/ui/icon_browser.gd")
+    var browser: Variant = browser_script.new()
     browser.build_ui(container, opts)
-    var title := opts.get("title", "Select Icon")
+    var title: Variant = opts.get("title", "Select Icon")
     # Add just a Close button with smaller styling (handled by popup manager)
     var close_btn := {"text": "Close", "close": true}
     core.ui_manager.show_popup(title, container, [close_btn])
@@ -141,7 +149,7 @@ func build_ui(parent: Control, options: Dictionary = {}) -> void:
     _pending_initial_selection = _initial_selected_id != ""
     _auto_confirm_on_click = bool(opts.get("auto_confirm", false))
     _button_group = ButtonGroup.new()
-    var callback := opts.get("selection_callback", null)
+    var callback: Variant = opts.get("selection_callback", null)
     if callback == null and opts.has("on_selected"):
         callback = opts["on_selected"]
     set_selection_callback(callback)
@@ -195,8 +203,8 @@ func update_layout() -> void:
     for btn in _buttons:
         if not is_instance_valid(btn):
             continue
-        var size := ICON_SIZE_SMALL if _compact_mode else ICON_SIZE
-        btn.custom_minimum_size = Vector2(size, size)
+        var btn_size := ICON_SIZE_SMALL if _compact_mode else ICON_SIZE
+        btn.custom_minimum_size = Vector2(btn_size, btn_size)
     if _scroll_container != null:
         var dynamic_height := viewport_size.y * SCROLL_HEIGHT_RATIO
         dynamic_height = clamp(dynamic_height, MIN_SCROLL_HEIGHT, MAX_SCROLL_HEIGHT)
@@ -217,8 +225,8 @@ func _on_viewport_resized() -> void:
     update_layout()
 
 func _calculate_columns(parent_width: float, spacing: int) -> int:
-    var icon_size := ICON_SIZE_SMALL if _compact_mode else ICON_SIZE
-    var available := max(parent_width, 1.0)
+    var icon_size: int = ICON_SIZE_SMALL if _compact_mode else ICON_SIZE
+    var available: float = max(parent_width, 1.0)
     var count := int(floor((available + spacing) / (icon_size + spacing)))
     count = max(count, GRID_COLUMNS_MIN)
     return count
@@ -271,8 +279,8 @@ func _build_grid(parent: Control) -> void:
     # Make scroll height responsive to viewport size
     var viewport_height := 600.0 # Default fallback
     if parent.get_viewport() != null:
-        viewport_height = parent.get_viewport().get_visible_rect().size.y
-    var dynamic_height := min(viewport_height * SCROLL_HEIGHT_RATIO, MAX_SCROLL_HEIGHT)
+        viewport_height = float(parent.get_viewport().get_visible_rect().size.y)
+    var dynamic_height: float = min(viewport_height * SCROLL_HEIGHT_RATIO, MAX_SCROLL_HEIGHT)
     _scroll_container.custom_minimum_size = Vector2(0, dynamic_height)
     _scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -352,7 +360,7 @@ func _load_icons() -> void:
         _icons_by_id[id] = entry
 
 func _normalize_allowed_sources(value: Variant) -> Array:
-    var raw := value
+    var raw: Variant = value
     if typeof(raw) == TYPE_STRING:
         raw = [raw]
     elif typeof(raw) != TYPE_ARRAY:
@@ -397,7 +405,7 @@ func _make_tab_label(group: String) -> String:
     var label := group.capitalize()
     if _registry != null:
         label = _registry.get_source_label(group)
-    var count := _tab_counts.get(group, 0)
+    var count: int = _tab_counts.get(group, 0)
     return "%s (%d)" % [label, count]
 
 func _apply_filters() -> void:
@@ -595,10 +603,10 @@ func _set_active_tab(group: String) -> void:
     if group == "" or _active_tab == group:
         return
     _active_tab = group
-    for name in _tab_buttons.keys():
-        var btn: Button = _tab_buttons[name]
+    for tab_name in _tab_buttons.keys():
+        var btn: Button = _tab_buttons[tab_name]
         if is_instance_valid(btn):
-            btn.button_pressed = name == group
+            btn.button_pressed = tab_name == group
     _apply_filters()
 
 func _matches_active_tab(entry: Dictionary) -> bool:
@@ -609,7 +617,7 @@ func _matches_active_tab(entry: Dictionary) -> bool:
 func _matches_allowed(entry: Dictionary) -> bool:
     if _allowed_sources.size() == 0:
         return true
-    var source := entry.get("source_id", "")
+    var source: String = entry.get("source_id", "")
     if _allowed_source_set.has(source):
         return true
     var group := _get_entry_group(entry)

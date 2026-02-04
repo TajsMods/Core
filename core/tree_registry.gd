@@ -68,7 +68,8 @@ func _configure_node_position(tree: Node, node: Node, def: Dictionary) -> void:
 	var pos := Vector2(float(def.get("x", 0)), float(def.get("y", 0)))
 	var ref_id := str(def.get("ref", ""))
 	if ref_id != "":
-		var ref := tree.get_node_or_null(ref_id if ref_id != "self" else node.name)
+		var ref_node_path: String = node.name if ref_id == "self" else ref_id
+		var ref := tree.get_node_or_null(ref_node_path)
 		if ref != null:
 			pos += Vector2(ref.position.x, ref.position.y)
 	node.position = pos
@@ -83,7 +84,8 @@ func _configure_ascension_node(tree: Node, node: Node, def: Dictionary) -> void:
 		node.set("angle_degrees", angle)
 		node.set("radius", radius)
 		if ref_id != "":
-			var ref := tree.get_node_or_null(ref_id if ref_id != "self" else node.name)
+			var ref_node_path: String = node.name if ref_id == "self" else ref_id
+			var ref := tree.get_node_or_null(ref_node_path)
 			if ref != null:
 				node.set("center", ref)
 		if node.has_method("update_radial_pos"):

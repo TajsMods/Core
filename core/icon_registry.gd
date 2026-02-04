@@ -66,7 +66,7 @@ func get_group_counts(allowed_groups: Array = []) -> Dictionary:
 
 func resolve_icon(icon_id: String) -> Dictionary:
 	_ensure_index()
-	var entry := _icons_by_id.get(icon_id, null)
+	var entry: Variant = _icons_by_id.get(icon_id, null)
 	var result := {
 		"texture": null,
 		"entry": entry,
@@ -119,8 +119,8 @@ func _build_index() -> void:
 	_index_mod_icons()
 	_index_custom_sources()
 	_icons.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var order_a := a.get("source_order", 99)
-		var order_b := b.get("source_order", 99)
+		var order_a: int = a.get("source_order", 99)
+		var order_b: int = b.get("source_order", 99)
 		if order_a == order_b:
 			return a.get("display_name", "") < b.get("display_name", "")
 		return order_a < order_b
@@ -133,7 +133,7 @@ func _register_builtin_sources() -> void:
 
 func _index_builtin_sources() -> void:
 	for source_id in [GROUP_BASE, GROUP_CORE]:
-		var lister := _custom_sources.get(source_id, null)
+		var lister: Variant = _custom_sources.get(source_id, null)
 		if lister == null or not lister.is_valid():
 			continue
 		var entries: Array = lister.call()
@@ -147,7 +147,7 @@ func _index_custom_sources() -> void:
 	for source_id in _custom_sources.keys():
 		if source_id == GROUP_BASE or source_id == GROUP_CORE:
 			continue
-		var lister := _custom_sources.get(source_id)
+		var lister: Variant = _custom_sources.get(source_id)
 		if lister == null or not lister.is_valid():
 			continue
 		var entries: Array = lister.call()
@@ -196,22 +196,22 @@ func _list_mod_icons() -> Array:
 		return results
 	dir.list_dir_begin()
 	while true:
-		var name := dir.get_next()
-		if name == "":
+		var dir_name := dir.get_next()
+		if dir_name == "":
 			break
-		if name.begins_with("."):
+		if dir_name.begins_with("."):
 			continue
-		if name == "mods disabled":
+		if dir_name == "mods disabled":
 			continue
-		var mod_path := base_dir.path_join(name)
+		var mod_path := base_dir.path_join(dir_name)
 		if not DirAccess.dir_exists_absolute(mod_path):
 			continue
 		var icons_path := mod_path.path_join("textures/icons")
 		if not DirAccess.dir_exists_absolute(icons_path):
 			continue
 		var manifest := _load_manifest(mod_path)
-		var label := manifest.get("name", name)
-		results += _list_icons_from_dir(icons_path, "mod:%s" % name, label, name)
+		var label: Variant = manifest.get("name", dir_name)
+		results += _list_icons_from_dir(icons_path, "mod:%s" % dir_name, label, dir_name)
 	return results
 
 func _load_manifest(mod_path: String) -> Dictionary:
@@ -239,16 +239,16 @@ func _collect_icons(current_path: String, root_path: String, source_id: String, 
 		return results
 	dir.list_dir_begin()
 	while true:
-		var name := dir.get_next()
-		if name == "":
+		var entry_name := dir.get_next()
+		if entry_name == "":
 			break
-		if name.begins_with("."):
+		if entry_name.begins_with("."):
 			continue
-		var full_path := current_path.path_join(name)
+		var full_path := current_path.path_join(entry_name)
 		if dir.current_is_dir():
 			results += _collect_icons(full_path, root_path, source_id, source_label, mod_id)
 			continue
-		if not _is_icon_file(name):
+		if not _is_icon_file(entry_name):
 			continue
 		var relative := _make_relative_path(root_path, full_path)
 		var entry := {
@@ -275,9 +275,9 @@ func _make_stable_id(source_id: String, relative_path: String, mod_id: String) -
 	return "%s:%s" % [source_id, relative_path]
 
 func _format_display_name(relative_path: String) -> String:
-	var name := relative_path.get_file().get_basename()
-	name = name.replace("_", " ").replace("-", " ")
-	return name.capitalize()
+	var display_name := relative_path.get_file().get_basename()
+	display_name = display_name.replace("_", " ").replace("-", " ")
+	return display_name.capitalize()
 
 func _is_icon_file(file_name: String) -> bool:
 	var lower := file_name.to_lower()
@@ -289,7 +289,7 @@ func _is_icon_file(file_name: String) -> bool:
 func _matches_allowed(entry: Dictionary, allowed: Array) -> bool:
 	if allowed == null or allowed.size() == 0:
 		return true
-	var source := entry.get("source_id", "")
+	var source: String = entry.get("source_id", "")
 	if allowed.has(source):
 		return true
 	var group := _get_source_group(source)

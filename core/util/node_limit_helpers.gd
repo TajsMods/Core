@@ -16,7 +16,7 @@ func get_node_count() -> int:
 	return int(Globals.max_window_count)
 
 func get_node_limit() -> int:
-	var globals_limit := _get_globals_custom_limit()
+	var globals_limit: Variant = _get_globals_custom_limit()
 	if globals_limit != null:
 		return int(globals_limit)
 	if _override_active:

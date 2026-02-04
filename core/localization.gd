@@ -21,7 +21,7 @@ func register_translation(resource_path: String) -> bool:
     return true
 
 func register_mod_translations(mod_id: String, relative_dir: String = "translations") -> int:
-    var count := 0
+    var _count := 0
     var base := _get_mod_path(mod_id)
     if base == "":
         return 0

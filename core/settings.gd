@@ -350,18 +350,26 @@ func export_settings(settings_namespace: String) -> String:
 
 func import_settings(settings_namespace: String, data: String, dry_run := false) -> Variant:
     if data == "":
-        return [] if dry_run else false
+        if dry_run:
+            return []
+        return false
     var json := JSON.new()
     var result := json.parse(data)
     if result != OK:
         _log_warn("settings", "Import failed: %s" % json.get_error_message())
-        return [] if dry_run else false
+        if dry_run:
+            return []
+        return false
     var payload = json.get_data()
     if not (payload is Dictionary):
-        return [] if dry_run else false
+        if dry_run:
+            return []
+        return false
     var values = payload.get("values", {})
     if not (values is Dictionary):
-        return [] if dry_run else false
+        if dry_run:
+            return []
+        return false
     var changes := _collect_import_changes(settings_namespace, values)
     if dry_run:
         return changes
@@ -539,7 +547,7 @@ func _sanitize_value(key: String, value: Variant, schema_entry: Dictionary, log_
             if has_min or has_max:
                 var min_value := float(schema_entry.get("min", numeric_value))
                 var max_value := float(schema_entry.get("max", numeric_value))
-                var clamped := clamp(float(numeric_value), min_value, max_value)
+                var clamped: float = clamp(float(numeric_value), min_value, max_value)
                 if typeof(numeric_value) == TYPE_INT:
                     clamped = int(clamped)
                 if clamped != numeric_value:

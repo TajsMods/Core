@@ -41,16 +41,17 @@ var _transaction_commands: Array = []
 # Tracking state
 var _drag_start_positions: Dictionary = {}
 var _drag_start_sizes: Dictionary = {}
-var _drag_start_size_positions: Dictionary = {}  # Resize can move window (left/top edges)
-var _group_color_snapshots: Dictionary = {}  # window -> color index before change
-var _window_clean_data: Dictionary = {}  # window_name -> saved data (for group_changed tracking)
+var _drag_start_size_positions: Dictionary = {} # Resize can move window (left/top edges)
+var _group_color_snapshots: Dictionary = {} # window -> color index before change
+var _window_clean_data: Dictionary = {} # window_name -> saved data (for group_changed tracking)
 var _is_dragging: bool = false
+@warning_ignore("unused_private_class_variable")
 var _params: Dictionary = {} # Optional params like { "signals_node": ..., "globals": ... }
 var _is_undoing_or_redoing: bool = false
 var _bulk_operation: bool = false
 var _signals_connected: bool = false
-var _recording: bool = false  # Only true after boot signal - prevents recording during initial load
-var _debug_enabled: bool = false  # Enable verbose logging (set via setup config)
+var _recording: bool = false # Only true after boot signal - prevents recording during initial load
+var _debug_enabled: bool = false # Enable verbose logging (set via setup config)
 
 # Dependencies
 var _logger = null

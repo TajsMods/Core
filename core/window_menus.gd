@@ -122,13 +122,14 @@ func _build_button(tab: Dictionary) -> Button:
 	var button := Button.new()
 	button.name = tab["button_name"]
 	button.custom_minimum_size = Vector2(80, 80)
+	@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 	button.layout_mode = 2
 	button.size_flags_horizontal = 6
 	button.size_flags_vertical = 4
 	button.focus_mode = Control.FOCUS_NONE
 	button.theme_type_variation = &"ButtonMenu"
 	button.toggle_mode = true
-	button.icon_alignment = 1
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.expand_icon = true
 
 	var icon_value: String = tab["icon"]
@@ -147,6 +148,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.name = tab["tab_id"]
 	panel.visible = false
+	@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 	panel.layout_mode = 1
 	panel.anchors_preset = Control.PRESET_FULL_RECT
 	panel.anchor_right = 1.0
@@ -159,6 +161,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 
 	var scroll := ScrollContainer.new()
 	scroll.name = "ScrollContainer"
+	@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 	scroll.layout_mode = 2
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -167,6 +170,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 
 	var margin := MarginContainer.new()
 	margin.name = "MarginContainer"
+	@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 	margin.layout_mode = 2
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -175,6 +179,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 
 	var categories := VBoxContainer.new()
 	categories.name = "Categories"
+	@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 	categories.layout_mode = 2
 	categories.mouse_filter = Control.MOUSE_FILTER_PASS
 	categories.add_theme_constant_override("separation", 0)
@@ -189,12 +194,14 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 		var row_name := "Row%d" % row_index
 		var row := HBoxContainer.new()
 		row.name = row_name
+		@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 		row.layout_mode = 2
 		row.add_theme_constant_override("separation", 10)
 		categories.add_child(row)
 		for sub_id in row_def.keys():
 			var column := VBoxContainer.new()
 			column.name = sub_id
+			@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 			column.layout_mode = 2
 			column.size_flags_horizontal = 0
 			column.add_theme_constant_override("separation", 0)
@@ -202,6 +209,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 
 			var label := Label.new()
 			label.name = "Label"
+			@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 			label.layout_mode = 2
 			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			label.add_theme_font_size_override("font_size", 32)
@@ -211,6 +219,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 
 			var panel_container := PanelContainer.new()
 			panel_container.name = "Container"
+			@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 			panel_container.layout_mode = 2
 			panel_container.size_flags_horizontal = 0
 			panel_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -219,6 +228,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
 
 			var windows := HBoxContainer.new()
 			windows.name = "Windows"
+			@warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
 			windows.layout_mode = 2
 			windows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			windows.add_theme_constant_override("separation", 5)

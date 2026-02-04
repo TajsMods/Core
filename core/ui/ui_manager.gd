@@ -276,7 +276,7 @@ func show_notification(icon: String, message: String) -> void:
     if signals != null and signals.has_signal("notify"):
         signals.emit_signal("notify", icon, message)
 
-func show_toast(message: String, duration: float = 2.0) -> void:
+func show_toast(message: String, _duration: float = 2.0) -> void:
     show_notification("info", message)
 
 func _get_extras_container() -> Node:
@@ -287,11 +287,11 @@ func _get_extras_container() -> Node:
         return null
     return root.get_node_or_null("Main/HUD/Main/MainContainer/Overlay/ExtrasButtons/Container")
 
-func _get_root_node(name: String) -> Node:
+func _get_root_node(node_name: String) -> Node:
     if Engine.get_main_loop():
         var root = Engine.get_main_loop().root
-        if root and root.has_node(name):
-            return root.get_node(name)
+        if root and root.has_node(node_name):
+            return root.get_node(node_name)
     return null
 
 func _emit_hud_ready() -> void:

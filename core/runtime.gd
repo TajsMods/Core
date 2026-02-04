@@ -85,7 +85,7 @@ func bootstrap() -> void:
     if Engine.has_meta(META_KEY) and Engine.get_meta(META_KEY) != self:
         _log_fallback("Core already registered, skipping bootstrap.")
         return
-    Engine.set_meta(META_KEY, self)
+    Engine.set_meta(META_KEY, self )
     var base_dir: String = get_script().resource_path.get_base_dir()
     _base_dir = base_dir
     CORE_VERSION = _read_version_from_manifest(base_dir.get_base_dir().path_join("manifest.json"))
@@ -223,18 +223,18 @@ func bootstrap() -> void:
 
     var diagnostics_script = _load_script(base_dir.path_join("diagnostics.gd"))
     if diagnostics_script != null:
-        diagnostics = diagnostics_script.new(self, logger)
+        diagnostics = diagnostics_script.new(self , logger)
 
     var registry_script = _load_script(base_dir.path_join("module_registry.gd"))
     if registry_script != null:
-        module_registry = registry_script.new(self, logger, event_bus)
+        module_registry = registry_script.new(self , logger, event_bus)
         modules = module_registry
 
     var hooks_script = _load_script(base_dir.path_join("hooks/hook_manager.gd"))
     if hooks_script != null:
         hook_manager = hooks_script.new()
         hook_manager.name = "CoreHooks"
-        hook_manager.setup(self)
+        hook_manager.setup(self )
         add_child(hook_manager)
 
     var desktop_layers_script = _load_script(base_dir.path_join("desktop_layers.gd"))
@@ -475,25 +475,25 @@ func _has_global_class(class_name_str: String) -> bool:
             return true
     return false
 
-func _get_autoload(name: String) -> Object:
-    if Engine.has_singleton(name):
-        return Engine.get_singleton(name)
+func _get_autoload(autoload_name: String) -> Object:
+    if Engine.has_singleton(autoload_name):
+        return Engine.get_singleton(autoload_name)
     if Engine.get_main_loop() == null:
         return null
     var root = Engine.get_main_loop().root
     if root == null:
         return null
-    return root.get_node_or_null(name)
+    return root.get_node_or_null(autoload_name)
 
 func _bridge_settings_events() -> void:
     if settings == null or event_bus == null:
         return
-    settings.value_changed.connect(Callable(self, "_on_settings_changed"))
+    settings.value_changed.connect(Callable(self , "_on_settings_changed"))
 
 func _bind_command_palette_events() -> void:
     if event_bus == null:
         return
-    event_bus.on("command_palette.ready", Callable(self, "_on_command_palette_ready"), self, true)
+    event_bus.on("command_palette.ready", Callable(self , "_on_command_palette_ready"), self , true)
 
 func _on_settings_changed(key: String, value: Variant, old_value: Variant) -> void:
     if event_bus == null:
@@ -526,7 +526,7 @@ func _register_undo_keybinds() -> void:
         "Undo",
         [keybinds.make_key_event(KEY_Z, true)],
         keybinds.CONTEXT_NO_TEXT,
-        Callable(self, "_on_undo"),
+        Callable(self , "_on_undo"),
         10,
         "core_editing"
     )
@@ -538,7 +538,7 @@ func _register_undo_keybinds() -> void:
         "Redo",
         [keybinds.make_key_event(KEY_Y, true)],
         keybinds.CONTEXT_NO_TEXT,
-        Callable(self, "_on_redo"),
+        Callable(self , "_on_redo"),
         10,
         "core_editing"
     )
@@ -550,7 +550,7 @@ func _register_undo_keybinds() -> void:
         "Redo (Alt)",
         [keybinds.make_key_event(KEY_Z, true, true)],
         keybinds.CONTEXT_NO_TEXT,
-        Callable(self, "_on_redo"),
+        Callable(self , "_on_redo"),
         10,
         "core_editing"
     )
@@ -593,7 +593,7 @@ func _init_optional_services(base_dir: String) -> void:
     if ui_manager_script != null:
         ui_manager = ui_manager_script.new()
         ui_manager.name = "CoreUiManager"
-        ui_manager.setup(self, workshop_sync)
+        ui_manager.setup(self , workshop_sync)
         add_child(ui_manager)
 
 func _start_workshop_sync() -> void:
@@ -608,7 +608,7 @@ func _init_boot_screen(base_dir: String) -> void:
     var boot_screen_script = _load_script(base_dir.path_join("features/boot_screen_feature.gd"))
     if boot_screen_script != null:
         boot_screen = boot_screen_script.new()
-        boot_screen.setup(self)
+        boot_screen.setup(self )
 
 func _install_modloader_extensions(base_dir: String) -> void:
     if not _has_global_class("ModLoaderMod"):

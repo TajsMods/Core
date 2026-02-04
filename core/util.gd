@@ -78,8 +78,10 @@ static func format_time(seconds: float) -> String:
 		seconds = 0
 	var total := int(round(seconds))
 	var secs := total % 60
-	var mins := int(total / 60) % 60
-	var hours := int(total / 3600)
+	@warning_ignore("integer_division")
+	var mins := (total / 60) % 60
+	@warning_ignore("integer_division")
+	var hours := total / 3600
 	if hours > 0:
 		return "%02d:%02d:%02d" % [hours, mins, secs]
 	return "%02d:%02d" % [mins, secs]

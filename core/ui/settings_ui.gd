@@ -120,7 +120,7 @@ func _create_ui_structure() -> void:
     # Connect to viewport resize to match game's dynamic scaling
     var viewport = root_control.get_viewport()
     if viewport != null:
-        var resize_handler := Callable(self, "_on_viewport_resized")
+        var resize_handler := Callable(self , "_on_viewport_resized")
         if not viewport.size_changed.is_connected(resize_handler):
             viewport.size_changed.connect(resize_handler)
 
@@ -343,12 +343,12 @@ func _on_tab_selected(index: int) -> void:
 
 func set_settings(settings_ref) -> void:
     if _settings_ref != null and _settings_ref.has_signal("value_changed"):
-        var handler := Callable(self, "_on_settings_value_changed")
+        var handler := Callable(self , "_on_settings_value_changed")
         if _settings_ref.value_changed.is_connected(handler):
             _settings_ref.value_changed.disconnect(handler)
     _settings_ref = settings_ref
     if _settings_ref != null and _settings_ref.has_signal("value_changed"):
-        var new_handler := Callable(self, "_on_settings_value_changed")
+        var new_handler := Callable(self , "_on_settings_value_changed")
         if not _settings_ref.value_changed.is_connected(new_handler):
             _settings_ref.value_changed.connect(new_handler)
     _filter_rows(_search_field.text if _search_field else "")
@@ -386,7 +386,7 @@ func _get_tab_meta(index: int) -> Dictionary:
 func _set_tab_kind_for_container(container: Control, kind: String) -> void:
     if container == null:
         return
-    var index := _tab_index_by_container.get(container, -1)
+    var index: int = _tab_index_by_container.get(container, -1)
     if index < 0:
         return
     if index >= _tab_meta.size():
@@ -793,7 +793,7 @@ func add_collapsible_section(parent: Control, title: String, expanded: bool = fa
 
 # --- Schema-Driven UI ---
 
-func build_schema_tab(container: VBoxContainer, settings_ref, ns_prefix: String, schema: Dictionary, opts := {}) -> void:
+func build_schema_tab(container: VBoxContainer, settings_ref, _ns_prefix: String, schema: Dictionary, _opts := {}) -> void:
     if container == null or schema.is_empty():
         return
     if settings_ref != null and settings_ref != _settings_ref:
@@ -1035,7 +1035,7 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
     slider.value_changed.connect(func(v: float):
         if _settings_ref == null:
             return
-        var next_value = int(v) if entry_type == "int" else v
+        var next_value: Variant = int(v) if entry_type == "int" else v
         value_label.text = _format_schema_value(next_value, entry_type, schema_entry)
         if _is_event_suppressed(key):
             return
@@ -1044,13 +1044,13 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
     slider.drag_ended.connect(func(changed: bool):
         if not changed or _settings_ref == null:
             return
-        var final_value = int(slider.value) if entry_type == "int" else slider.value
+        var final_value: Variant = int(slider.value) if entry_type == "int" else slider.value
         _settings_ref.set_value(key, final_value, true)
     )
     slider.focus_exited.connect(func():
         if _settings_ref == null:
             return
-        var final_value = int(slider.value) if entry_type == "int" else slider.value
+        var final_value: Variant = int(slider.value) if entry_type == "int" else slider.value
         _settings_ref.set_value(key, final_value, true)
     )
     wrapper.add_child(slider)

@@ -79,7 +79,7 @@ func get_redo_count() -> int:
 
 func _execute(action: Dictionary, is_undo: bool) -> bool:
 	var action_type := str(action.get("type", ""))
-	var data := action.get("data", {})
+	var data: Variant = action.get("data", {})
 	if action_type == "":
 		return false
 	if _handlers.has(action_type):
