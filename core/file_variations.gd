@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - File Variations
-# Author: TajemnikTV
-# Description: Registry for custom file variation bits, multipliers, and symbols.
-# ==============================================================================
 class_name TajsCoreFileVariations
 extends RefCounted
 

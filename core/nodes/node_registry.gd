@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Node Registry
-# Author: TajemnikTV
-# Description: Mod-safe registry for window/node metadata.
-# ==============================================================================
 class_name TajsCoreNodeRegistry
 extends RefCounted
 
@@ -403,7 +398,7 @@ func setup_signals() -> void:
     if Signals == null:
         _log_warn("nodes", "Signals autoload missing in setup_signals!")
         return
-    _patches.connect_signal_once(Signals, "desktop_ready", Callable(self, "_on_desktop_ready"), "core.nodes.desktop_ready")
+    _patches.connect_signal_once(Signals, "desktop_ready", Callable(self , "_on_desktop_ready"), "core.nodes.desktop_ready")
 
 func _on_desktop_ready() -> void:
     # Defer by one frame to ensure windows_menu._ready() has fully completed

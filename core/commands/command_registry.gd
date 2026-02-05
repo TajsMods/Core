@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Command Registry
-# Author: TajemnikTV
-# Description: Command storage and execution helpers
-# ==============================================================================
 class_name TajsCoreCommandRegistry
 extends RefCounted
 
@@ -150,7 +145,7 @@ func is_visible(command: Variant, context = null) -> bool:
         return false
     var is_visible_func: Callable = cmd.get("is_visible", Callable())
     if is_visible_func.is_valid():
-        return bool(is_visible_func.call(context))
+        return _call_bool_with_optional_context(is_visible_func, context, false, "is_visible")
     return true
 
 
@@ -162,7 +157,7 @@ func is_enabled(command: Variant, context = null) -> bool:
     if not enabled_func.is_valid():
         enabled_func = cmd.get("can_run", Callable())
     if enabled_func.is_valid():
-        return bool(enabled_func.call(context))
+        return _call_bool_with_optional_context(enabled_func, context, false, "is_enabled/can_run")
     return true
 
 
@@ -191,7 +186,7 @@ func execute(command_id: String, context = null) -> bool:
         command_executed.emit(command_id, context, false)
         return false
     var success := true
-    var result = run_func.call(context)
+    var result = _call_with_optional_context(run_func, context, "run", command_id)
     if typeof(result) == TYPE_INT and int(result) != OK:
         success = false
         _log_warn("Command '%s' returned error: %s" % [command_id, str(result)])
@@ -271,6 +266,34 @@ func _resolve_command(command: Variant) -> Dictionary:
     if command is String and _commands.has(command):
         return _commands[command]
     return {}
+
+
+func _call_with_optional_context(callable_func: Callable, context, role: String, command_id: String = ""):
+    var required_args := _get_required_argument_count(callable_func)
+    if required_args == 0:
+        return callable_func.call()
+    if required_args == 1:
+        return callable_func.call(context)
+
+    var target_label := ""
+    if command_id != "":
+        target_label = " for command '%s'" % command_id
+    _log_warn("Callable %s%s expects %d args; only 0 or 1 are supported." % [role, target_label, required_args])
+    return ERR_INVALID_PARAMETER
+
+
+func _call_bool_with_optional_context(callable_func: Callable, context, default_value: bool, role: String) -> bool:
+    var result = _call_with_optional_context(callable_func, context, role)
+    if typeof(result) == TYPE_INT and int(result) == ERR_INVALID_PARAMETER:
+        return default_value
+    return bool(result)
+
+
+func _get_required_argument_count(callable_func: Callable) -> int:
+    var required_args := callable_func.get_argument_count()
+    if required_args < 0:
+        return 0
+    return required_args
 
 
 func _emit_event(event_name: String, data: Dictionary) -> void:

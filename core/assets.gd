@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Asset Manager
-# Author: TajemnikTV
-# Description: Shared icon/texture loading helpers.
-# ==============================================================================
 class_name TajsCoreAssets
 extends RefCounted
 

@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Patches
-# Author: TajemnikTV
-# Description: Patches
-# ==============================================================================
 class_name TajsCorePatches
 extends RefCounted
 
@@ -121,32 +116,32 @@ func patch_node_script(node: Node, extension_script_path: String, patch_id: Stri
     if node == null:
         _log_warn("patches", "Cannot patch null node")
         return false
-    
+
     if extension_script_path == "":
         _log_warn("patches", "Extension script path is empty")
         return false
-    
+
     var current_script_path: String = ""
     if node.get_script():
         current_script_path = node.get_script().resource_path
-    
+
     # Check if already patched with this script
     if current_script_path == extension_script_path:
         return true # Already patched
-    
+
     # Load the extension script
     var new_script = load(extension_script_path)
     if new_script == null:
         _log_warn("patches", "Failed to load extension script: %s" % extension_script_path)
         return false
-    
+
     # Apply the script to the node
     node.set_script(new_script)
-    
+
     if patch_id == "":
         patch_id = "node_patch:%s" % extension_script_path
     _applied[patch_id] = true
-    
+
     _log_info("patches", "Runtime patched node '%s' with '%s'" % [node.name, extension_script_path])
     return true
 
@@ -154,34 +149,41 @@ func patch_node_script(node: Node, extension_script_path: String, patch_id: Stri
 func patch_desktop(extension_script_path: String) -> bool:
     if not is_instance_valid(Globals.desktop):
         return false
-    
+
     var current_script_path: String = ""
     if Globals.desktop.get_script():
         current_script_path = Globals.desktop.get_script().resource_path
-    
+
     if current_script_path == extension_script_path:
         return true # Already patched
-    
+
     # Save state that might be lost during script swap
+    var property_names: Dictionary = {}
+    for prop in Globals.desktop.get_property_list():
+        property_names[prop.name] = true
     var old_resources = Globals.desktop.resources
-    var old_connections = Globals.desktop.connections
+    var old_connections = null
+    var has_connections_prop := property_names.has("connections")
+    if has_connections_prop:
+        old_connections = Globals.desktop.connections
     var old_win_selections = Globals.desktop.window_selections
     var old_grab_selections = Globals.desktop.grabber_selections
-    
+
     # Load and apply new script
     var new_script = load(extension_script_path)
     if new_script == null:
         _log_warn("patches", "Failed to load desktop extension: %s" % extension_script_path)
         return false
-    
+
     Globals.desktop.set_script(new_script)
-    
+
     # Restore state
     Globals.desktop.resources = old_resources
-    Globals.desktop.connections = old_connections
+    if has_connections_prop:
+        Globals.desktop.connections = old_connections
     Globals.desktop.window_selections = old_win_selections
     Globals.desktop.grabber_selections = old_grab_selections
-    
+
     _applied["desktop_patch"] = true
     _log_info("patches", "Desktop runtime patched with: %s" % extension_script_path)
     return true

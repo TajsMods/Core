@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Localization
-# Author: TajemnikTV
-# Description: Translation helpers for mods.
-# ==============================================================================
 class_name TajsCoreLocalization
 extends RefCounted
 

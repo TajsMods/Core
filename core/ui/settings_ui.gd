@@ -1,8 +1,3 @@
-# =============================================================================
-# Taj's Core - Settings UI
-# Author: TajemnikTV
-# Description: Core settings interface
-# =============================================================================
 class_name TajsCoreSettingsUI
 extends RefCounted
 
@@ -1035,7 +1030,9 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
     slider.value_changed.connect(func(v: float):
         if _settings_ref == null:
             return
-        var next_value: Variant = int(v) if entry_type == "int" else v
+        var next_value: Variant = v
+        if entry_type == "int":
+            next_value = int(v)
         value_label.text = _format_schema_value(next_value, entry_type, schema_entry)
         if _is_event_suppressed(key):
             return
@@ -1044,13 +1041,17 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
     slider.drag_ended.connect(func(changed: bool):
         if not changed or _settings_ref == null:
             return
-        var final_value: Variant = int(slider.value) if entry_type == "int" else slider.value
+        var final_value: Variant = slider.value
+        if entry_type == "int":
+            final_value = int(slider.value)
         _settings_ref.set_value(key, final_value, true)
     )
     slider.focus_exited.connect(func():
         if _settings_ref == null:
             return
-        var final_value: Variant = int(slider.value) if entry_type == "int" else slider.value
+        var final_value: Variant = slider.value
+        if entry_type == "int":
+            final_value = int(slider.value)
         _settings_ref.set_value(key, final_value, true)
     )
     wrapper.add_child(slider)

@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Undo Stack
-# Author: TajemnikTV
-# Description: Lightweight undo/redo stack for mods.
-# ==============================================================================
 class_name TajsCoreUndoStack
 extends RefCounted
 

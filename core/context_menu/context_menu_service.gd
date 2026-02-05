@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Context Menu Service
-# Author: TajemnikTV
-# Description: Context resolution + action provider registry for context menus.
-# ==============================================================================
 class_name TajsCoreContextMenuService
 extends RefCounted
 

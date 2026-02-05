@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Icon Browser
-# Author: TajemnikTV
-# Description: Unified icon picker UI with indexing support.
-# ==============================================================================
 class_name TajsCoreIconBrowser
 extends RefCounted
 

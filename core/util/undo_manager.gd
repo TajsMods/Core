@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Undo Manager
-# Author: TajemnikTV
-# Description: Full-featured Undo/Redo manager service for Core.
-# ==============================================================================
 class_name TajsCoreUndoManager
 extends RefCounted
 

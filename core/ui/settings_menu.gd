@@ -1,8 +1,3 @@
-# =============================================================================
-# Taj's Core - Settings Menu
-# Author: TajemnikTV
-# Description: Builds the Core settings tabs
-# =============================================================================
 class_name TajsCoreSettingsMenu
 extends RefCounted
 

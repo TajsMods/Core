@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Diagnostics
-# Author: TajemnikTV
-# Description:
-# ==============================================================================
 class_name TajsCoreDiagnostics
 extends RefCounted
 
@@ -174,7 +169,7 @@ func self_test() -> Dictionary:
         ok = ok and pass2
     if _core != null and _core.event_bus != null:
         var flag_dict := {"value": false}
-        _core.event_bus.on("core.self_test", func(_payload): flag_dict["value"] = true, self, true)
+        _core.event_bus.on("core.self_test", func(_payload): flag_dict["value"] = true, self , true)
         _core.event_bus.emit("core.self_test", {})
         checks.append({"name": "event_bus", "ok": flag_dict["value"]})
         ok = ok and flag_dict["value"]

@@ -1,8 +1,3 @@
-# =============================================================================
-# Taj's Core - UI Manager
-# Author: TajemnikTV
-# Description: Attaches Core settings UI to the HUD
-# =============================================================================
 class_name TajsCoreUiManager
 extends Node
 

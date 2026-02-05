@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Settings
-# Author: TajemnikTV
-# Description: Settings
-# ==============================================================================
 class_name TajsCoreSettings
 extends RefCounted
 

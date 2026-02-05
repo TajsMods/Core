@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Module Registry
-# Author: TajemnikTV
-# Description: Module Registry
-# ==============================================================================
 class_name TajsCoreModuleRegistry
 extends RefCounted
 

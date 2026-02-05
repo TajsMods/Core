@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Logger
-# Author: TajemnikTV
-# Description: Adds logging functionality to the Core
-# ==============================================================================
 class_name TajsCoreLogger
 extends RefCounted
 

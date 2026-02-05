@@ -55,7 +55,7 @@ func _on_add_pressed() -> void:
         Signals.set_menu.emit(0, 0)
 
 func _on_window_selected(w: String) -> void:
-    if Globals.platform == 2 or Globals.platform == 3:
+    if Data.platform == 2 or Data.platform == 3:
         if w == cur_window:
             set_window("")
         else:

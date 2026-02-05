@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Theme Manager
-# Author: TajemnikTV
-# Description: Shared theme registry for UI with tooltip styling support.
-# ==============================================================================
 class_name TajsCoreThemeManager
 extends RefCounted
 
@@ -24,69 +19,69 @@ var _tooltip_styling = null
 var _tooltip_applied := false
 
 func _init(default_theme_path: String = "res://themes/main.tres") -> void:
-	if ResourceLoader.exists(default_theme_path):
-		_themes[DEFAULT_THEME_ID] = load(default_theme_path)
-	_init_tooltip_styling()
+    if ResourceLoader.exists(default_theme_path):
+        _themes[DEFAULT_THEME_ID] = load(default_theme_path)
+    _init_tooltip_styling()
 
 func _init_tooltip_styling() -> void:
-	var base_dir: String = get_script().resource_path.get_base_dir()
-	var tooltip_script_path: String = base_dir.path_join("tooltip_styling.gd")
-	if ResourceLoader.exists(tooltip_script_path):
-		var tooltip_script = load(tooltip_script_path)
-		if tooltip_script != null:
-			_tooltip_styling = tooltip_script.new()
+    var base_dir: String = get_script().resource_path.get_base_dir()
+    var tooltip_script_path: String = base_dir.path_join("tooltip_styling.gd")
+    if ResourceLoader.exists(tooltip_script_path):
+        var tooltip_script = load(tooltip_script_path)
+        if tooltip_script != null:
+            _tooltip_styling = tooltip_script.new()
 
 func register_theme(theme_id: String, theme: Theme) -> void:
-	if theme_id == "" or theme == null:
-		return
-	_themes[theme_id] = theme
+    if theme_id == "" or theme == null:
+        return
+    _themes[theme_id] = theme
 
 func get_theme(theme_id: String) -> Theme:
-	if _themes.has(theme_id):
-		return _themes[theme_id]
-	return _themes.get(DEFAULT_THEME_ID, null)
+    if _themes.has(theme_id):
+        return _themes[theme_id]
+    return _themes.get(DEFAULT_THEME_ID, null)
 
 func get_game_theme() -> Theme:
-	"""Returns the game's main.tres theme. Use this to ensure consistent styling."""
-	return get_theme(DEFAULT_THEME_ID)
+    """Returns the game's main.tres theme. Use this to ensure consistent styling."""
+    return get_theme(DEFAULT_THEME_ID)
 
 func apply_theme(control: Control, theme_id: String) -> void:
-	if control == null:
-		return
-	var theme := get_theme(theme_id)
-	if theme != null:
-		control.theme = theme
+    if control == null:
+        return
+    var theme := get_theme(theme_id)
+    if theme != null:
+        control.theme = theme
 
 func apply_game_theme(control: Control) -> void:
-	"""Apply the game's main theme to a control for consistent fonts and styling."""
-	apply_theme(control, DEFAULT_THEME_ID)
+    """Apply the game's main theme to a control for consistent fonts and styling."""
+    apply_theme(control, DEFAULT_THEME_ID)
 
 func list_themes() -> Array:
-	return _themes.keys()
+    return _themes.keys()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tooltip Styling API
 # ─────────────────────────────────────────────────────────────────────────────
 
 func apply_tooltip_styling() -> void:
-	"""Apply in-game tooltip styling to the root viewport."""
-	if _tooltip_styling == null or _tooltip_applied:
-		return
-	_tooltip_styling.apply_to_root()
-	_tooltip_applied = true
+    """Apply in-game tooltip styling to the root viewport."""
+    if _tooltip_styling == null or _tooltip_applied:
+        return
+    _tooltip_styling.apply_to_root()
+    _tooltip_applied = true
 
 func apply_tooltip_styling_to_theme(theme: Theme) -> void:
-	"""Apply tooltip styling to a specific theme."""
-	if _tooltip_styling == null or theme == null:
-		return
-	_tooltip_styling.apply_to_theme(theme)
+    """Apply tooltip styling to a specific theme."""
+    if _tooltip_styling == null or theme == null:
+        return
+    _tooltip_styling.apply_to_theme(theme)
 
 func is_tooltip_styling_applied() -> bool:
-	"""Check if tooltip styling has been applied."""
-	return _tooltip_applied
+    """Check if tooltip styling has been applied."""
+    return _tooltip_applied
 
 func reset_tooltip_styling() -> void:
-	"""Remove tooltip styling and restore defaults."""
-	if _tooltip_styling != null:
-		_tooltip_styling.reset()
-		_tooltip_applied = false
+    """Remove tooltip styling and restore defaults."""
+    if _tooltip_styling != null:
+        _tooltip_styling.reset()
+        _tooltip_applied = false

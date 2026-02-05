@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Runtime
-# Author: TajemnikTV
-# Description: Runtime
-# ==============================================================================
 class_name TajsCoreRuntime
 extends Node
 
@@ -620,6 +615,7 @@ func _install_modloader_extensions(base_dir: String) -> void:
     # See _process() for desktop runtime patching logic.
     var paths := [
         base_dir.path_join("extensions/data.gd"),
+        base_dir.path_join("extensions/connectors.gd"),
         base_dir.path_join("extensions/windows_menu.gd"),
         base_dir.path_join("extensions/window_dragger.gd"),
         base_dir.path_join("extensions/hud.gd"),

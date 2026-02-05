@@ -1,8 +1,3 @@
-# ==============================================================================
-# Taj's Core - Feature Flags
-# Author: TajemnikTV
-# Description: Simple feature flag manager backed by Core settings.
-# ==============================================================================
 class_name TajsCoreFeatures
 extends RefCounted
 
