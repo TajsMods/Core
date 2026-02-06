@@ -24,7 +24,7 @@ func _resolve_window_scene(window_id: String) -> String:
     var scene := str(Data.windows[window_id].scene)
     if scene == "":
         return ""
-    var core = Engine.get_meta("TajsCore", null)
+    var core: Variant = Engine.get_meta("TajsCore", null)
     if core != null and core.window_scenes != null:
         return core.window_scenes.resolve_scene_path(scene)
     var file_name := scene
@@ -33,13 +33,13 @@ func _resolve_window_scene(window_id: String) -> String:
     return "res://scenes/windows".path_join(file_name)
 
 func _is_node_limit_reached(additional: int) -> bool:
-    var helper = _get_node_limit_helpers()
+    var helper: Variant = _get_node_limit_helpers()
     if helper != null and helper.has_method("can_add_nodes"):
         return not helper.can_add_nodes(additional)
     return Globals.max_window_count + max(additional, 0) > Utils.MAX_WINDOW
 
 func _get_node_limit_helpers() -> Object:
-    var core = Engine.get_meta("TajsCore", null)
+    var core: Variant = Engine.get_meta("TajsCore", null)
     if core != null and core.has_method("get"):
         return core.get("node_limit_helpers")
     return null

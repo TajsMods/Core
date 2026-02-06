@@ -40,7 +40,7 @@ func can_add_nodes(additional: int = 1) -> bool:
 func _has_globals_custom_limit() -> bool:
     if Globals == null:
         return false
-    for prop in Globals.get_property_list():
+    for prop: Variant in Globals.get_property_list():
         if prop is Dictionary and prop.get("name", "") == "custom_node_limit":
             return true
     return false

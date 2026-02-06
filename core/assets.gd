@@ -28,7 +28,7 @@ func register_icon_dir(path: String, take_over: bool = true) -> int:
 	if dir == null:
 		return 0
 	var count := 0
-	for file_name in dir.get_files():
+	for file_name: Variant in dir.get_files():
 		if not file_name.ends_with(".png"):
 			continue
 		var texture: Texture2D = load(path.path_join(file_name))
@@ -36,7 +36,7 @@ func register_icon_dir(path: String, take_over: bool = true) -> int:
 			continue
 		if take_over:
 			texture.take_over_path("res://textures/icons".path_join(file_name))
-		var resources = _get_autoload("Resources")
+		var resources: Variant = _get_autoload("Resources")
 		if resources != null:
 			if resources.icons == null:
 				resources.icons = {}
@@ -47,7 +47,7 @@ func register_icon_dir(path: String, take_over: bool = true) -> int:
 func _get_autoload(name: String) -> Object:
 	if Engine.has_singleton(name):
 		return Engine.get_singleton(name)
-	var tree = Engine.get_main_loop()
+	var tree: Variant = Engine.get_main_loop()
 	if not (tree is SceneTree):
 		return null
 	return tree.get_root().get_node_or_null(name)
@@ -76,7 +76,7 @@ func _get_mod_path(mod_id: String) -> String:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-	for entry in ProjectSettings.get_global_class_list():
+	for entry: Variant in ProjectSettings.get_global_class_list():
 		if entry.get("class", "") == class_name_str:
 			return true
 	return false

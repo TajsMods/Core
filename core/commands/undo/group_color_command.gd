@@ -31,23 +31,23 @@ func undo() -> bool:
 
 ## Apply a color index to the window
 func _apply_color(color_index: int) -> bool:
-    var window = _find_window()
+    var window: Node = _find_window()
     if not is_instance_valid(window):
         return false
     
     if not "color" in window:
         return false
     
-    window.color = color_index
+    window.set("color", color_index)
     if window.has_method("update_color"):
-        window.update_color()
+        window.call("update_color")
     
     return true
 
 
 ## Check if command is still valid
 func is_valid() -> bool:
-    var window = _find_window()
+    var window: Node = _find_window()
     return is_instance_valid(window) and "color" in window
 
 
@@ -55,7 +55,7 @@ func is_valid() -> bool:
 func _find_window() -> Node:
     if not Globals.desktop:
         return null
-    var windows = Globals.desktop.get_node_or_null("Windows")
+    var windows: Node = Globals.desktop.get_node_or_null("Windows")
     if not windows:
         return null
     return windows.get_node_or_null(_window_name)

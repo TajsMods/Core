@@ -5,11 +5,11 @@ const LOG_NAME := "TajemnikTV-Core:Settings"
 const DEFAULT_MOD_ICON := "res://textures/icons/puzzle.png"
 const TAJS_CORE_MOD_ID := "TajemnikTV-Core"
 
-var _core
-var _ui
-var _workshop_sync
-var _logger
-var _keybinds_ui
+var _core: Variant
+var _ui: Variant
+var _workshop_sync: Variant
+var _logger: Variant
+var _keybinds_ui: Variant
 
 var _mod_initial_states: Dictionary = {}
 var _mod_row_by_id: Dictionary = {}
@@ -27,7 +27,7 @@ var _mod_details_deps_container: VBoxContainer = null
 var _mod_details_links_container: VBoxContainer = null
 var _mod_details_enable_toggle: CheckButton = null
 
-func setup(core, ui, workshop_sync) -> void:
+func setup(core: Variant, ui: Variant, workshop_sync: Variant) -> void:
     _core = core
     _ui = ui
     _workshop_sync = workshop_sync
@@ -42,10 +42,10 @@ func build_settings_menu() -> void:
     _build_mod_settings_tabs()
 
 func _build_core_tab() -> void:
-    var core_vbox = _ui.add_tab("Core", "res://textures/icons/cog.png")
+    var core_vbox: Variant = _ui.add_tab("Core", "res://textures/icons/cog.png")
 
     if _core == null or _core.settings == null:
-        var label = Label.new()
+        var label: Variant = Label.new()
         label.text = "Core settings not available."
         core_vbox.add_child(label)
         return
@@ -59,13 +59,13 @@ func _build_core_tab() -> void:
     _ui.add_toggle(core_vbox, "Log to File", _core.settings.get_bool("core.log_to_file", false), func(v):
         _core.settings.set_value("core.log_to_file", v)
         if _core.logger != null:
-            var path = _core.settings.get_string("core.log_file_path", "user://tajs_core.log")
+            var path: Variant = _core.settings.get_string("core.log_file_path", "user://tajs_core.log")
             _core.logger.set_file_logging(v, path)
     , "Write logs to user://tajs_core.log")
 
 
-    var log_slider = _ui.add_slider(core_vbox, "Log Ring Size", _core.settings.get_int("core.log_ring_size", 200), 50, 500, 10, "", func(v):
-        var size = int(v)
+    var log_slider: Variant = _ui.add_slider(core_vbox, "Log Ring Size", _core.settings.get_int("core.log_ring_size", 200), 50, 500, 10, "", func(v):
+        var size: Variant = int(v)
         _core.settings.set_value("core.log_ring_size", size, false)
         if _core.logger != null:
             _core.logger.set_ring_size(size)
@@ -79,28 +79,28 @@ func _build_core_tab() -> void:
 
     _ui.add_button(core_vbox, "Export Diagnostics", func():
         if _core.diagnostics != null:
-            var result = _core.diagnostics.export_json()
+            var result: Variant = _core.diagnostics.export_json()
             _notify("check", "Diagnostics written to: %s" % result.get("path", ""))
     )
 
     _ui.add_button(core_vbox, "Run Self Test", func():
         if _core.diagnostics != null:
-            var result = _core.diagnostics.self_test()
+            var result: Variant = _core.diagnostics.self_test()
             _notify("check", "Self-test complete: %s" % str(result.get("ok", false)))
     )
 
 func _build_keybinds_tab() -> void:
-    var keybinds_vbox = _ui.add_tab("Keybinds", "res://mods-unpacked/TajemnikTV-Core/textures/icons/Keyboard.png")
+    var keybinds_vbox: Variant = _ui.add_tab("Keybinds", "res://mods-unpacked/TajemnikTV-Core/textures/icons/Keyboard.png")
 
     if _core == null or _core.keybinds == null:
-        var label = Label.new()
+        var label: Variant = Label.new()
         label.text = "Keybinds not available."
         keybinds_vbox.add_child(label)
         return
 
-    var script = load(_core.get_script().resource_path.get_base_dir().path_join("ui/keybinds_ui.gd"))
+    var script: Variant = load(_core.get_script().resource_path.get_base_dir().path_join("ui/keybinds_ui.gd"))
     if script == null:
-        var label2 = Label.new()
+        var label2: Variant = Label.new()
         label2.text = "Keybinds UI failed to load."
         keybinds_vbox.add_child(label2)
         return
@@ -109,10 +109,10 @@ func _build_keybinds_tab() -> void:
     _keybinds_ui.setup(_core.keybinds, _ui, keybinds_vbox)
 
 func _build_mod_manager_tab() -> void:
-    var modmgr_vbox = _ui.add_tab("Mod Manager", "res://textures/icons/puzzle.png")
+    var modmgr_vbox: Variant = _ui.add_tab("Mod Manager", "res://textures/icons/puzzle.png")
 
     if _core == null or _core.settings == null:
-        var label = Label.new()
+        var label: Variant = Label.new()
         label.text = "Core settings not available."
         modmgr_vbox.add_child(label)
         return
@@ -142,7 +142,7 @@ func _build_mod_manager_tab() -> void:
             _notify("cross", "Workshop Sync not available")
     )
 
-    var steam_status = Label.new()
+    var steam_status: Variant = Label.new()
     steam_status.add_theme_font_size_override("font_size", 20)
     steam_status.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8, 0.8))
     if _workshop_sync and _workshop_sync.is_steam_available():
@@ -155,7 +155,7 @@ func _build_mod_manager_tab() -> void:
 
     modmgr_vbox.add_child(HSeparator.new())
 
-    var mods_label = Label.new()
+    var mods_label: Variant = Label.new()
     mods_label.text = "Installed Mods"
     mods_label.add_theme_font_size_override("font_size", 24)
     modmgr_vbox.add_child(mods_label)
@@ -183,12 +183,12 @@ func _build_mod_manager_tab() -> void:
     list_vbox.add_theme_constant_override("separation", 8)
     list_margin.add_child(list_vbox)
 
-    var scroll = ScrollContainer.new()
+    var scroll: Variant = ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.custom_minimum_size = Vector2(0, 300)
     list_vbox.add_child(scroll)
 
-    var mods_list = VBoxContainer.new()
+    var mods_list: Variant = VBoxContainer.new()
     mods_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     mods_list.add_theme_constant_override("separation", 6)
     scroll.add_child(mods_list)
@@ -308,10 +308,10 @@ func _build_mod_manager_tab() -> void:
     _populate_mod_list(mods_list)
 
 func _build_diagnostics_tab() -> void:
-    var diag_vbox = _ui.add_tab("Diagnostics", "res://textures/icons/magnifying_glass.png")
+    var diag_vbox: Variant = _ui.add_tab("Diagnostics", "res://textures/icons/magnifying_glass.png")
 
     if _core == null or _core.diagnostics == null:
-        var label = Label.new()
+        var label: Variant = Label.new()
         label.text = "Diagnostics not available."
         diag_vbox.add_child(label)
         return
@@ -321,7 +321,7 @@ func _build_diagnostics_tab() -> void:
     output.size_flags_vertical = Control.SIZE_EXPAND_FILL
     output.custom_minimum_size = Vector2(0, 300)
 
-    var refresh = func() -> String:
+    var refresh: Variant = func() -> String:
         var dump: String = _core.diagnostics.generate_dump()
         output.text = dump
         return dump
@@ -331,8 +331,8 @@ func _build_diagnostics_tab() -> void:
     )
 
     _ui.add_button(diag_vbox, "Copy Diagnostics Dump", func():
-        var dump = refresh.call()
-        var result = _core.diagnostics.copy_dump_to_clipboard({"dump": dump})
+        var dump: Variant = refresh.call()
+        var result: Variant = _core.diagnostics.copy_dump_to_clipboard({"dump": dump})
         if result.get("ok", false):
             _notify("check", "Diagnostics dump copied to clipboard.")
         else:
@@ -340,8 +340,8 @@ func _build_diagnostics_tab() -> void:
     )
 
     _ui.add_button(diag_vbox, "Save Diagnostics Dump", func():
-        var dump = refresh.call()
-        var result = _core.diagnostics.save_dump_to_file("", {"dump": dump})
+        var dump: Variant = refresh.call()
+        var result: Variant = _core.diagnostics.save_dump_to_file("", {"dump": dump})
         if result.get("ok", false):
             _notify("check", "Diagnostics dump saved to: %s" % result.get("path", ""))
         else:
@@ -356,31 +356,31 @@ func _build_mod_settings_tabs() -> void:
     if not _has_global_class("ModLoaderMod"):
         return
 
-    var all_mods = ModLoaderMod.get_mod_data_all()
+    var all_mods: Variant = ModLoaderMod.get_mod_data_all()
     if all_mods == null:
         return
 
     # Sort mods alphabetically by display name
-    var sorted_mods = all_mods.keys()
+    var sorted_mods: Variant = all_mods.keys()
     sorted_mods.sort_custom(func(a, b):
-        var name_a = _get_mod_display_name(all_mods[a].manifest, str(a))
-        var name_b = _get_mod_display_name(all_mods[b].manifest, str(b))
+        var name_a: Variant = _get_mod_display_name(all_mods[a].manifest, str(a))
+        var name_b: Variant = _get_mod_display_name(all_mods[b].manifest, str(b))
         return str(name_a).naturalnocasecmp_to(str(name_b)) < 0
     )
 
-    for mod_id in sorted_mods:
+    for mod_id: Variant in sorted_mods:
         # Skip Core - it has its own dedicated tabs
         if mod_id == "TajemnikTV-Core":
             continue
 
-        var mod_data = all_mods[mod_id]
+        var mod_data: Variant = all_mods[mod_id]
         # Only create tabs for active mods
         if not mod_data.is_active:
             continue
 
-        var manifest = mod_data.manifest
-        var display_name = _get_mod_display_name(manifest, mod_id)
-        var icon_path = _get_mod_icon_path(manifest, mod_id)
+        var manifest: Variant = mod_data.manifest
+        var display_name: Variant = _get_mod_display_name(manifest, mod_id)
+        var icon_path: Variant = _get_mod_icon_path(manifest, mod_id)
 
         if _core != null and _core.ui_manager != null and _core.ui_manager.has_mod_settings_tab(mod_id):
             _core.ui_manager.register_mod_settings_tab(mod_id, display_name, icon_path)
@@ -397,7 +397,7 @@ func _build_mod_settings_tabs() -> void:
             tab_id = _infer_schema_namespace(core_schema, mod_id)
 
         var tab_kind := "schema" if not core_schema.is_empty() else "manual"
-        var mod_vbox = _ui.add_mod_tab_ex(display_name, icon_path, tab_id, tab_kind)
+        var mod_vbox: Variant = _ui.add_mod_tab_ex(display_name, icon_path, tab_id, tab_kind)
         if mod_vbox == null:
             continue
 
@@ -407,10 +407,10 @@ func _build_mod_settings_tabs() -> void:
             continue
 
         # 2. Check for config_schema from manifest (Fallback)
-        var config_schema = _get_mod_config_schema(manifest)
+        var config_schema: Variant = _get_mod_config_schema(manifest)
         if config_schema != null and not config_schema.is_empty():
             # TODO: Auto-generate settings UI from manifest config_schema
-            var placeholder_label = Label.new()
+            var placeholder_label: Variant = Label.new()
             placeholder_label.text = "Settings available (manifest schema found)."
             placeholder_label.add_theme_font_size_override("font_size", 24)
             placeholder_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6, 0.8))
@@ -418,29 +418,29 @@ func _build_mod_settings_tabs() -> void:
             continue
 
         # 3. No settings found
-        var no_settings_label = Label.new()
+        var no_settings_label: Variant = Label.new()
         no_settings_label.text = "No configurable settings."
         no_settings_label.add_theme_font_size_override("font_size", 24)
         no_settings_label.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8, 0.7))
         mod_vbox.add_child(no_settings_label)
 
 func _generate_settings_from_schema(container: VBoxContainer, schema: Dictionary) -> void:
-    var keys = schema.keys()
+    var keys: Variant = schema.keys()
     keys.sort()
 
-    for key in keys:
-        var entry = schema[key]
+    for key: Variant in keys:
+        var entry: Variant = schema[key]
         if not (entry is Dictionary):
             continue
 
-        var type = entry.get("type", "string")
-        var description = entry.get("description", key)
-        var default_val = entry.get("default", null)
-        var current_val = _core.settings.get_value(key, default_val)
+        var type: Variant = entry.get("type", "string")
+        var description: Variant = entry.get("description", key)
+        var default_val: Variant = entry.get("default", null)
+        var current_val: Variant = _core.settings.get_value(key, default_val)
 
         # If description contains dots (like a key), try to make it prettier?
         # For now use description as label.
-        var label_text = description
+        var label_text: Variant = description
 
         match type:
             "bool":
@@ -463,11 +463,11 @@ func _generate_settings_from_schema(container: VBoxContainer, schema: Dictionary
                     _core.settings.set_value(key, text)
                 )
             _:
-                var unknown_label = Label.new()
+                var unknown_label: Variant = Label.new()
                 unknown_label.text = "%s: Unknown type '%s'" % [label_text, type]
                 container.add_child(unknown_label)
 
-func _get_mod_display_name(manifest, mod_id: String = "") -> String:
+func _get_mod_display_name(manifest: Variant, mod_id: String = "") -> String:
     # Extracts display name from mod manifest, handling both Object and Dictionary types
     var display_name := ""
     var fallback_name := ""
@@ -506,12 +506,12 @@ func _read_manifest_display_name_from_file(mod_id: String) -> String:
     var parser := JSON.new()
     if parser.parse(json_string) != OK:
         return ""
-    var data = parser.get_data()
+    var data: Variant = parser.get_data()
     if not (data is Dictionary):
         return ""
     return str(data.get("display_name", "")).strip_edges()
 
-func _is_valid_mod(mod_id: String, manifest) -> bool:
+func _is_valid_mod(mod_id: String, manifest: Variant) -> bool:
     # Checks if a mod entry is valid (not a stray folder like .idea)
     # Skip hidden directories (start with .)
     if mod_id.begins_with("."):
@@ -531,43 +531,43 @@ func _is_valid_mod(mod_id: String, manifest) -> bool:
 
     return true
 
-func _get_mod_icon_path(manifest, mod_id: String) -> String:
+func _get_mod_icon_path(manifest: Variant, mod_id: String) -> String:
     # Gets mod icon path from manifest or returns empty for default puzzle icon
-    var extra = null
+    var extra: Variant = null
     if manifest is Dictionary:
         extra = manifest.get("extra", {})
     elif manifest != null and "extra" in manifest:
         extra = manifest.extra
 
     if extra is Dictionary:
-        var godot_extra = extra.get("godot", {})
+        var godot_extra: Variant = extra.get("godot", {})
         if godot_extra is Dictionary and godot_extra.has("image"):
-            var image_path = godot_extra.get("image", "")
+            var image_path: Variant = godot_extra.get("image", "")
             if image_path != null and image_path != "" and ResourceLoader.exists(image_path):
                 return image_path
 
     # Try to find an icon in the mod's folder
-    var mod_dir = "res://mods-unpacked/" + mod_id
-    var potential_icons = ["/icon.png", "/icon.svg", "/icon.tres"]
-    for icon in potential_icons:
-        var full_path = mod_dir + icon
+    var mod_dir: Variant = "res://mods-unpacked/" + mod_id
+    var potential_icons: Variant = ["/icon.png", "/icon.svg", "/icon.tres"]
+    for icon: Variant in potential_icons:
+        var full_path: Variant = mod_dir + icon
         if ResourceLoader.exists(full_path):
             return full_path
 
     return "" # Will fall back to puzzle icon
 
-func _get_mod_config_schema(manifest) -> Dictionary:
+func _get_mod_config_schema(manifest: Variant) -> Dictionary:
     # Extracts config_schema from mod manifest
-    var extra = null
+    var extra: Variant = null
     if manifest is Dictionary:
         extra = manifest.get("extra", {})
     elif manifest != null and "extra" in manifest:
         extra = manifest.extra
 
     if extra is Dictionary:
-        var godot_extra = extra.get("godot", {})
+        var godot_extra: Variant = extra.get("godot", {})
         if godot_extra is Dictionary:
-            var schema = godot_extra.get("config_schema", {})
+            var schema: Variant = godot_extra.get("config_schema", {})
             if schema is Dictionary:
                 return schema
     return {}
@@ -582,11 +582,11 @@ func _infer_schema_namespace(schema: Dictionary, fallback: String) -> String:
         return single_key.substr(0, last_dot) if last_dot > 0 else fallback
 
     var common_parts: Array = str(keys[0]).split(".")
-    for idx in range(1, keys.size()):
+    for idx: Variant in range(1, keys.size()):
         var parts: Array = str(keys[idx]).split(".")
         var max_parts: int = min(common_parts.size(), parts.size())
         var new_common: Array = []
-        for i in range(max_parts):
+        for i: Variant in range(max_parts):
             if common_parts[i] == parts[i]:
                 new_common.append(common_parts[i])
             else:
@@ -599,45 +599,45 @@ func _infer_schema_namespace(schema: Dictionary, fallback: String) -> String:
     return ".".join(common_parts)
 
 func _populate_mod_list(container: VBoxContainer) -> void:
-    for child in container.get_children():
+    for child: Variant in container.get_children():
         child.queue_free()
 
     _mod_row_by_id.clear()
 
     if not _has_global_class("ModLoaderMod") or not _has_global_class("ModLoaderUserProfile"):
-        var label = Label.new()
+        var label: Variant = Label.new()
         label.text = "Mod Loader APIs not available."
         container.add_child(label)
         _show_mod_details_placeholder()
         return
 
-    var all_mods = ModLoaderMod.get_mod_data_all()
+    var all_mods: Variant = ModLoaderMod.get_mod_data_all()
     if all_mods == null:
-        var label2 = Label.new()
+        var label2: Variant = Label.new()
         label2.text = "No mod data available."
         container.add_child(label2)
         _show_mod_details_placeholder()
         return
 
     _mod_initial_states.clear()
-    for mod_id in all_mods:
+    for mod_id: Variant in all_mods:
         _mod_initial_states[mod_id] = all_mods[mod_id].is_active
 
-    var sorted_mods = all_mods.keys()
+    var sorted_mods: Variant = all_mods.keys()
     sorted_mods.sort_custom(func(a, b):
         if a == "TajemnikTV-Core":
             return true
         if b == "TajemnikTV-Core":
             return false
-        var name_a = _get_mod_display_name(all_mods[a].manifest, str(a))
-        var name_b = _get_mod_display_name(all_mods[b].manifest, str(b))
+        var name_a: Variant = _get_mod_display_name(all_mods[a].manifest, str(a))
+        var name_b: Variant = _get_mod_display_name(all_mods[b].manifest, str(b))
         return str(name_a).naturalnocasecmp_to(str(name_b)) < 0
     )
 
     var first_mod_id := ""
-    for mod_id in sorted_mods:
-        var mod_data = all_mods[mod_id]
-        var manifest = mod_data.manifest
+    for mod_id: Variant in sorted_mods:
+        var mod_data: Variant = all_mods[mod_id]
+        var manifest: Variant = mod_data.manifest
 
         # Filter out invalid entries (folders without proper manifests)
         if not _is_valid_mod(mod_id, manifest):
@@ -661,15 +661,15 @@ func _populate_mod_list(container: VBoxContainer) -> void:
         row_margin.add_theme_constant_override("margin_bottom", 6)
         row_panel.add_child(row_margin)
 
-        var row = HBoxContainer.new()
+        var row: Variant = HBoxContainer.new()
         row.mouse_filter = Control.MOUSE_FILTER_IGNORE
         row.add_theme_constant_override("separation", 8)
         row_margin.add_child(row)
 
         _mod_row_by_id[mod_id] = row_panel
         var mod_id_for_row: String = mod_id
-        row_panel.gui_input.connect(func(event: InputEvent):
-            if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+        var _ignored: Variant = row_panel.gui_input.connect(func(event: InputEvent):
+            if event is InputEventMouseButton and event.get("pressed") and event.get("button_index") == MOUSE_BUTTON_LEFT:
                 _select_mod(mod_id_for_row)
         )
 
@@ -685,9 +685,9 @@ func _populate_mod_list(container: VBoxContainer) -> void:
             status_dot.tooltip_text = "Disabled"
         row.add_child(status_dot)
 
-        var display_name = _get_mod_display_name(manifest, mod_id)
-        var name_label = Label.new()
-        var version_number = _get_mod_version(manifest)
+        var display_name: Variant = _get_mod_display_name(manifest, mod_id)
+        var name_label: Variant = Label.new()
+        var version_number: Variant = _get_mod_version(manifest)
         name_label.text = "%s v%s" % [display_name, version_number] if version_number != "" else display_name
         name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         name_label.clip_text = true
@@ -707,14 +707,14 @@ func _populate_mod_list(container: VBoxContainer) -> void:
 
 func _update_restart_banner_for_mods() -> void:
     var mod_restart_required := false
-    var current_profile = ModLoaderUserProfile.get_current()
+    var current_profile: Variant = ModLoaderUserProfile.get_current()
     if current_profile == null:
         return
-    var current_enabled_mods = current_profile.mod_list
+    var current_enabled_mods: Variant = current_profile.mod_list
 
-    for mod_id in _mod_initial_states:
-        var originally_enabled = _mod_initial_states[mod_id]
-        var currently_enabled = current_enabled_mods.has(mod_id)
+    for mod_id: Variant in _mod_initial_states:
+        var originally_enabled: Variant = _mod_initial_states[mod_id]
+        var currently_enabled: Variant = current_enabled_mods.has(mod_id)
         if currently_enabled != originally_enabled:
             mod_restart_required = true
             break
@@ -728,17 +728,17 @@ func _update_status_dot_for_mod(mod_id: String, is_active: bool) -> void:
     # Updates the status dot color for a mod in the list
     if not _mod_row_by_id.has(mod_id):
         return
-    var row_panel = _mod_row_by_id[mod_id]
+    var row_panel: Variant = _mod_row_by_id[mod_id]
     if row_panel == null or not is_instance_valid(row_panel):
         return
     # Find the status dot (first label in the row)
-    var row_margin = row_panel.get_child(0) if row_panel.get_child_count() > 0 else null
+    var row_margin: Variant = row_panel.get_child(0) if row_panel.get_child_count() > 0 else null
     if row_margin == null:
         return
-    var row = row_margin.get_child(0) if row_margin.get_child_count() > 0 else null
+    var row: Variant = row_margin.get_child(0) if row_margin.get_child_count() > 0 else null
     if row == null:
         return
-    for child in row.get_children():
+    for child: Variant in row.get_children():
         if child is Label and child.text == "●":
             if is_active:
                 child.add_theme_color_override("font_color", Color(0.4, 0.85, 0.5))
@@ -749,15 +749,15 @@ func _update_status_dot_for_mod(mod_id: String, is_active: bool) -> void:
             break
 
 func _notify(icon: String, message: String) -> void:
-    var signals = _get_root_node("Signals")
+    var signals: Variant = _get_root_node("Signals")
     if signals != null and signals.has_signal("notify"):
-        signals.emit_signal("notify", icon, message)
+        var _ignored: Variant = signals.emit_signal("notify", icon, message)
         return
     _log_info(message)
 
 func _get_root_node(name: String) -> Node:
     if Engine.get_main_loop():
-        var root = Engine.get_main_loop().root
+        var root: Variant = Engine.get_main_loop().root
         if root and root.has_node(name):
             return root.get_node(name)
     return null
@@ -772,7 +772,7 @@ func _log_info(message: String) -> void:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false
@@ -785,21 +785,21 @@ func _select_mod(mod_id: String) -> void:
         _show_mod_details_placeholder()
         return
 
-    var all_mods = ModLoaderMod.get_mod_data_all()
+    var all_mods: Variant = ModLoaderMod.get_mod_data_all()
     if all_mods == null or not all_mods.has(mod_id):
         _show_mod_details_placeholder()
         return
 
-    var mod_data = all_mods[mod_id]
+    var mod_data: Variant = all_mods[mod_id]
     _render_mod_details(mod_data.manifest, mod_id)
 
-func _render_mod_details(manifest, mod_id: String) -> void:
+func _render_mod_details(manifest: Variant, mod_id: String) -> void:
     if _mod_details_panel_root == null or _mod_details_placeholder == null:
         return
 
-    var display_name = _get_mod_display_name(manifest, mod_id)
-    var version = _get_mod_version(manifest)
-    var author = _resolve_mod_author(manifest)
+    var display_name: Variant = _get_mod_display_name(manifest, mod_id)
+    var version: Variant = _get_mod_version(manifest)
+    var author: Variant = _resolve_mod_author(manifest)
 
     var resolved_mod_id := mod_id
     if resolved_mod_id.strip_edges() == "":
@@ -822,13 +822,13 @@ func _render_mod_details(manifest, mod_id: String) -> void:
 
     # Configure enable/disable toggle
     if _mod_details_enable_toggle != null and _has_global_class("ModLoaderMod") and _has_global_class("ModLoaderUserProfile"):
-        var all_mods = ModLoaderMod.get_mod_data_all()
+        var all_mods: Variant = ModLoaderMod.get_mod_data_all()
         var is_active := false
         if all_mods != null and all_mods.has(mod_id):
             is_active = all_mods[mod_id].is_active
 
         # Disconnect any previous signals
-        for conn in _mod_details_enable_toggle.toggled.get_connections():
+        for conn: Variant in _mod_details_enable_toggle.toggled.get_connections():
             _mod_details_enable_toggle.toggled.disconnect(conn.callable)
 
         _mod_details_enable_toggle.set_pressed_no_signal(is_active)
@@ -843,7 +843,7 @@ func _render_mod_details(manifest, mod_id: String) -> void:
             _mod_details_enable_toggle.tooltip_text = ""
 
         var toggle_mod_id: String = mod_id
-        _mod_details_enable_toggle.toggled.connect(func(active: bool):
+        var _ignored: Variant = _mod_details_enable_toggle.toggled.connect(func(active: bool):
             _mod_details_enable_toggle.text = "Enabled" if active else "Disabled"
 
             var success := false
@@ -862,13 +862,13 @@ func _render_mod_details(manifest, mod_id: String) -> void:
         )
 
     if _mod_details_desc_label != null:
-        var description = str(_get_manifest_value(manifest, "description", ""))
+        var description: Variant = str(_get_manifest_value(manifest, "description", ""))
         if description.strip_edges() == "":
             description = "No description provided."
         _mod_details_desc_label.text = description
 
     if _mod_details_icon != null:
-        var icon_path = _get_mod_icon_path(manifest, resolved_mod_id)
+        var icon_path: Variant = _get_mod_icon_path(manifest, resolved_mod_id)
         var icon_texture: Texture2D = null
         if icon_path != "" and ResourceLoader.exists(icon_path):
             icon_texture = load(icon_path)
@@ -877,14 +877,14 @@ func _render_mod_details(manifest, mod_id: String) -> void:
         _mod_details_icon.texture = icon_texture
 
     if _mod_details_deps_container != null:
-        for child in _mod_details_deps_container.get_children():
+        for child: Variant in _mod_details_deps_container.get_children():
             child.queue_free()
-        var deps_payload = _collect_manifest_dependencies(manifest)
+        var deps_payload: Variant = _collect_manifest_dependencies(manifest)
         var deps: Array = deps_payload.get("deps", [])
         var core_found: bool = bool(deps_payload.get("core_found", false))
         if not core_found:
-            var extra = _get_manifest_extra(manifest)
-            var core_min = _get_extra_core_requirement(extra)
+            var extra: Variant = _get_manifest_extra(manifest)
+            var core_min: Variant = _get_extra_core_requirement(extra)
             if core_min != "":
                 deps.append("Taj's Core >= %s" % core_min)
 
@@ -894,31 +894,31 @@ func _render_mod_details(manifest, mod_id: String) -> void:
             none_label.add_theme_color_override("font_color", Color(0.65, 0.7, 0.8, 0.8))
             _mod_details_deps_container.add_child(none_label)
         else:
-            for dep in deps:
+            for dep: Variant in deps:
                 var dep_label := Label.new()
                 dep_label.text = "- " + dep
                 _mod_details_deps_container.add_child(dep_label)
 
     if _mod_details_links_container != null:
-        for child in _mod_details_links_container.get_children():
+        for child: Variant in _mod_details_links_container.get_children():
             child.queue_free()
-        var links = _build_mod_links(manifest)
+        var links: Variant = _build_mod_links(manifest)
         if links.is_empty():
             var none_links := Label.new()
             none_links.text = "No links"
             none_links.add_theme_color_override("font_color", Color(0.65, 0.7, 0.8, 0.8))
             _mod_details_links_container.add_child(none_links)
         else:
-            for entry in links:
+            for entry: Variant in links:
                 var btn := Button.new()
                 btn.text = str(entry.get("label", "Open"))
                 btn.focus_mode = Control.FOCUS_NONE
                 btn.theme_type_variation = "TabButton"
                 btn.custom_minimum_size = Vector2(160, 34)
                 var url := str(entry.get("url", ""))
-                btn.pressed.connect(func():
+                var _ignored: Variant = btn.pressed.connect(func():
                     if url != "":
-                        OS.shell_open(url)
+                        var _ignored: Variant = OS.shell_open(url)
                 )
                 _mod_details_links_container.add_child(btn)
 
@@ -932,8 +932,8 @@ func _show_mod_details_placeholder() -> void:
         _mod_details_panel_root.visible = false
 
 func _update_mod_row_highlight() -> void:
-    for mod_id in _mod_row_by_id.keys():
-        var row_panel = _mod_row_by_id[mod_id]
+    for mod_id: Variant in _mod_row_by_id.keys():
+        var row_panel: Variant = _mod_row_by_id[mod_id]
         if row_panel == null or not is_instance_valid(row_panel):
             continue
         if mod_id == _selected_mod_id:
@@ -954,14 +954,14 @@ func _get_mod_row_selected_style() -> StyleBoxFlat:
         _mod_row_selected_style = style
     return _mod_row_selected_style
 
-func _get_mod_version(manifest) -> String:
-    var version = str(_get_manifest_value(manifest, "version", ""))
+func _get_mod_version(manifest: Variant) -> String:
+    var version: Variant = str(_get_manifest_value(manifest, "version", ""))
     if version.strip_edges() == "":
         version = str(_get_manifest_value(manifest, "version_number", ""))
     return version
 
-func _resolve_mod_author(manifest) -> String:
-    var author = str(_get_manifest_value(manifest, "author", "")).strip_edges()
+func _resolve_mod_author(manifest: Variant) -> String:
+    var author: Variant = str(_get_manifest_value(manifest, "author", "")).strip_edges()
     if author != "":
         return author
 
@@ -969,7 +969,7 @@ func _resolve_mod_author(manifest) -> String:
     if author != "":
         return author
 
-    var extra = _get_manifest_extra(manifest)
+    var extra: Variant = _get_manifest_extra(manifest)
     author = str(extra.get("author", "")).strip_edges()
     if author != "":
         return author
@@ -999,8 +999,8 @@ func _authors_to_display(value: Variant) -> String:
 
     var names: Array[String] = []
     if value is PackedStringArray or value is Array:
-        for entry in value:
-            var name = str(entry).strip_edges()
+        for entry: Variant in value:
+            var name: Variant = str(entry).strip_edges()
             if name != "":
                 names.append(name)
 
@@ -1008,19 +1008,19 @@ func _authors_to_display(value: Variant) -> String:
         return ""
     return ", ".join(names)
 
-func _get_manifest_value(manifest, key: String, fallback: Variant) -> Variant:
+func _get_manifest_value(manifest: Variant, key: String, fallback: Variant) -> Variant:
     if manifest is Dictionary:
         return manifest.get(key, fallback)
     if manifest != null:
         if manifest.has_method("get"):
-            var value = manifest.get(key)
+            var value: Variant = manifest.get(key)
             return value if value != null else fallback
         if key in manifest:
             return manifest[key]
     return fallback
 
-func _get_manifest_extra(manifest) -> Dictionary:
-    var extra = null
+func _get_manifest_extra(manifest: Variant) -> Dictionary:
+    var extra: Variant = null
     if manifest is Dictionary:
         extra = manifest.get("extra", {})
     elif manifest != null and "extra" in manifest:
@@ -1028,18 +1028,18 @@ func _get_manifest_extra(manifest) -> Dictionary:
 
     return extra if extra is Dictionary else {}
 
-func _collect_manifest_dependencies(manifest) -> Dictionary:
+func _collect_manifest_dependencies(manifest: Variant) -> Dictionary:
     var deps: Array[String] = []
     var core_found := false
 
-    var raw = _get_manifest_value(manifest, "dependencies", null)
+    var raw: Variant = _get_manifest_value(manifest, "dependencies", null)
     if raw == null:
         raw = _get_manifest_value(manifest, "requires", null)
     if raw == null:
         raw = _get_manifest_value(manifest, "deps", null)
 
     if raw is Array or raw is PackedStringArray:
-        for entry in raw:
+        for entry: Variant in raw:
             if entry is Dictionary:
                 var dep_id := str(entry.get("mod_id", entry.get("id", entry.get("name", ""))))
                 if dep_id == "":
@@ -1056,7 +1056,7 @@ func _collect_manifest_dependencies(manifest) -> Dictionary:
             else:
                 deps.append(str(entry))
     elif raw is Dictionary:
-        for dep_key in raw.keys():
+        for dep_key: Variant in raw.keys():
             var dep_id := str(dep_key)
             if dep_id == TAJS_CORE_MOD_ID:
                 core_found = true
@@ -1088,27 +1088,27 @@ func _get_extra_core_requirement(extra: Dictionary) -> String:
         extra.get("core_min_version", ""),
         extra.get("tajs_core_min_version", "")
     ]
-    for value in candidates:
+    for value: Variant in candidates:
         if value is String and value.strip_edges() != "":
             return value
         if value is int or value is float:
             return str(value)
     return ""
 
-func _build_mod_links(manifest) -> Array[Dictionary]:
-    var extra = _get_manifest_extra(manifest)
+func _build_mod_links(manifest: Variant) -> Array[Dictionary]:
+    var extra: Variant = _get_manifest_extra(manifest)
     var links: Array[Dictionary] = []
 
     var godot_extra := {}
     if extra.has("godot") and extra.get("godot") is Dictionary:
         godot_extra = extra.get("godot")
 
-    var workshop_url = _first_non_empty_string([
+    var workshop_url: Variant = _first_non_empty_string([
         _get_manifest_value(manifest, "workshop_url", ""),
         extra.get("workshop_url", ""),
         extra.get("steam_workshop_url", "")
     ])
-    var workshop_id = _first_non_empty_string([
+    var workshop_id: Variant = _first_non_empty_string([
         str(_get_manifest_value(manifest, "workshop_id", "")),
         str(_get_manifest_value(manifest, "steam_workshop_id", "")),
         str(extra.get("workshop_id", "")),
@@ -1122,7 +1122,7 @@ func _build_mod_links(manifest) -> Array[Dictionary]:
     if workshop_url != "":
         links.append({"label": "Open Workshop", "url": workshop_url})
 
-    var github_url = _first_non_empty_string([
+    var github_url: Variant = _first_non_empty_string([
         _get_manifest_value(manifest, "github", ""),
         _get_manifest_value(manifest, "github_url", ""),
         _get_manifest_value(manifest, "repo_url", ""),
@@ -1141,7 +1141,7 @@ func _build_mod_links(manifest) -> Array[Dictionary]:
     if github_url != "":
         links.append({"label": "Open GitHub", "url": github_url})
 
-    var docs_url = _first_non_empty_string([
+    var docs_url: Variant = _first_non_empty_string([
         _get_manifest_value(manifest, "docs", ""),
         _get_manifest_value(manifest, "docs_url", ""),
         _get_manifest_value(manifest, "documentation", ""),
@@ -1161,7 +1161,7 @@ func _build_mod_links(manifest) -> Array[Dictionary]:
         links.append({"label": "Open Docs", "url": docs_url})
 
     if workshop_url == "" and github_url == "" and docs_url == "":
-        var website_url = _normalize_link_url(str(_get_manifest_value(manifest, "website_url", "")))
+        var website_url: Variant = _normalize_link_url(str(_get_manifest_value(manifest, "website_url", "")))
         if website_url == "":
             website_url = _normalize_link_url(str(extra.get("website_url", "")))
         if website_url == "":
@@ -1179,7 +1179,7 @@ func _build_mod_links(manifest) -> Array[Dictionary]:
     return links
 
 func _first_non_empty_string(values: Array) -> String:
-    for value in values:
+    for value: Variant in values:
         if value is String and value.strip_edges() != "":
             return value
     return ""

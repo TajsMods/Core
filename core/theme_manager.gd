@@ -15,7 +15,7 @@ const FONT_SIZE_LARGE := 32 # Titles, buttons (matches game's Button/font_size)
 const FONT_SIZE_XLARGE := 36 # Headers
 
 var _themes: Dictionary = {}
-var _tooltip_styling = null
+var _tooltip_styling: Variant = null
 var _tooltip_applied := false
 
 func _init(default_theme_path: String = "res://themes/main.tres") -> void:
@@ -27,7 +27,7 @@ func _init_tooltip_styling() -> void:
     var base_dir: String = get_script().resource_path.get_base_dir()
     var tooltip_script_path: String = base_dir.path_join("tooltip_styling.gd")
     if ResourceLoader.exists(tooltip_script_path):
-        var tooltip_script = load(tooltip_script_path)
+        var tooltip_script: Variant = load(tooltip_script_path)
         if tooltip_script != null:
             _tooltip_styling = tooltip_script.new()
 

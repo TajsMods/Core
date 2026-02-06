@@ -30,7 +30,7 @@ func is_valid() -> bool:
 
 ## Merge this command with a new one (optional optimization)
 ## Returns true if merged
-func merge_with(_other) -> bool:
+func merge_with(_other: Variant) -> bool:
     return false
 
 ## Get description string

@@ -1,10 +1,10 @@
 class_name TajsCoreUiHooks
 extends Node
 
-var _event_bus
+var _event_bus: Variant
 var _last_menu: int = 0
 
-func setup(event_bus) -> void:
+func setup(event_bus: Variant) -> void:
     _event_bus = event_bus
 
 func _ready() -> void:
@@ -39,7 +39,7 @@ func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false
     return {}
 
 func _autoload_ready(autoload_name: String) -> bool:
-    var tree = Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(autoload_name)

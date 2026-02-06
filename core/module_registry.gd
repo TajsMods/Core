@@ -2,11 +2,11 @@ class_name TajsCoreModuleRegistry
 extends RefCounted
 
 var _modules: Dictionary = {}
-var _core
-var _logger
-var _event_bus
+var _core: Variant
+var _logger: Variant
+var _event_bus: Variant
 
-func _init(core, logger = null, event_bus = null) -> void:
+func _init(core: Variant, logger: Variant = null, event_bus: Variant = null) -> void:
     _core = core
     _logger = logger
     _event_bus = event_bus

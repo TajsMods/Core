@@ -26,8 +26,8 @@ func apply_to_viewport(viewport: Viewport) -> void:
     
     if main_theme != null:
         _theme = main_theme
-    elif viewport.theme != null:
-        _theme = viewport.theme
+    elif viewport.get("theme") != null:
+        _theme = viewport.get("theme")
     else:
         _theme = Theme.new()
         viewport.theme = _theme
@@ -56,7 +56,7 @@ func apply_to_root() -> void:
     # Fallback to viewport theme if main theme not found
     if Engine.get_main_loop() == null:
         return
-    var root = Engine.get_main_loop().root
+    var root: Variant = Engine.get_main_loop().root
     if root != null:
         apply_to_viewport(root)
 

@@ -7,9 +7,9 @@ const BASE_DIR := "res://scenes/windows"
 const SCENE_EXT := ".tscn"
 
 var _extra_dirs: Array[String] = []
-var _logger
+var _logger: Variant
 
-func _init(logger = null) -> void:
+func _init(logger: Variant = null) -> void:
     _logger = logger
 
 func register_dir(dir_path: String) -> bool:
@@ -76,11 +76,11 @@ func normalize_saved_windows(save_data: Dictionary) -> void:
         return
     if not save_data.has("windows"):
         return
-    var windows = save_data["windows"]
+    var windows: Variant = save_data["windows"]
     if not (windows is Dictionary):
         return
-    for window_id in windows.keys():
-        var entry = windows[window_id]
+    for window_id: Variant in windows.keys():
+        var entry: Variant = windows[window_id]
         if not (entry is Dictionary):
             continue
         if not entry.has("filename"):
@@ -124,7 +124,7 @@ func _get_mod_path(mod_id: String) -> String:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

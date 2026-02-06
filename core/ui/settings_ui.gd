@@ -1,18 +1,18 @@
 class_name TajsCoreSettingsUI
 extends RefCounted
 
-const LOG_NAME := "TajemnikTV-Core:UI"
+const LOG_NAME: String = "TajemnikTV-Core:UI"
 # Panel sizing - matches game's native Menus container
-const MENUS_OFFSET_LEFT := -1180.0 # Same as HUD/Main/MainContainer/Overlay/Menus
-const MENUS_OFFSET_RIGHT := -100.0 # 100px margin from right edge
-const PANEL_INNER_MARGIN := 20.0 # Inner margin for panel content
-const PANEL_MIN_WIDTH := 560.0
+const MENUS_OFFSET_LEFT: float = -1180.0 # Same as HUD/Main/MainContainer/Overlay/Menus
+const MENUS_OFFSET_RIGHT: float = -100.0 # 100px margin from right edge
+const PANEL_INNER_MARGIN: float = 20.0 # Inner margin for panel content
+const PANEL_MIN_WIDTH: float = 560.0
 
 signal action_triggered(key: String)
 
 var _hud_node: Node
 var _core_version: String
-var _settings_ref = null
+var _settings_ref: Variant = null
 
 # UI References
 var root_control: Control
@@ -23,7 +23,7 @@ var _tab_buttons: Array[Button] = []
 var settings_button: Button
 
 # Restart Banner State
-var _restart_pending := false
+var _restart_pending: bool = false
 var _restart_banner: Control = null
 var _restart_indicator: Control = null
 var _main_vbox: VBoxContainer = null
@@ -31,8 +31,8 @@ var _main_vbox: VBoxContainer = null
 # Search Bar State
 var _search_field: LineEdit = null
 var _searchable_rows: Array = []
-var _filter_only_changed := false
-var _filter_show_advanced := false
+var _filter_only_changed: bool = false
+var _filter_show_advanced: bool = false
 var _filter_only_changed_btn: CheckButton = null
 var _filter_show_advanced_btn: CheckButton = null
 var _export_button: Button = null
@@ -40,16 +40,16 @@ var _import_button: Button = null
 var _reset_tab_button: Button = null
 
 # Sidebar Collapse State
-const SIDEBAR_WIDTH_COLLAPSED := 46.0
-const SIDEBAR_WIDTH_EXPANDED := 180.0
+const SIDEBAR_WIDTH_COLLAPSED: float = 46.0
+const SIDEBAR_WIDTH_EXPANDED: float = 180.0
 var _sidebar: Control = null
-var _sidebar_expanded := false
+var _sidebar_expanded: bool = false
 var _sidebar_tween: Tween = null
 var _search_container: Control = null
 
 # Mod Tab Section State
-const DEFAULT_MOD_ICON := "res://textures/icons/puzzle.png"
-var _mod_section_started := false
+const DEFAULT_MOD_ICON: String = "res://textures/icons/puzzle.png"
+var _mod_section_started: bool = false
 var _mod_section_separator: Control = null
 
 var _tab_meta: Array[Dictionary] = []
@@ -58,14 +58,14 @@ var _current_tab_index: int = 0
 var _controls_by_key: Dictionary = {}
 var _suppressed_control_events: Dictionary = {}
 var _restart_required_changed: Dictionary = {}
-var _restart_from_settings := false
-var _restart_from_external := false
+var _restart_from_settings: bool = false
+var _restart_from_external: bool = false
 var _popup_provider: Callable = Callable()
 
-var _is_animating := false
+var _is_animating: bool = false
 var _tween: Tween = null
 
-func _init(hud: Node, version: String):
+func _init(hud: Node, version: String) -> void:
     _hud_node = hud
     _core_version = version
     _create_ui_structure()
@@ -84,7 +84,7 @@ func _create_ui_structure() -> void:
     root_control.grow_horizontal = Control.GROW_DIRECTION_BEGIN
     root_control.grow_vertical = Control.GROW_DIRECTION_BOTH
 
-    var overlay = _hud_node.get_node_or_null("Main/MainContainer/Overlay")
+    var overlay: Node = _hud_node.get_node_or_null("Main/MainContainer/Overlay")
     if overlay:
         overlay.add_child(root_control)
     else:
@@ -103,7 +103,7 @@ func _create_ui_structure() -> void:
     settings_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
     root_control.add_child(settings_panel)
 
-    var main_vbox = VBoxContainer.new()
+    var main_vbox: VBoxContainer = VBoxContainer.new()
     main_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
     main_vbox.add_theme_constant_override("separation", 0)
     settings_panel.add_child(main_vbox)
@@ -113,9 +113,9 @@ func _create_ui_structure() -> void:
     _create_content_panel(main_vbox)
     _create_footer_panel(main_vbox)
     # Connect to viewport resize to match game's dynamic scaling
-    var viewport = root_control.get_viewport()
+    var viewport: Viewport = root_control.get_viewport()
     if viewport != null:
-        var resize_handler := Callable(self , "_on_viewport_resized")
+        var resize_handler: Callable = Callable(self , "_on_viewport_resized")
         if not viewport.size_changed.is_connected(resize_handler):
             viewport.size_changed.connect(resize_handler)
 
@@ -127,12 +127,12 @@ func _on_viewport_resized() -> void:
     pass
 
 func _create_title_panel(parent: Control) -> void:
-    var title_panel := Panel.new()
+    var title_panel: Panel = Panel.new()
     title_panel.custom_minimum_size = Vector2(0, 80)
     title_panel.theme_type_variation = "OverlayPanelTitle"
     parent.add_child(title_panel)
 
-    var title_container := HBoxContainer.new()
+    var title_container: HBoxContainer = HBoxContainer.new()
     title_container.set_anchors_preset(Control.PRESET_FULL_RECT)
     title_container.offset_left = 15
     title_container.offset_top = 15
@@ -141,7 +141,7 @@ func _create_title_panel(parent: Control) -> void:
     title_container.alignment = BoxContainer.ALIGNMENT_CENTER
     title_panel.add_child(title_container)
 
-    var title_icon := TextureRect.new()
+    var title_icon: TextureRect = TextureRect.new()
     title_icon.custom_minimum_size = Vector2(48, 48)
     title_icon.texture = load("res://textures/icons/puzzle.png")
     title_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -149,22 +149,22 @@ func _create_title_panel(parent: Control) -> void:
     title_icon.self_modulate = Color(0.567, 0.69465, 0.9, 1)
     title_container.add_child(title_icon)
 
-    var title_label := Label.new()
+    var title_label: Label = Label.new()
     title_label.text = "Taj's Core"
     title_label.add_theme_font_size_override("font_size", 40)
     title_container.add_child(title_label)
 
 func _create_content_panel(parent: Control) -> void:
-    var content_panel := PanelContainer.new()
+    var content_panel: PanelContainer = PanelContainer.new()
     content_panel.theme_type_variation = "MenuPanel"
     content_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
     parent.add_child(content_panel)
 
-    var main_hbox := HBoxContainer.new()
+    var main_hbox: HBoxContainer = HBoxContainer.new()
     main_hbox.add_theme_constant_override("separation", 0)
     content_panel.add_child(main_hbox)
 
-    var sidebar := VBoxContainer.new()
+    var sidebar: VBoxContainer = VBoxContainer.new()
     sidebar.name = "Sidebar"
     sidebar.custom_minimum_size = Vector2(SIDEBAR_WIDTH_COLLAPSED, 0)
     sidebar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -177,7 +177,7 @@ func _create_content_panel(parent: Control) -> void:
     sidebar.mouse_entered.connect(_on_sidebar_mouse_entered)
     sidebar.mouse_exited.connect(_on_sidebar_mouse_exited)
 
-    var tab_scroll := ScrollContainer.new()
+    var tab_scroll: ScrollContainer = ScrollContainer.new()
     tab_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     tab_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     tab_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -191,11 +191,11 @@ func _create_content_panel(parent: Control) -> void:
     tab_buttons_container.mouse_filter = Control.MOUSE_FILTER_PASS
     tab_scroll.add_child(tab_buttons_container)
 
-    var separator := VSeparator.new()
+    var separator: VSeparator = VSeparator.new()
     separator.add_theme_constant_override("separation", 2)
     main_hbox.add_child(separator)
 
-    var content_vbox := VBoxContainer.new()
+    var content_vbox: VBoxContainer = VBoxContainer.new()
     content_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     content_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
     content_vbox.add_theme_constant_override("separation", 0)
@@ -211,12 +211,12 @@ func _create_content_panel(parent: Control) -> void:
     content_vbox.add_child(tab_container)
 
 func _create_footer_panel(parent: Control) -> void:
-    var version_panel := PanelContainer.new()
+    var version_panel: PanelContainer = PanelContainer.new()
     version_panel.theme_type_variation = "MenuPanelTitle"
     version_panel.custom_minimum_size = Vector2(0, 40)
     parent.add_child(version_panel)
 
-    var version_label := Label.new()
+    var version_label: Label = Label.new()
     version_label.text = "Taj's Core v" + _core_version
     version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     version_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -225,7 +225,7 @@ func _create_footer_panel(parent: Control) -> void:
     version_panel.add_child(version_label)
 
 func add_mod_button(callback: Callable) -> void:
-    var extras_container = _hud_node.get_node_or_null("Main/MainContainer/Overlay/ExtrasButtons/Container")
+    var extras_container: Node = _hud_node.get_node_or_null("Main/MainContainer/Overlay/ExtrasButtons/Container")
     if extras_container == null:
         return
 
@@ -253,25 +253,25 @@ func add_tab_ex(display_name: String, icon_path: String, tab_id: String = "") ->
         _log_warn("Skipping tab with empty name (icon: %s)" % icon_path)
         return null
 
-    var scroll := ScrollContainer.new()
+    var scroll: ScrollContainer = ScrollContainer.new()
     scroll.name = tab_id if tab_id != "" else display_name
     scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 
-    var margin := MarginContainer.new()
+    var margin: MarginContainer = MarginContainer.new()
     margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     margin.add_theme_constant_override("margin_left", 20)
     margin.add_theme_constant_override("margin_right", 20)
     margin.add_theme_constant_override("margin_top", 10)
     scroll.add_child(margin)
 
-    var vbox := VBoxContainer.new()
+    var vbox: VBoxContainer = VBoxContainer.new()
     vbox.add_theme_constant_override("separation", 10)
     margin.add_child(vbox)
 
     tab_container.add_child(scroll)
-    var tab_index := tab_container.get_child_count() - 1
+    var tab_index: int = tab_container.get_child_count() - 1
 
-    var btn := Button.new()
+    var btn: Button = Button.new()
     btn.name = display_name + "Tab"
     btn.text = ""
     btn.custom_minimum_size = Vector2(SIDEBAR_WIDTH_COLLAPSED, 50)
@@ -306,7 +306,7 @@ func add_mod_section_separator() -> void:
         return
     _mod_section_started = true
 
-    var sep := HSeparator.new()
+    var sep: HSeparator = HSeparator.new()
     sep.name = "ModSectionSeparator"
     sep.custom_minimum_size = Vector2(0, 20)
     sep.add_theme_constant_override("separation", 8)
@@ -323,7 +323,7 @@ func add_mod_tab_ex(display_name: String, icon_path: String = "", tab_id: String
         add_mod_section_separator()
 
     var effective_icon := icon_path if icon_path != "" and ResourceLoader.exists(icon_path) else DEFAULT_MOD_ICON
-    var container = add_tab_ex(display_name, effective_icon, tab_id)
+    var container: Variant = add_tab_ex(display_name, effective_icon, tab_id)
     if container != null:
         _set_tab_kind_for_container(container, kind)
     return container
@@ -331,19 +331,20 @@ func add_mod_tab_ex(display_name: String, icon_path: String = "", tab_id: String
 func _on_tab_selected(index: int) -> void:
     tab_container.current_tab = index
     _current_tab_index = index
-    for i in range(_tab_buttons.size()):
-        _tab_buttons[i].set_pressed_no_signal(i == index)
+    for i: Variant in range(_tab_buttons.size()):
+        if i < _tab_buttons.size():
+            _tab_buttons[i].set_pressed_no_signal(bool(i == index))
     _filter_rows(_search_field.text if _search_field else "")
     _update_tab_action_buttons()
 
-func set_settings(settings_ref) -> void:
+func set_settings(settings_ref: Variant) -> void:
     if _settings_ref != null and _settings_ref.has_signal("value_changed"):
-        var handler := Callable(self , "_on_settings_value_changed")
+        var handler: Callable = Callable(self , "_on_settings_value_changed")
         if _settings_ref.value_changed.is_connected(handler):
             _settings_ref.value_changed.disconnect(handler)
     _settings_ref = settings_ref
     if _settings_ref != null and _settings_ref.has_signal("value_changed"):
-        var new_handler := Callable(self , "_on_settings_value_changed")
+        var new_handler: Callable = Callable(self , "_on_settings_value_changed")
         if not _settings_ref.value_changed.is_connected(new_handler):
             _settings_ref.value_changed.connect(new_handler)
     _filter_rows(_search_field.text if _search_field else "")
@@ -354,15 +355,15 @@ func set_popup_provider(callable_show_popup: Callable) -> void:
     _popup_provider = callable_show_popup
 
 func get_current_tab_id() -> String:
-    var meta := _get_tab_meta(_current_tab_index)
+    var meta: Dictionary = _get_tab_meta(_current_tab_index)
     return str(meta.get("id", ""))
 
 func get_current_tab_display_name() -> String:
-    var meta := _get_tab_meta(_current_tab_index)
+    var meta: Dictionary = _get_tab_meta(_current_tab_index)
     return str(meta.get("display", ""))
 
 func _register_tab_meta(index: int, display_name: String, tab_id: String, kind: String) -> void:
-    var id_value := tab_id if tab_id != "" else display_name
+    var id_value: String = tab_id if tab_id != "" else display_name
     if index >= _tab_meta.size():
         _tab_meta.resize(index + 1)
     _tab_meta[index] = {
@@ -372,13 +373,13 @@ func _register_tab_meta(index: int, display_name: String, tab_id: String, kind: 
     }
 
 func update_tab_display_name(tab_id: String, display_name: String) -> void:
-    var normalized_id := tab_id.strip_edges()
-    var normalized_name := display_name.strip_edges()
+    var normalized_id: String = tab_id.strip_edges()
+    var normalized_name: String = display_name.strip_edges()
     if normalized_id == "" or normalized_name == "":
         return
 
-    for i in range(_tab_meta.size()):
-        var meta = _tab_meta[i]
+    for i: Variant in range(_tab_meta.size()):
+        var meta: Variant = _tab_meta[i]
         if not (meta is Dictionary):
             continue
         if str(meta.get("id", "")).strip_edges() != normalized_id:
@@ -388,7 +389,7 @@ func update_tab_display_name(tab_id: String, display_name: String) -> void:
         _tab_meta[i] = meta
 
         if i >= 0 and i < _tab_buttons.size():
-            var btn = _tab_buttons[i]
+            var btn: Variant = _tab_buttons[i]
             if is_instance_valid(btn):
                 btn.name = normalized_name + "Tab"
                 if _sidebar_expanded:
@@ -399,7 +400,7 @@ func update_tab_display_name(tab_id: String, display_name: String) -> void:
 
 func _get_tab_meta(index: int) -> Dictionary:
     if index >= 0 and index < _tab_meta.size():
-        var meta = _tab_meta[index]
+        var meta: Variant = _tab_meta[index]
         if meta is Dictionary:
             return meta
     return {}
@@ -422,7 +423,7 @@ func _get_current_tab_kind() -> String:
     return str(meta.get("kind", "manual"))
 
 func _update_tab_action_buttons() -> void:
-    var enable_actions := false
+    var enable_actions: bool = false
     if _settings_ref != null and get_current_tab_id() != "" and _get_current_tab_kind() == "schema":
         enable_actions = true
     if _export_button:
@@ -480,24 +481,24 @@ func is_visible() -> bool:
     return settings_panel.visible
 
 func _create_search_field(parent: Control) -> void:
-    var search_container := PanelContainer.new()
+    var search_container: PanelContainer = PanelContainer.new()
     search_container.theme_type_variation = "MenuPanelTitle"
     search_container.custom_minimum_size = Vector2(0, 90)
     parent.add_child(search_container)
     _search_container = search_container
 
-    var search_margin := MarginContainer.new()
+    var search_margin: MarginContainer = MarginContainer.new()
     search_margin.add_theme_constant_override("margin_left", 15)
     search_margin.add_theme_constant_override("margin_right", 15)
     search_margin.add_theme_constant_override("margin_top", 8)
     search_margin.add_theme_constant_override("margin_bottom", 8)
     search_container.add_child(search_margin)
 
-    var layout := VBoxContainer.new()
+    var layout: VBoxContainer = VBoxContainer.new()
     layout.add_theme_constant_override("separation", 6)
     search_margin.add_child(layout)
 
-    var row_top := HBoxContainer.new()
+    var row_top: HBoxContainer = HBoxContainer.new()
     row_top.add_theme_constant_override("separation", 10)
     layout.add_child(row_top)
 
@@ -527,7 +528,7 @@ func _create_search_field(parent: Control) -> void:
     )
     row_top.add_child(_filter_show_advanced_btn)
 
-    var row_bottom := HBoxContainer.new()
+    var row_bottom: HBoxContainer = HBoxContainer.new()
     row_bottom.alignment = BoxContainer.ALIGNMENT_END
     row_bottom.add_theme_constant_override("separation", 10)
     layout.add_child(row_bottom)
@@ -556,19 +557,19 @@ func _create_search_field(parent: Control) -> void:
     _update_tab_action_buttons()
 
 func _filter_rows(query: String) -> void:
-    var search_term := query.strip_edges().to_lower()
-    var current_tab := _current_tab_index
+    var search_term: String = query.strip_edges().to_lower()
+    var current_tab: int = _current_tab_index
 
-    for entry in _searchable_rows:
+    for entry: Variant in _searchable_rows:
         var entry_row: Control = entry.get("row", null)
         if entry_row == null or not is_instance_valid(entry_row):
             continue
-        var visible := int(entry.get("tab_index", -1)) == current_tab
+        var visible: bool = int(entry.get("tab_index", -1)) == current_tab
         if visible and not search_term.is_empty():
-            var label_text := str(entry.get("label", ""))
-            var key_text := str(entry.get("key", ""))
-            var desc_text := str(entry.get("description", ""))
-            var matches := label_text.to_lower().contains(search_term)
+            var label_text: String = str(entry.get("label", ""))
+            var key_text: String = str(entry.get("key", ""))
+            var desc_text: String = str(entry.get("description", ""))
+            var matches: bool = label_text.to_lower().contains(search_term)
             if not matches and key_text != "":
                 matches = key_text.to_lower().contains(search_term)
             if not matches and desc_text != "":
@@ -580,7 +581,7 @@ func _filter_rows(query: String) -> void:
             if _settings_ref != null and _settings_ref.has_method("is_default"):
                 if _settings_ref.is_default(str(entry.get("key", ""))):
                     visible = false
-        var depends_on = entry.get("depends_on", {})
+        var depends_on: Variant = entry.get("depends_on", {})
         if visible and depends_on is Dictionary and not depends_on.is_empty():
             if not _dependency_is_met(depends_on):
                 visible = false
@@ -604,7 +605,7 @@ func _track_row(row: Control, label_text: String, tab_idx: int, key: String = ""
     })
 
 func add_toggle(parent: Control, label_text: String, initial_val: bool, callback: Callable, tooltip: String = "") -> CheckButton:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if tooltip != "":
         row.tooltip_text = tooltip
@@ -612,13 +613,13 @@ func add_toggle(parent: Control, label_text: String, initial_val: bool, callback
 
     _track_row(row, label_text, tab_container.get_child_count() - 1)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var toggle := CheckButton.new()
+    var toggle: CheckButton = CheckButton.new()
     toggle.size_flags_horizontal = Control.SIZE_SHRINK_END
     toggle.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     toggle.focus_mode = Control.FOCUS_NONE
@@ -630,27 +631,27 @@ func add_toggle(parent: Control, label_text: String, initial_val: bool, callback
     return toggle
 
 func add_slider(parent: Control, label_text: String, start_val: float, min_val: float, max_val: float, step: float, suffix: String, callback: Callable) -> HSlider:
-    var container := VBoxContainer.new()
+    var container: VBoxContainer = VBoxContainer.new()
     container.add_theme_constant_override("separation", 5)
     parent.add_child(container)
 
     _track_row(container, label_text, tab_container.get_child_count() - 1)
 
-    var header := HBoxContainer.new()
+    var header: HBoxContainer = HBoxContainer.new()
     container.add_child(header)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(label)
 
-    var value_label := Label.new()
+    var value_label: Label = Label.new()
     value_label.text = _format_slider_value(start_val, suffix)
     value_label.add_theme_font_size_override("font_size", 32)
     header.add_child(value_label)
 
-    var slider := HSlider.new()
+    var slider: HSlider = HSlider.new()
     slider.min_value = min_val
     slider.max_value = max_val
     slider.step = step
@@ -672,7 +673,7 @@ func _format_slider_value(value: float, suffix: String) -> String:
     return str(snapped(value, 0.1))
 
 func add_button(parent: Control, text: String, callback: Callable) -> Button:
-    var btn := Button.new()
+    var btn: Button = Button.new()
     btn.text = text
     btn.custom_minimum_size = Vector2(0, 60)
     btn.theme_type_variation = "TabButton"
@@ -685,21 +686,21 @@ func add_button(parent: Control, text: String, callback: Callable) -> Button:
     return btn
 
 func add_dropdown(parent: Control, label_text: String, options: Array, selected: int, callback: Callable) -> OptionButton:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     parent.add_child(row)
 
     _track_row(row, label_text, tab_container.get_child_count() - 1)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var dropdown := OptionButton.new()
+    var dropdown: OptionButton = OptionButton.new()
     dropdown.focus_mode = Control.FOCUS_NONE
-    for option in options:
+    for option: Variant in options:
         dropdown.add_item(str(option))
     dropdown.selected = clampi(selected, 0, max(0, options.size() - 1))
     dropdown.item_selected.connect(callback)
@@ -708,19 +709,19 @@ func add_dropdown(parent: Control, label_text: String, options: Array, selected:
     return dropdown
 
 func add_text_input(parent: Control, label_text: String, value: String, callback: Callable) -> LineEdit:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     parent.add_child(row)
 
     _track_row(row, label_text, tab_container.get_child_count() - 1)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var input := LineEdit.new()
+    var input: LineEdit = LineEdit.new()
     input.text = value
     input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     input.text_changed.connect(callback)
@@ -729,19 +730,19 @@ func add_text_input(parent: Control, label_text: String, value: String, callback
     return input
 
 func add_color_picker(parent: Control, label_text: String, value: Color, callback: Callable) -> ColorPickerButton:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     parent.add_child(row)
 
     _track_row(row, label_text, tab_container.get_child_count() - 1)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var picker := ColorPickerButton.new()
+    var picker: ColorPickerButton = ColorPickerButton.new()
     picker.color = value
     picker.color_changed.connect(callback)
     row.add_child(picker)
@@ -749,16 +750,16 @@ func add_color_picker(parent: Control, label_text: String, value: Color, callbac
     return picker
 
 func add_separator(parent: Control) -> HSeparator:
-    var sep := HSeparator.new()
+    var sep: HSeparator = HSeparator.new()
     parent.add_child(sep)
     return sep
 
 func add_section_separator_small(parent: Control) -> HSeparator:
     # Small separator placed under section headers
-    var sep := HSeparator.new()
+    var sep: HSeparator = HSeparator.new()
     sep.custom_minimum_size = Vector2(0, 12)
     # Create a StyleBoxLine for actual thickness control
-    var style := StyleBoxLine.new()
+    var style: StyleBoxLine = StyleBoxLine.new()
     style.color = Color(0.627, 0.776, 0.812, 0.5) # Match the theme color with some transparency
     style.thickness = 2
     style.grow_begin = 0
@@ -769,10 +770,10 @@ func add_section_separator_small(parent: Control) -> HSeparator:
 
 func add_section_separator_large(parent: Control) -> HSeparator:
     # Larger separator placed at the end of sections
-    var sep := HSeparator.new()
+    var sep: HSeparator = HSeparator.new()
     sep.custom_minimum_size = Vector2(0, 24)
     # Create a StyleBoxLine for actual thickness control
-    var style := StyleBoxLine.new()
+    var style: StyleBoxLine = StyleBoxLine.new()
     style.color = Color(0.627, 0.776, 0.812, 0.8) # Match the theme color, more visible
     style.thickness = 3
     style.grow_begin = 0
@@ -782,7 +783,7 @@ func add_section_separator_large(parent: Control) -> HSeparator:
     return sep
 
 func add_section_header(parent: Control, title: String) -> Label:
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = title.to_upper() # Force uppercase for section headers
     label.add_theme_font_size_override("font_size", 36) # Larger than settings (32px)
     label.add_theme_color_override("font_color", Color(0.627, 0.776, 0.812, 1.0)) # Theme accent color
@@ -793,18 +794,18 @@ func add_section_header(parent: Control, title: String) -> Label:
     return label
 
 func add_collapsible_section(parent: Control, title: String, expanded: bool = false) -> VBoxContainer:
-    var container := VBoxContainer.new()
+    var container: VBoxContainer = VBoxContainer.new()
     container.add_theme_constant_override("separation", 6)
     parent.add_child(container)
 
-    var header := Button.new()
+    var header: Button = Button.new()
     header.text = title
     header.toggle_mode = true
     header.button_pressed = expanded
     header.theme_type_variation = "TabButton"
     container.add_child(header)
 
-    var content := VBoxContainer.new()
+    var content: VBoxContainer = VBoxContainer.new()
     content.visible = expanded
     container.add_child(content)
 
@@ -814,49 +815,51 @@ func add_collapsible_section(parent: Control, title: String, expanded: bool = fa
 
 # --- Schema-Driven UI ---
 
-func build_schema_tab(container: VBoxContainer, settings_ref, _ns_prefix: String, schema: Dictionary, _opts := {}) -> void:
+func build_schema_tab(container: VBoxContainer, settings_ref: Variant, _ns_prefix: String, schema: Dictionary, _opts := {}) -> void:
     if container == null or schema.is_empty():
         return
     if settings_ref != null and settings_ref != _settings_ref:
         set_settings(settings_ref)
-    var tab_index := _get_tab_index_for_container(container)
+    var tab_index: int = _get_tab_index_for_container(container)
     _set_tab_kind_for_container(container, "schema")
 
     var grouped: Dictionary = {}
-    for key in schema.keys():
-        var entry = schema[key]
+    for key: Variant in schema.keys():
+        var entry: Variant = schema[key]
         if not (entry is Dictionary):
             continue
-        var category := str(entry.get("category", "General"))
+        var entry_dict: Dictionary = (entry as Dictionary)
+        var category: String = str(entry_dict.get("category", "General"))
         if category == "":
             category = "General"
         if not grouped.has(category):
             grouped[category] = []
-        grouped[category].append(str(key))
+        var cat_array: Array = grouped[category] as Array
+        cat_array.append(str(key))
 
     var categories: Array = grouped.keys()
     categories.sort_custom(func(a, b):
         return str(a).naturalnocasecmp_to(str(b)) < 0
     )
 
-    var category_count := categories.size()
-    var category_idx := 0
-    for category in categories:
-        var header = add_section_header(container, str(category))
+    var category_count: int = categories.size()
+    var category_idx: int = 0
+    for category: Variant in categories:
+        var header: Variant = add_section_header(container, str(category))
         _track_row(header, str(category), tab_index)
         # Add small separator under the section header
-        var small_sep = add_section_separator_small(container)
+        var small_sep: Variant = add_section_separator_small(container)
         _track_row(small_sep, str(category), tab_index)
         var keys: Array = grouped[category]
         keys = _sort_keys_by_dependency(keys, schema)
-        for key in keys:
-            var entry = schema.get(key, {})
+        for key: Variant in keys:
+            var entry: Variant = schema.get(key, {})
             if entry is Dictionary:
                 _build_schema_entry(container, tab_index, str(key), entry)
         # Add large separator at the end of the section (except for the last section)
         category_idx += 1
         if category_idx < category_count:
-            var large_sep = add_section_separator_large(container)
+            var large_sep: Variant = add_section_separator_large(container)
             _track_row(large_sep, str(category), tab_index)
 
     _filter_rows(_search_field.text if _search_field else "")
@@ -874,23 +877,27 @@ func _sort_keys_by_dependency(keys: Array, schema: Dictionary) -> Array:
     var depends_on_map: Dictionary = {} # key -> parent key it depends on (if any)
     var dependents_map: Dictionary = {} # parent key -> array of keys that depend on it
 
-    for key in sorted_keys:
-        var entry = schema.get(str(key), {})
+    for key: Variant in sorted_keys:
+        var entry: Variant = schema.get(str(key), {})
         if entry is Dictionary:
-            var dep = entry.get("depends_on", {})
-            if dep is Dictionary and dep.has("key"):
-                var parent_key := str(dep.get("key", ""))
-                if parent_key != "":
-                    depends_on_map[str(key)] = parent_key
-                    if not dependents_map.has(parent_key):
-                        dependents_map[parent_key] = []
-                    dependents_map[parent_key].append(str(key))
+            var entry_dict: Dictionary = (entry as Dictionary)
+            var dep: Variant = entry_dict.get("depends_on", {})
+            if dep is Dictionary:
+                var dep_dict: Dictionary = (dep as Dictionary)
+                if dep_dict.has("key"):
+                    var parent_key: String = str(dep_dict.get("key", ""))
+                    if parent_key != "":
+                        depends_on_map[str(key)] = parent_key
+                        if not dependents_map.has(parent_key):
+                            dependents_map[parent_key] = []
+                        var dep_list: Array = dependents_map[parent_key] as Array
+                        dep_list.append(str(key))
 
     # Now reorder: place each key, then immediately place its dependents (recursively)
     var result: Array = []
     var visited: Dictionary = {}
 
-    for key in sorted_keys:
+    for key: Variant in sorted_keys:
         _add_key_with_dependents(str(key), result, visited, depends_on_map, dependents_map, sorted_keys, schema)
 
     return result
@@ -922,25 +929,27 @@ func _add_key_with_dependents(key: String, result: Array, visited: Dictionary, d
         dependents.sort_custom(func(a, b):
             return str(a).naturalnocasecmp_to(str(b)) < 0
         )
-        for dep_key in dependents:
+        for dep_key: Variant in dependents:
             _add_key_with_dependents(str(dep_key), result, visited, depends_on_map, dependents_map, all_keys, schema)
 
 func _build_schema_entry(container: VBoxContainer, tab_index: int, key: String, entry: Dictionary) -> void:
     if _settings_ref == null:
         return
     var schema_entry: Dictionary = entry.duplicate(true)
-    var label_text := str(schema_entry.get("label", key))
-    var description := str(schema_entry.get("description", ""))
-    var is_advanced := bool(schema_entry.get("hidden", false)) or bool(schema_entry.get("experimental", false))
-    var depends_on = schema_entry.get("depends_on", {})
+    var label_text: String = str(schema_entry.get("label", key))
+    var description: String = str(schema_entry.get("description", ""))
+    var hidden_value: Variant = schema_entry.get("hidden", false)
+    var experimental_value: Variant = schema_entry.get("experimental", false)
+    var is_advanced: bool = bool(hidden_value) or bool(experimental_value)
+    var depends_on: Variant = schema_entry.get("depends_on", {})
     if not (depends_on is Dictionary):
         depends_on = {}
-    var default_value = schema_entry.get("default", null)
-    var current_value = _settings_ref.get_value(key, default_value)
-    var entry_type := str(schema_entry.get("type", ""))
+    var default_value: Variant = schema_entry.get("default", null)
+    var current_value: Variant = _settings_ref.get_value(key, default_value)
+    var entry_type: String = str(schema_entry.get("type", ""))
     if entry_type == "" and schema_entry.has("default"):
         entry_type = _infer_schema_type(schema_entry["default"])
-    var ui_control := _get_schema_ui_control(schema_entry)
+    var ui_control: String = _get_schema_ui_control(schema_entry)
 
     if ui_control == "color_map":
         _build_schema_color_map(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry)
@@ -957,7 +966,7 @@ func _build_schema_entry(container: VBoxContainer, tab_index: int, key: String, 
             else:
                 _build_schema_numeric_input(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type)
         "enum":
-            var options = schema_entry.get("options", [])
+            var options: Variant = schema_entry.get("options", [])
             if options is Array and not options.is_empty():
                 _build_schema_enum(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, options)
             else:
@@ -972,26 +981,26 @@ func _build_schema_entry(container: VBoxContainer, tab_index: int, key: String, 
             _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry)
 
 func _build_schema_bool(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: bool, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
     _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var badge := _create_changed_badge()
+    var badge: Label = _create_changed_badge()
     row.add_child(badge)
 
-    var reset_btn := _create_reset_button(key)
+    var reset_btn: Button = _create_reset_button(key)
     row.add_child(reset_btn)
 
-    var toggle := CheckButton.new()
+    var toggle: CheckButton = CheckButton.new()
     toggle.size_flags_horizontal = Control.SIZE_SHRINK_END
     toggle.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     toggle.focus_mode = Control.FOCUS_NONE
@@ -1017,38 +1026,38 @@ func _build_schema_bool(container: VBoxContainer, tab_index: int, key: String, l
     _register_restart_requirement(key, schema_entry)
 
 func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, entry_type: String) -> void:
-    var wrapper := VBoxContainer.new()
+    var wrapper: VBoxContainer = VBoxContainer.new()
     wrapper.add_theme_constant_override("separation", 5)
     if description != "":
         wrapper.tooltip_text = description
     container.add_child(wrapper)
     _track_row(wrapper, label_text, tab_index, key, description, true, is_advanced, depends_on)
 
-    var header := HBoxContainer.new()
+    var header: HBoxContainer = HBoxContainer.new()
     wrapper.add_child(header)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(label)
 
-    var value_label := Label.new()
+    var value_label: Label = Label.new()
     value_label.text = _format_schema_value(value, entry_type, schema_entry)
     value_label.add_theme_font_size_override("font_size", 24)
     header.add_child(value_label)
 
-    var badge := _create_changed_badge()
+    var badge: Label = _create_changed_badge()
     header.add_child(badge)
 
-    var reset_btn := _create_reset_button(key)
+    var reset_btn: Button = _create_reset_button(key)
     header.add_child(reset_btn)
 
-    var slider := HSlider.new()
+    var slider: HSlider = HSlider.new()
     slider.min_value = float(schema_entry.get("min", 0.0))
     slider.max_value = float(schema_entry.get("max", 1.0))
     slider.step = float(schema_entry.get("step", 1.0 if entry_type == "int" else 0.1))
-    var numeric_value := float(value) if value != null else slider.min_value
+    var numeric_value: float = float(value) if value != null else slider.min_value
     if entry_type == "int":
         numeric_value = float(int(numeric_value))
     slider.value = numeric_value
@@ -1095,30 +1104,30 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
     _register_restart_requirement(key, schema_entry)
 
 func _build_schema_numeric_input(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, entry_type: String) -> void:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
     _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var badge := _create_changed_badge()
+    var badge: Label = _create_changed_badge()
     row.add_child(badge)
 
-    var reset_btn := _create_reset_button(key)
+    var reset_btn: Button = _create_reset_button(key)
     row.add_child(reset_btn)
 
-    var input := LineEdit.new()
+    var input: LineEdit = LineEdit.new()
     input.text = str(value)
     input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     input.focus_mode = Control.FOCUS_ALL
-    var apply_value := func(text: String, save: bool):
+    var apply_value: Callable = func(text: String, save: bool):
         if _settings_ref == null:
             return
         if entry_type == "int":
@@ -1156,45 +1165,45 @@ func _build_schema_numeric_input(container: VBoxContainer, tab_index: int, key: 
     _register_restart_requirement(key, schema_entry)
 
 func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, options: Array) -> void:
-    var row := HBoxContainer.new()
+    var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
     _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
 
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = label_text
     label.add_theme_font_size_override("font_size", 32)
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(label)
 
-    var badge := _create_changed_badge()
+    var badge: Label = _create_changed_badge()
     row.add_child(badge)
 
-    var reset_btn := _create_reset_button(key)
+    var reset_btn: Button = _create_reset_button(key)
     row.add_child(reset_btn)
 
-    var dropdown := OptionButton.new()
+    var dropdown: OptionButton = OptionButton.new()
     dropdown.focus_mode = Control.FOCUS_NONE
     var option_labels: Array = []
     var option_values: Array = []
-    for option in options:
+    for option: Variant in options:
         if option is Dictionary:
-            var opt_value = option.get("value", option.get("label", ""))
-            var opt_label = option.get("label", opt_value)
+            var opt_value: Variant = option.get("value", option.get("label", ""))
+            var opt_label: Variant = option.get("label", opt_value)
             option_values.append(opt_value)
             option_labels.append(str(opt_label))
         else:
             option_values.append(option)
             option_labels.append(str(option))
-    for i in range(option_labels.size()):
+    for i: Variant in range(option_labels.size()):
         dropdown.add_item(option_labels[i])
     # JSON loads integers as floats, so we need to coerce when comparing against int option values
-    var lookup_value = value
+    var lookup_value: Variant = value
     if typeof(value) == TYPE_FLOAT and not option_values.is_empty():
-        var all_int := true
-        for ov in option_values:
+        var all_int: bool = true
+        for ov: Variant in option_values:
             if typeof(ov) != TYPE_INT:
                 all_int = false
                 break
@@ -1209,7 +1218,7 @@ func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, l
             return
         if _is_event_suppressed(key):
             return
-        var next_value = option_values[idx] if idx >= 0 and idx < option_values.size() else option_values[0]
+        var next_value: Variant = option_values[idx] if idx >= 0 and idx < option_values.size() else option_values[0]
         _settings_ref.set_value(key, next_value)
     )
     row.add_child(dropdown)
@@ -1306,7 +1315,7 @@ func _build_schema_json(container: VBoxContainer, tab_index: int, key: String, l
     copy_btn.text = "Copy JSON"
     copy_btn.focus_mode = Control.FOCUS_NONE
     copy_btn.pressed.connect(func():
-        var payload = JSON.stringify(_settings_ref.get_value(key, value), "\t")
+        var payload: Variant = JSON.stringify(_settings_ref.get_value(key, value), "\t")
         DisplayServer.clipboard_set(payload)
     )
     row.add_child(copy_btn)
@@ -1331,16 +1340,16 @@ func _build_schema_json(container: VBoxContainer, tab_index: int, key: String, l
 
 func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
     var overrides: Dictionary = value if value is Dictionary else {}
-    var options_raw = schema_entry.get("color_options", {})
+    var options_raw: Variant = schema_entry.get("color_options", {})
     var option_list: Array[Dictionary] = []
     if options_raw is Dictionary:
-        for opt_key in options_raw.keys():
+        for opt_key: Variant in options_raw.keys():
             option_list.append({
                 "id": str(opt_key),
                 "label": str(options_raw[opt_key])
             })
     elif options_raw is Array:
-        for opt_key in options_raw:
+        for opt_key: Variant in options_raw:
             option_list.append({
                 "id": str(opt_key),
                 "label": str(opt_key)
@@ -1377,7 +1386,7 @@ func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: Stri
 
     var pickers: Dictionary = {}
     var color_get: Callable = schema_entry.get("color_get", Callable())
-    for option in option_list:
+    for option: Variant in option_list:
         var option_id := str(option.get("id", ""))
         if option_id == "":
             continue
@@ -1456,7 +1465,7 @@ func _build_schema_action(container: VBoxContainer, tab_index: int, key: String,
     var action_btn := Button.new()
     action_btn.text = "Run"
     action_btn.focus_mode = Control.FOCUS_NONE
-    var action_callable = schema_entry.get("action", Callable())
+    var action_callable: Variant = schema_entry.get("action", Callable())
     action_btn.pressed.connect(func():
         if action_callable is Callable and action_callable.is_valid():
             action_callable.call()
@@ -1467,7 +1476,7 @@ func _build_schema_action(container: VBoxContainer, tab_index: int, key: String,
 
 func _format_schema_value(value: Variant, entry_type: String, schema_entry: Dictionary = {}) -> String:
     var suffix := str(schema_entry.get("suffix", ""))
-    var precision_val = schema_entry.get("precision", schema_entry.get("decimals", -1))
+    var precision_val: Variant = schema_entry.get("precision", schema_entry.get("decimals", -1))
     var precision := -1
     if typeof(precision_val) == TYPE_INT or typeof(precision_val) == TYPE_FLOAT:
         precision = int(precision_val)
@@ -1506,7 +1515,7 @@ func _infer_schema_type(default_value: Variant) -> String:
             return "string"
 
 func _get_schema_ui_control(schema_entry: Dictionary) -> String:
-    var control = schema_entry.get("ui_control", "")
+    var control: Variant = schema_entry.get("ui_control", "")
     if control == "":
         control = schema_entry.get("control", "")
     if control == "":
@@ -1522,11 +1531,11 @@ func _get_schema_ui_control(schema_entry: Dictionary) -> String:
 
 func _get_color_map_color(overrides: Dictionary, option_id: String, color_get: Callable) -> Color:
     if overrides.has(option_id):
-        var raw = overrides[option_id]
+        var raw: Variant = overrides[option_id]
         if typeof(raw) == TYPE_STRING:
             return Color(str(raw))
     if color_get is Callable and color_get.is_valid():
-        var result = color_get.call(option_id)
+        var result: Variant = color_get.call(option_id)
         if result is Color:
             return result
     return Color.WHITE
@@ -1541,7 +1550,7 @@ func _set_color_map_value(setting_key: String, option_id: String, color: Color, 
 func _get_tab_index_for_container(container: Control) -> int:
     if _tab_index_by_container.has(container):
         return int(_tab_index_by_container[container])
-    for i in range(tab_container.get_child_count()):
+    for i: Variant in range(tab_container.get_child_count()):
         var scroll := tab_container.get_child(i)
         if scroll is ScrollContainer and scroll.get_child_count() > 0:
             var margin := scroll.get_child(0)
@@ -1609,8 +1618,8 @@ func _dependency_is_met(depends_on: Dictionary) -> bool:
         return true
     if _settings_ref == null:
         return true
-    var expected = depends_on.get("equals", null)
-    var current = _settings_ref.get_value(dep_key, null)
+    var expected: Variant = depends_on.get("equals", null)
+    var current: Variant = _settings_ref.get_value(dep_key, null)
     return current == expected
 
 func _on_export_current_tab() -> void:
@@ -1706,7 +1715,7 @@ func _show_json_editor(key: String, value: Variant) -> void:
         if result != OK:
             _show_confirmation("Invalid JSON", "Could not parse the JSON payload.", func(): pass )
             return
-        var data = json.get_data()
+        var data: Variant = json.get_data()
         if entry_type == "dict" and not (data is Dictionary):
             _show_confirmation("Invalid Type", "Expected a JSON object for this setting.", func(): pass )
             return
@@ -1725,8 +1734,8 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
         return
     if _hud_node == null:
         return
-    var base_dir = get_script().resource_path.get_base_dir()
-    var panel_script = load(base_dir.path_join("color_picker_panel.gd"))
+    var base_dir: Variant = get_script().resource_path.get_base_dir()
+    var panel_script: Variant = load(base_dir.path_join("color_picker_panel.gd"))
     if panel_script == null:
         _log_warn("Failed to load color picker panel.")
         return
@@ -1764,7 +1773,7 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
     vbox.add_child(title_label)
 
     # Create the color picker panel
-    var panel = panel_script.new()
+    var panel: Variant = panel_script.new()
     if panel.has_method("setup"):
         panel.call("setup", _settings_ref)
     if panel.has_method("set_color"):
@@ -1790,7 +1799,7 @@ func _show_color_map_picker(setting_key: String, option_id: String, start_color:
 
     # Also close when clicking the background
     bg.gui_input.connect(func(event: InputEvent):
-        if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+        if event is InputEventMouseButton and event.get("pressed") and event.get("button_index") == MOUSE_BUTTON_LEFT:
             close_and_save.call()
     )
 
@@ -1834,7 +1843,7 @@ func _show_popup(title: String, content: Control, buttons: Array[Dictionary]) ->
     btn_row.add_theme_constant_override("separation", 10)
     container.add_child(btn_row)
 
-    for entry in buttons:
+    for entry: Variant in buttons:
         var btn := Button.new()
         btn.text = str(entry.get("text", "OK"))
         btn.focus_mode = Control.FOCUS_NONE
@@ -1869,9 +1878,9 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
         return
     var entry: Dictionary = _controls_by_key[key]
     var kind := str(entry.get("kind", ""))
-    var control = entry.get("control", null)
-    var badge = entry.get("badge", null)
-    var value_label = entry.get("value_label", null)
+    var control: Variant = entry.get("control", null)
+    var badge: Variant = entry.get("badge", null)
+    var value_label: Variant = entry.get("value_label", null)
     var entry_type := str(entry.get("entry_type", ""))
     var schema_entry: Dictionary = entry.get("schema", {})
 
@@ -1887,7 +1896,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
                     else:
                         control.value = float(value)
                     if value_label != null:
-                        var display_value = int(value) if entry_type == "int" else value
+                        var display_value: Variant = int(value) if entry_type == "int" else value
                         value_label.text = _format_schema_value(display_value, entry_type, schema_entry)
             "numeric":
                 if control and control is LineEdit:
@@ -1897,7 +1906,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
                     control.text = str(value)
             "dropdown":
                 if control and control is OptionButton:
-                    var options = entry.get("option_values", entry.get("options", []))
+                    var options: Variant = entry.get("option_values", entry.get("options", []))
                     var selected_idx: int = options.find(value)
                     if selected_idx < 0:
                         selected_idx = 0
@@ -1906,7 +1915,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
                 var pickers: Dictionary = entry.get("pickers", {})
                 var color_get: Callable = entry.get("color_get", Callable())
                 var overrides: Dictionary = value if value is Dictionary else {}
-                for option_id in pickers.keys():
+                for option_id: Variant in pickers.keys():
                     var picker_entry: Dictionary = pickers.get(option_id, {})
                     var style: StyleBoxFlat = picker_entry.get("style", null)
                     var button: Button = picker_entry.get("button", null)
@@ -1930,7 +1939,7 @@ func _rebuild_restart_required_state() -> void:
         _restart_from_settings = false
         _update_restart_banner_state()
         return
-    for key in _controls_by_key.keys():
+    for key: Variant in _controls_by_key.keys():
         var entry: Dictionary = _controls_by_key[key]
         var schema_entry: Dictionary = entry.get("schema", {})
         if schema_entry.get("requires_restart", false):
@@ -1999,8 +2008,8 @@ func _expand_sidebar() -> void:
     _sidebar_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
     _sidebar_tween.tween_property(_sidebar, "custom_minimum_size:x", SIDEBAR_WIDTH_EXPANDED, 0.2)
 
-    for i in range(_tab_buttons.size()):
-        var btn = _tab_buttons[i]
+    for i: Variant in range(_tab_buttons.size()):
+        var btn: Variant = _tab_buttons[i]
         if is_instance_valid(btn):
             var tab_name: String = btn.name.replace("Tab", "")
             if i < _tab_meta.size():
@@ -2021,7 +2030,7 @@ func _collapse_sidebar() -> void:
     _sidebar_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
     _sidebar_tween.tween_property(_sidebar, "custom_minimum_size:x", SIDEBAR_WIDTH_COLLAPSED, 0.2)
 
-    for btn in _tab_buttons:
+    for btn: Variant in _tab_buttons:
         if is_instance_valid(btn):
             btn.text = ""
             btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -2046,11 +2055,11 @@ func _create_restart_banner() -> void:
     if not _main_vbox:
         return
 
-    var banner = PanelContainer.new()
+    var banner: Variant = PanelContainer.new()
     banner.name = "RestartBanner"
     banner.custom_minimum_size = Vector2(0, 50)
 
-    var style = StyleBoxFlat.new()
+    var style: Variant = StyleBoxFlat.new()
     style.bg_color = Color(0.85, 0.55, 0.15, 0.95)
     style.set_corner_radius_all(0)
     style.content_margin_left = 15
@@ -2059,11 +2068,11 @@ func _create_restart_banner() -> void:
     style.content_margin_bottom = 8
     banner.add_theme_stylebox_override("panel", style)
 
-    var hbox = HBoxContainer.new()
+    var hbox: Variant = HBoxContainer.new()
     hbox.add_theme_constant_override("separation", 10)
     banner.add_child(hbox)
 
-    var icon = TextureRect.new()
+    var icon: Variant = TextureRect.new()
     icon.custom_minimum_size = Vector2(28, 28)
     icon.texture = load("res://textures/icons/reload.png")
     icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -2072,7 +2081,7 @@ func _create_restart_banner() -> void:
     icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     hbox.add_child(icon)
 
-    var label = Label.new()
+    var label: Variant = Label.new()
     label.text = "Restart required for changes"
     label.add_theme_font_size_override("font_size", 22)
     label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -2080,7 +2089,7 @@ func _create_restart_banner() -> void:
     label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     hbox.add_child(label)
 
-    var dismiss_btn = Button.new()
+    var dismiss_btn: Variant = Button.new()
     dismiss_btn.text = "Dismiss"
     dismiss_btn.custom_minimum_size = Vector2(90, 34)
     dismiss_btn.focus_mode = Control.FOCUS_NONE
@@ -2091,7 +2100,7 @@ func _create_restart_banner() -> void:
     )
     hbox.add_child(dismiss_btn)
 
-    var exit_btn = Button.new()
+    var exit_btn: Variant = Button.new()
     exit_btn.text = "Exit Now"
     exit_btn.custom_minimum_size = Vector2(90, 34)
     exit_btn.focus_mode = Control.FOCUS_NONE
@@ -2113,13 +2122,13 @@ func _create_restart_indicator() -> void:
     if not settings_button or not is_instance_valid(settings_button):
         return
 
-    var indicator = Panel.new()
+    var indicator: Variant = Panel.new()
     indicator.name = "RestartIndicator"
     indicator.custom_minimum_size = Vector2(14, 14)
     indicator.mouse_filter = Control.MOUSE_FILTER_PASS
     indicator.tooltip_text = "Restart required for some settings"
 
-    var style = StyleBoxFlat.new()
+    var style: Variant = StyleBoxFlat.new()
     style.bg_color = Color(1.0, 0.6, 0.2, 1.0)
     style.set_corner_radius_all(7)
     style.border_width_left = 2
@@ -2129,7 +2138,7 @@ func _create_restart_indicator() -> void:
     style.border_color = Color(0.3, 0.2, 0.1, 1.0)
     indicator.add_theme_stylebox_override("panel", style)
 
-    var btn_parent = settings_button.get_parent()
+    var btn_parent: Variant = settings_button.get_parent()
     if btn_parent:
         btn_parent.add_child(indicator)
         indicator.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -2142,18 +2151,18 @@ func _create_restart_indicator() -> void:
     _restart_indicator = indicator
 
 func _emit_menu_close() -> void:
-    var signals = _get_root_node("Signals")
+    var signals: Variant = _get_root_node("Signals")
     if signals != null and signals.has_signal("set_menu"):
         signals.emit_signal("set_menu", 0, 0)
 
 func _play_sound(name: String) -> void:
-    var sound = _get_root_node("Sound")
+    var sound: Variant = _get_root_node("Sound")
     if sound != null and sound.has_method("play"):
         sound.call("play", name)
 
 func _get_root_node(name: String) -> Node:
     if Engine.get_main_loop():
-        var root = Engine.get_main_loop().root
+        var root: Variant = Engine.get_main_loop().root
         if root and root.has_node(name):
             return root.get_node(name)
     return null
@@ -2166,7 +2175,7 @@ func _log_warn(message: String) -> void:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

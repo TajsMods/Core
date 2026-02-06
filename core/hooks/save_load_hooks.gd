@@ -1,9 +1,9 @@
 class_name TajsCoreSaveLoadHooks
 extends Node
 
-var _event_bus
+var _event_bus: Variant
 
-func setup(event_bus) -> void:
+func setup(event_bus: Variant) -> void:
     _event_bus = event_bus
 
 func _ready() -> void:
@@ -14,13 +14,13 @@ func _ready() -> void:
     Signals.desktop_ready.connect(_on_desktop_ready)
 
 func _on_saving() -> void:
-    _emit_event("game.saving", {})
+    var _ignored: Variant = _emit_event("game.saving", {})
 
 func _on_boot() -> void:
-    _emit_event("game.started", {})
+    var _ignored: Variant = _emit_event("game.started", {})
 
 func _on_desktop_ready() -> void:
-    _emit_event("game.desktop_ready", {})
+    var _ignored: Variant = _emit_event("game.desktop_ready", {})
 
 func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false) -> Dictionary:
     if _event_bus == null:
@@ -34,7 +34,7 @@ func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false
     return {}
 
 func _autoload_ready(autoload_name: String) -> bool:
-    var tree = Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(autoload_name)

@@ -3,7 +3,7 @@ extends "res://scripts/connectors.gd"
 
 func _ready() -> void:
     super._ready()
-    Signals.tool_set.connect(_on_tool_set)
+    var _ignored: Variant = Signals.tool_set.connect(_on_tool_set)
     _apply_mouse_filter_policy()
 
 
@@ -24,13 +24,13 @@ func _on_gui_input(event: InputEvent) -> void:
 
     if event is InputEventMouseMotion:
         if grabbing:
-            grabbing.move_and_snap(event.position)
+            grabbing.move_and_snap(event.get("position"))
             queue_redraw()
             accept_event()
             return
         elif Globals.tool != Utils.tools.MOVE:
             var new_hover: Connector
-            var point_data: Dictionary = get_point_at(event.position)
+            var point_data: Dictionary = get_point_at(event.get("position"))
 
             if point_data.connector:
                 new_hover = point_data.connector
@@ -46,19 +46,19 @@ func _on_gui_input(event: InputEvent) -> void:
                 queue_redraw()
     elif event is InputEventScreenDrag:
         if grabbing:
-            grabbing.move_and_snap(event.position)
+            grabbing.move_and_snap(event.get("position"))
             queue_redraw()
             accept_event()
             return
 
     if Globals.editing_connection and Globals.tool != Utils.tools.MOVE:
         if event is InputEventScreenTouch:
-            if event.index == 0:
+            if event.get("index") == 0:
                 if handle_press_input(event):
                     accept_event()
                     return
         elif event is InputEventMouseButton:
-            if event.button_index == MOUSE_BUTTON_LEFT:
+            if event.get("button_index") == MOUSE_BUTTON_LEFT:
                 if handle_press_input(event):
                     accept_event()
                     return

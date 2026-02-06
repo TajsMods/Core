@@ -13,7 +13,7 @@ func setup(before: Dictionary, after: Dictionary) -> void:
     _before_data = before.duplicate(true)
     _after_data = after.duplicate(true)
     
-    var count = _before_data.size()
+    var count: int = _before_data.size()
     if count == 1:
         description = "Resize Node"
     else:
@@ -32,20 +32,20 @@ func undo() -> bool:
 
 ## Apply a set of sizes and positions to windows
 func _apply_data(data: Dictionary) -> bool:
-    var success := true
+    var success: bool = true
     
-    for window_name in data:
-        var window = _find_window(window_name)
+    for window_name: String in data:
+        var window: Node = _find_window(window_name)
         if not is_instance_valid(window):
             success = false
             continue
         
-        var entry = data[window_name]
-        window.position = entry.position
-        window.size = entry.size
+        var entry: Dictionary = data[window_name]
+        window.set("position", entry.position)
+        window.set("size", entry.size)
         # window_group uses custom_minimum_size to enforce minimum
         if "custom_minimum_size" in window:
-            window.custom_minimum_size = entry.size
+            window.set("custom_minimum_size", entry.size)
     
     # Emit dragging_set signal to trigger UI updates (cables etc)
     Signals.dragging_set.emit()
@@ -56,8 +56,8 @@ func _apply_data(data: Dictionary) -> bool:
 ## Check if command is still valid
 func is_valid() -> bool:
     # At least one window must still exist
-    for window_name in _before_data:
-        var window = _find_window(window_name)
+    for window_name: String in _before_data:
+        var window: Node = _find_window(window_name)
         if is_instance_valid(window):
             return true
     return false
@@ -67,7 +67,7 @@ func is_valid() -> bool:
 func _find_window(window_name: String) -> Node:
     if not Globals.desktop:
         return null
-    var windows = Globals.desktop.get_node_or_null("Windows")
+    var windows: Node = Globals.desktop.get_node_or_null("Windows")
     if not windows:
         return null
     return windows.get_node_or_null(window_name)

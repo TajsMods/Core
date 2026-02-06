@@ -4,26 +4,26 @@ extends Node
 const LOG_NAME := "TajemnikTV-Core:UIManager"
 const IconBrowserScript := preload("res://mods-unpacked/TajemnikTV-Core/core/ui/icon_browser.gd")
 
-var _core
-var _workshop_sync
-var _ui
-var _settings_menu
-var _hud_injector
-var _popup_manager
+var _core: Variant
+var _workshop_sync: Variant
+var _ui: Variant
+var _settings_menu: Variant
+var _hud_injector: Variant
+var _popup_manager: Variant
 var _mod_tabs: Dictionary = {} # mod_id -> VBoxContainer
 var _pending_mod_tabs: Dictionary = {} # mod_id -> {name, icon}
 
-func setup(core, workshop_sync) -> void:
+func setup(core: Variant, workshop_sync: Variant) -> void:
     _core = core
     _workshop_sync = workshop_sync
 
 func _ready() -> void:
     set_process_input(true)
-    get_tree().node_added.connect(_on_node_added)
+    var _ignored: Variant = get_tree().node_added.connect(_on_node_added)
     call_deferred("_check_existing_main")
 
 func _check_existing_main() -> void:
-    var main = get_tree().root.get_node_or_null("Main")
+    var main: Variant = get_tree().root.get_node_or_null("Main")
     if main:
         _setup_for_main(main)
 
@@ -32,16 +32,16 @@ func _on_node_added(node: Node) -> void:
         call_deferred("_setup_for_main", node)
 
 func _setup_for_main(main_node: Node) -> void:
-    var hud = main_node.get_node_or_null("HUD")
+    var hud: Variant = main_node.get_node_or_null("HUD")
     if hud == null:
         return
 
-    var overlay = hud.get_node_or_null("Main/MainContainer/Overlay")
+    var overlay: Variant = hud.get_node_or_null("Main/MainContainer/Overlay")
     if overlay and overlay.has_node("TajsCoreMenus"):
         return
 
-    var base_dir = get_script().resource_path.get_base_dir()
-    var ui_script = load(base_dir.path_join("settings_ui.gd"))
+    var base_dir: Variant = get_script().resource_path.get_base_dir()
+    var ui_script: Variant = load(base_dir.path_join("settings_ui.gd"))
     if ui_script == null:
         _log_warn("Failed to load settings UI script.")
         return
@@ -51,7 +51,7 @@ func _setup_for_main(main_node: Node) -> void:
     if _core != null:
         _ui.set_settings(_core.settings)
 
-    var menu_script = load(base_dir.path_join("settings_menu.gd"))
+    var menu_script: Variant = load(base_dir.path_join("settings_menu.gd"))
     if menu_script == null:
         _log_warn("Failed to load settings menu script.")
         return
@@ -67,14 +67,14 @@ func _setup_for_main(main_node: Node) -> void:
     _emit_hud_ready()
 
 func _setup_hud_services(hud: Node) -> void:
-    var base_dir = get_script().resource_path.get_base_dir()
-    var injector_script = load(base_dir.path_join("hud_injector.gd"))
+    var base_dir: Variant = get_script().resource_path.get_base_dir()
+    var injector_script: Variant = load(base_dir.path_join("hud_injector.gd"))
     if injector_script != null:
         _hud_injector = injector_script.new()
         _hud_injector.name = "CoreHudInjector"
         _hud_injector.setup(hud)
         add_child(_hud_injector)
-    var popup_script = load(base_dir.path_join("popup_manager.gd"))
+    var popup_script: Variant = load(base_dir.path_join("popup_manager.gd"))
     if popup_script != null:
         _popup_manager = popup_script.new()
         _popup_manager.name = "CorePopupManager"
@@ -100,14 +100,14 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
     Returns: VBoxContainer to add settings widgets, or null if UI not ready.
     """
     if _mod_tabs.has(mod_id):
-        var cached_tab = _mod_tabs[mod_id]
+        var cached_tab: Variant = _mod_tabs[mod_id]
         if is_instance_valid(cached_tab):
             if _ui != null and _ui.has_method("update_tab_display_name"):
                 _ui.update_tab_display_name(mod_id, display_name)
             return cached_tab
         else:
             # Tab was freed (e.g., on reload), remove stale reference
-            _mod_tabs.erase(mod_id)
+            var _ignored: Variant = _mod_tabs.erase(mod_id)
     if _ui == null:
         _pending_mod_tabs[mod_id] = {"name": display_name, "icon": icon_path}
         return null
@@ -121,8 +121,8 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
             effective_name = pending_name
         if str(effective_icon).strip_edges() == "":
             effective_icon = pending_icon
-        _pending_mod_tabs.erase(mod_id)
-    var container = _ui.add_mod_tab_ex(effective_name, effective_icon, mod_id, "manual")
+        var _ignored: Variant = _pending_mod_tabs.erase(mod_id)
+    var container: Variant = _ui.add_mod_tab_ex(effective_name, effective_icon, mod_id, "manual")
     if container != null:
         _mod_tabs[mod_id] = container
     return container
@@ -210,13 +210,36 @@ func show_input_dialog(title: String, prompt: String, default_text: String, on_s
         return
     _popup_manager.show_input_dialog(title, prompt, default_text, on_submit)
 
+func show_checkbox_confirmation(
+    title: String,
+    message: String,
+    checkbox_text: String,
+    on_confirm: Callable,
+    on_cancel: Callable = Callable(),
+    confirm_text: String = "Confirm",
+    cancel_text: String = "Cancel",
+    helper_text: String = ""
+) -> void:
+    if _popup_manager == null:
+        return
+    _popup_manager.show_checkbox_confirmation(
+        title,
+        message,
+        checkbox_text,
+        on_confirm,
+        on_cancel,
+        confirm_text,
+        cancel_text,
+        helper_text
+    )
+
 func close_popup() -> void:
     if _popup_manager == null:
         return
     _popup_manager.close_popup()
 
 func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
-    IconBrowserScript.open({
+    var _ignored: Variant = IconBrowserScript.open({
         "initial_selected_id": initial_selection,
         "allow_clear": false
     }, func(selected_id: String, entry: Dictionary):
@@ -230,7 +253,7 @@ func create_button(text: String, callback: Callable) -> Button:
     btn.text = text
     btn.focus_mode = Control.FOCUS_NONE
     if callback != null and callback.is_valid():
-        btn.pressed.connect(callback)
+        var _ignored: Variant = btn.pressed.connect(callback)
     return btn
 
 func create_slider(label: String, value: float, min_val: float, max_val: float, callback: Callable) -> HSlider:
@@ -241,7 +264,7 @@ func create_slider(label: String, value: float, min_val: float, max_val: float, 
     slider.tooltip_text = label
     slider.focus_mode = Control.FOCUS_NONE
     if callback != null and callback.is_valid():
-        slider.value_changed.connect(callback)
+        var _ignored: Variant = slider.value_changed.connect(callback)
     return slider
 
 func create_toggle(label: String, value: bool, callback: Callable) -> CheckButton:
@@ -250,11 +273,11 @@ func create_toggle(label: String, value: bool, callback: Callable) -> CheckButto
     toggle.text = label
     toggle.focus_mode = Control.FOCUS_NONE
     if callback != null and callback.is_valid():
-        toggle.toggled.connect(callback)
+        var _ignored: Variant = toggle.toggled.connect(callback)
     return toggle
 
 func register_mod_settings_button(mod_id: String, icon: String, callback: Callable) -> void:
-    var extras_container = _get_extras_container()
+    var extras_container: Variant = _get_extras_container()
     if extras_container == null:
         return
     if extras_container.has_node(mod_id):
@@ -269,13 +292,13 @@ func register_mod_settings_button(mod_id: String, icon: String, callback: Callab
     button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
     button.expand_icon = true
     if callback != null and callback.is_valid():
-        button.pressed.connect(callback)
+        var _ignored: Variant = button.pressed.connect(callback)
     extras_container.add_child(button)
 
 func show_notification(icon: String, message: String) -> void:
-    var signals = _get_root_node("Signals")
+    var signals: Variant = _get_root_node("Signals")
     if signals != null and signals.has_signal("notify"):
-        signals.emit_signal("notify", icon, message)
+        var _ignored: Variant = signals.emit_signal("notify", icon, message)
 
 func show_toast(message: String, _duration: float = 2.0) -> void:
     show_notification("info", message)
@@ -283,14 +306,14 @@ func show_toast(message: String, _duration: float = 2.0) -> void:
 func _get_extras_container() -> Node:
     if Engine.get_main_loop() == null:
         return null
-    var root = Engine.get_main_loop().root
+    var root: Variant = Engine.get_main_loop().root
     if root == null:
         return null
     return root.get_node_or_null("Main/HUD/Main/MainContainer/Overlay/ExtrasButtons/Container")
 
 func _get_root_node(node_name: String) -> Node:
     if Engine.get_main_loop():
-        var root = Engine.get_main_loop().root
+        var root: Variant = Engine.get_main_loop().root
         if root and root.has_node(node_name):
             return root.get_node(node_name)
     return null
@@ -306,7 +329,7 @@ func _emit_hud_ready() -> void:
 func _input(event: InputEvent) -> void:
     if _ui == null or not _ui.is_visible():
         return
-    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+    if event is InputEventMouseButton and event.get("pressed") and event.get("button_index") == MOUSE_BUTTON_LEFT:
         var mouse_pos := get_viewport().get_mouse_position()
         var panel_rect: Rect2 = _ui.settings_panel.get_global_rect() if _ui.settings_panel else Rect2()
         var btn_rect: Rect2 = _ui.settings_button.get_global_rect() if _ui.settings_button else Rect2()
@@ -321,7 +344,7 @@ func _log_warn(message: String) -> void:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

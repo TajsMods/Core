@@ -19,16 +19,16 @@ enum KeybindContext {
     NO_TEXT_INPUT
 }
 
-var _settings
-var _logger
-var _event_bus
+var _settings: Variant
+var _logger: Variant
+var _event_bus: Variant
 var _actions: Dictionary = {}
 var _conflicts: Array = []
 var _register_counter: int = 0
 var _categories: Dictionary = {}
 var _hold_actions: Dictionary = {}
 
-func setup(settings, logger, event_bus = null) -> void:
+func setup(settings: Variant, logger: Variant, event_bus: Variant = null) -> void:
     _settings = settings
     _logger = logger
     _event_bus = event_bus
@@ -36,7 +36,7 @@ func setup(settings, logger, event_bus = null) -> void:
     set_process_unhandled_input(true)
 
 
-func register(action_id: String, default_binding, callback: Callable, display_name: String = "", context: String = CONTEXT_ANY, module_id: String = "", priority: int = 0, category_id: String = "", use_input: bool = false) -> bool:
+func register(action_id: String, default_binding: Variant, callback: Callable, display_name: String = "", context: String = CONTEXT_ANY, module_id: String = "", priority: int = 0, category_id: String = "", use_input: bool = false) -> bool:
     var shortcuts: Array = []
     if default_binding is Array:
         shortcuts = default_binding
@@ -156,7 +156,7 @@ func set_binding(action_id: String, shortcuts: Array) -> void:
     overrides[action_id] = _serialize_shortcuts(normalized)
     _save_overrides(overrides)
     _rebuild_conflicts()
-    emit_signal("binding_changed", action_id, normalized)
+    var _ignored: Variant = emit_signal("binding_changed", action_id, normalized)
     if _event_bus != null and _event_bus.has_method("emit"):
         _event_bus.emit("keybind.overridden", {"id": action_id})
 
@@ -173,11 +173,11 @@ func reset_to_default(action_id: String) -> void:
     emit_signal("binding_changed", action_id, defaults)
 
 func reset_all_to_default() -> void:
-    for action_id in _actions.keys():
+    for action_id: Variant in _actions.keys():
         var defaults: Array = _actions[action_id]["default_shortcuts"]
         _actions[action_id]["shortcuts"] = defaults
         _apply_binding(action_id, defaults)
-        emit_signal("binding_changed", action_id, defaults)
+        var _ignored: Variant = emit_signal("binding_changed", action_id, defaults)
     var overrides := _get_overrides()
     overrides.clear()
     _save_overrides(overrides)
@@ -189,10 +189,10 @@ func get_conflicts() -> Array:
 func get_actions_for_ui() -> Array:
     var result: Array = []
     var conflict_lookup := {}
-    for conflict in _conflicts:
-        for action_id in conflict["actions"]:
+    for conflict: Variant in _conflicts:
+        for action_id: Variant in conflict["actions"]:
             conflict_lookup[action_id] = true
-    for action in _actions.values():
+    for action: Variant in _actions.values():
         result.append({
             "id": action["id"],
             "display_name": action["display_name"],
@@ -215,15 +215,15 @@ func _unhandled_input(event: InputEvent) -> void:
         if _handle_hold(event):
             get_viewport().set_input_as_handled()
             return
-        if not event.pressed or event.echo:
+        if not event.get("pressed") or event.get("echo"):
             return
     elif event is InputEventMouseButton:
-        if not event.pressed:
+        if not event.get("pressed"):
             return
     else:
         return
     var matches: Array = []
-    for action in _actions.values():
+    for action: Variant in _actions.values():
         if action.get("use_input", false):
             continue
         if action.get("hold", false):
@@ -234,7 +234,7 @@ func _unhandled_input(event: InputEvent) -> void:
             matches.append(action)
     if matches.is_empty():
         return
-    var winner = _resolve_conflict(matches)
+    var winner: Variant = _resolve_conflict(matches)
     if winner == null:
         return
     var callback: Callable = winner["callback"]
@@ -248,15 +248,15 @@ func _input(event: InputEvent) -> void:
     if _actions.is_empty():
         return
     if event is InputEventKey:
-        if not event.pressed or event.echo:
+        if not event.get("pressed") or event.get("echo"):
             return
     elif event is InputEventMouseButton:
-        if not event.pressed:
+        if not event.get("pressed"):
             return
     else:
         return
     var matches: Array = []
-    for action in _actions.values():
+    for action: Variant in _actions.values():
         if not action.get("use_input", false):
             continue
         if action.get("hold", false):
@@ -267,7 +267,7 @@ func _input(event: InputEvent) -> void:
             matches.append(action)
     if matches.is_empty():
         return
-    var winner = _resolve_conflict(matches)
+    var winner: Variant = _resolve_conflict(matches)
     if winner == null:
         return
     var callback: Callable = winner["callback"]
@@ -317,7 +317,7 @@ func _is_menu_open() -> bool:
     if hud == null:
         return false
     if hud.has_method("get"):
-        var menu_val = hud.get("cur_menu")
+        var menu_val: Variant = hud.get("cur_menu")
         if menu_val != null:
             return int(menu_val) != Utils.menu_types.NONE
     return false
@@ -326,14 +326,14 @@ func _is_popup_open() -> bool:
     return false
 
 func _get_hud() -> Node:
-    var tree = Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     if tree is SceneTree:
         return tree.root.get_node_or_null("Main/HUD")
     return null
 
 func _resolve_conflict(matches: Array) -> Dictionary:
-    var winner = matches[0]
-    for action in matches:
+    var winner: Variant = matches[0]
+    for action: Variant in matches:
         if action["priority"] > winner["priority"]:
             winner = action
         elif action["priority"] == winner["priority"]:
@@ -343,9 +343,9 @@ func _resolve_conflict(matches: Array) -> Dictionary:
 
 func _rebuild_conflicts() -> void:
     var grouped := {}
-    for action in _actions.values():
+    for action: Variant in _actions.values():
         var context: String = action["context"]
-        for shortcut in action["shortcuts"]:
+        for shortcut: Variant in action["shortcuts"]:
             var signature: String = _event_signature(shortcut)
             var key: String = "%s|%s" % [context, signature]
             if not grouped.has(key):
@@ -356,12 +356,12 @@ func _rebuild_conflicts() -> void:
                 }
             grouped[key]["actions"].append(action)
     _conflicts = []
-    for group in grouped.values():
+    for group: Variant in grouped.values():
         if group["actions"].size() <= 1:
             continue
-        var winner = _resolve_conflict(group["actions"])
+        var winner: Variant = _resolve_conflict(group["actions"])
         var action_ids: Array = []
-        for action in group["actions"]:
+        for action: Variant in group["actions"]:
             action_ids.append(action["id"])
         _conflicts.append({
             "context": group["context"],
@@ -374,24 +374,24 @@ func _apply_binding(action_id: String, shortcuts: Array) -> void:
     if not InputMap.has_action(action_id):
         InputMap.add_action(action_id)
     InputMap.action_erase_events(action_id)
-    for shortcut in shortcuts:
+    for shortcut: Variant in shortcuts:
         if shortcut is InputEvent:
             InputMap.action_add_event(action_id, shortcut)
 
 func _normalize_shortcuts(shortcuts: Array) -> Array:
     var result: Array = []
-    for entry in shortcuts:
+    for entry: Variant in shortcuts:
         if entry is InputEvent:
             result.append(entry)
         elif entry is Dictionary:
-            var event = _deserialize_shortcut(entry)
+            var event: Variant = _deserialize_shortcut(entry)
             if event != null:
                 result.append(event)
     return result
 
 func _serialize_shortcuts(shortcuts: Array) -> Array:
     var result: Array = []
-    for shortcut in shortcuts:
+    for shortcut: Variant in shortcuts:
         var data := _serialize_shortcut(shortcut)
         if not data.is_empty():
             result.append(data)
@@ -401,20 +401,20 @@ func _serialize_shortcut(event: InputEvent) -> Dictionary:
     if event is InputEventKey:
         return {
             "type": "key",
-            "keycode": event.keycode,
-            "shift": event.shift_pressed,
-            "ctrl": event.ctrl_pressed,
-            "alt": event.alt_pressed,
-            "meta": event.meta_pressed
+            "keycode": event.get("keycode"),
+            "shift": event.get("shift_pressed"),
+            "ctrl": event.get("ctrl_pressed"),
+            "alt": event.get("alt_pressed"),
+            "meta": event.get("meta_pressed")
         }
     if event is InputEventMouseButton:
         return {
             "type": "mouse",
-            "button_index": event.button_index,
-            "shift": event.shift_pressed,
-            "ctrl": event.ctrl_pressed,
-            "alt": event.alt_pressed,
-            "meta": event.meta_pressed
+            "button_index": event.get("button_index"),
+            "shift": event.get("shift_pressed"),
+            "ctrl": event.get("ctrl_pressed"),
+            "alt": event.get("alt_pressed"),
+            "meta": event.get("meta_pressed")
         }
     return {}
 
@@ -451,16 +451,16 @@ func _deserialize_shortcut(data: Dictionary) -> InputEvent:
 
 func _format_shortcuts(shortcuts: Array) -> Array:
     var result: Array = []
-    for shortcut in shortcuts:
+    for shortcut: Variant in shortcuts:
         if shortcut is InputEvent:
             result.append(shortcut.as_text())
     return result
 
 func _event_signature(event: InputEvent) -> String:
     if event is InputEventKey:
-        return "key:%s:%s:%s:%s:%s" % [event.keycode, event.shift_pressed, event.ctrl_pressed, event.alt_pressed, event.meta_pressed]
+        return "key:%s:%s:%s:%s:%s" % [event.get("keycode"), event.get("shift_pressed"), event.get("ctrl_pressed"), event.get("alt_pressed"), event.get("meta_pressed")]
     if event is InputEventMouseButton:
-        return "mouse:%s:%s:%s:%s:%s" % [event.button_index, event.shift_pressed, event.ctrl_pressed, event.alt_pressed, event.meta_pressed]
+        return "mouse:%s:%s:%s:%s:%s" % [event.get("button_index"), event.get("shift_pressed"), event.get("ctrl_pressed"), event.get("alt_pressed"), event.get("meta_pressed")]
     return event.as_text()
 
 func _normalize_context(context: Variant) -> String:
@@ -487,7 +487,7 @@ func _extract_module_id(action_id: String) -> String:
 
 func _build_combo_event(keys: Array[int]) -> InputEventKey:
     var event := InputEventKey.new()
-    for key in keys:
+    for key: Variant in keys:
         match key:
             KEY_CTRL:
                 event.ctrl_pressed = true
@@ -527,13 +527,13 @@ func make_mouse_event(button_index: int, ctrl: bool = false, shift: bool = false
 func _handle_hold(event: InputEvent) -> bool:
     if not (event is InputEventKey):
         return false
-    for action_id in _hold_actions.keys():
+    for action_id: Variant in _hold_actions.keys():
         var entry: Dictionary = _hold_actions[action_id]
         if not _context_allows(entry.get("context", CONTEXT_ANY)):
             continue
         var target: InputEventKey = entry.get("event", null)
         if target != null and _event_matches(event, target):
-            var callable: Callable = entry["press"] if event.pressed else entry["release"]
+            var callable: Callable = entry["press"] if event.get("pressed") else entry["release"]
             if callable != null and callable.is_valid():
                 callable.call()
             if _event_bus != null and _event_bus.has_method("emit"):

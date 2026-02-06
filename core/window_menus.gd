@@ -40,7 +40,7 @@ func get_tab_index(mod_id: String, tab_id: String) -> int:
     return -1
 
 func get_tab_by_index(index: int) -> Dictionary:
-    for tab in _tabs:
+    for tab: Variant in _tabs:
         if int(tab["index"]) == index:
             return tab
     return {}
@@ -48,7 +48,7 @@ func get_tab_by_index(index: int) -> Dictionary:
 func ensure_tabs(categories_node: Node) -> void:
     if categories_node == null:
         return
-    for tab in _tabs:
+    for tab: Variant in _tabs:
         var tab_name: String = tab["tab_id"]
         if categories_node.has_node(tab_name):
             continue
@@ -59,7 +59,7 @@ func ensure_tabs(categories_node: Node) -> void:
 func build_buttons(menu_buttons: Node) -> void:
     if menu_buttons == null:
         return
-    for tab in _tabs:
+    for tab: Variant in _tabs:
         var button_name: String = tab["button_name"]
         if menu_buttons.has_node(button_name):
             continue
@@ -85,17 +85,17 @@ func get_panel_for_tab(index: int, categories_node: Node) -> Control:
 func update_button_states(menu_buttons: Node, windows_menu: Node) -> void:
     if menu_buttons == null or windows_menu == null:
         return
-    for tab in _tabs:
+    for tab: Variant in _tabs:
         var button_name: String = tab["button_name"]
         if not menu_buttons.has_node(button_name):
             continue
         var button: Button = menu_buttons.get_node(button_name)
-        button.button_pressed = windows_menu.open and windows_menu.cur_tab == int(tab["index"])
+        button.button_pressed = windows_menu.get("open") and windows_menu.get("cur_tab") == int(tab["index"])
 
 func update_unlocks(menu_buttons: Node) -> void:
     if menu_buttons == null:
         return
-    for tab in _tabs:
+    for tab: Variant in _tabs:
         var button_name: String = tab["button_name"]
         if not menu_buttons.has_node(button_name):
             continue
@@ -108,7 +108,7 @@ func update_unlocks(menu_buttons: Node) -> void:
             button.disabled = not Globals.unlocks[disable_key]
 
 func get_notice_for_category(category_id: String) -> String:
-    for tab in _tabs:
+    for tab: Variant in _tabs:
         if tab["tab_id"] == category_id:
             return str(tab["notice"])
     return ""
@@ -134,7 +134,7 @@ func _build_button(tab: Dictionary) -> Button:
             button.icon = load(icon_path)
 
     var index := int(tab["index"])
-    button.pressed.connect(func() -> void:
+    var _ignored: Variant = button.pressed.connect(func() -> void:
         Signals.set_menu.emit(Utils.menu_types.WINDOWS, index)
     )
     return button
@@ -184,7 +184,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
     var rows: Array = tab["rows"]
     if rows.is_empty():
         rows = [ {"default": tab["tab_id"]}]
-    for row_index in range(rows.size()):
+    for row_index: Variant in range(rows.size()):
         var row_def: Dictionary = rows[row_index]
         var row_name := "Row%d" % row_index
         var row := HBoxContainer.new()
@@ -193,7 +193,7 @@ func _build_tab_panel(tab: Dictionary) -> PanelContainer:
         row.layout_mode = 2
         row.add_theme_constant_override("separation", 10)
         categories.add_child(row)
-        for sub_id in row_def.keys():
+        for sub_id: Variant in row_def.keys():
             var column := VBoxContainer.new()
             column.name = sub_id
             @warning_ignore("int_as_enum_without_cast", "int_as_enum_without_match")
@@ -256,13 +256,13 @@ func _resolve_icon_path(icon_value: String, mod_id: String) -> String:
 
 func _normalize_rows(config: Dictionary) -> Array:
     if config.has("rows"):
-        var rows = config["rows"]
+        var rows: Variant = config["rows"]
         if rows is Array:
             return rows
         if rows is Dictionary:
             return [rows]
     if config.has("categories"):
-        var categories = config["categories"]
+        var categories: Variant = config["categories"]
         if categories is Array:
             return categories
         if categories is Dictionary:
@@ -286,7 +286,7 @@ func _get_mod_path(mod_id: String) -> String:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

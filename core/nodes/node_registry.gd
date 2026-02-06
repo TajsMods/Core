@@ -18,11 +18,11 @@ var _resource_types: Dictionary = {}
 var _file_types: Dictionary = {}
 var _window_categories: Dictionary = {}
 var _category_items: Dictionary = {}
-var _logger
-var _event_bus
-var _patches
+var _logger: Variant
+var _event_bus: Variant
+var _patches: Variant
 
-func _init(logger = null, event_bus = null, patches = null) -> void:
+func _init(logger: Variant = null, event_bus: Variant = null, patches: Variant = null) -> void:
     _logger = logger
     _event_bus = event_bus
     _patches = patches
@@ -124,11 +124,11 @@ func unregister_node(node_id: String) -> bool:
         if count > 0:
             _log_warn("nodes", "Node '%s' has active windows; unregister blocked." % node_id)
             return false
-        Data.windows.erase(node_id)
+        var _ignored: Variant = Data.windows.erase(node_id)
         _remove_from_attributes(node_id)
         _remove_from_globals(node_id)
         _remove_from_menu(node_id)
-    _nodes.erase(node_id)
+    var _ignored: Variant = _nodes.erase(node_id)
     _untrack_mod_node(node_id)
     return true
 
@@ -153,7 +153,7 @@ func list_nodes(filter: Dictionary = {}) -> Array:
             var required: Array = filter["tags"]
             var tags_list: Array = entry.get("tags", [])
             var ok := true
-            for tag in required:
+            for tag: Variant in required:
                 if not tags_list.has(tag):
                     ok = false
                     break
@@ -163,7 +163,7 @@ func list_nodes(filter: Dictionary = {}) -> Array:
     return results
 
 func refresh_node_catalog() -> bool:
-    var menu = _find_windows_menu()
+    var menu: Variant = _find_windows_menu()
     if menu == null:
         _log_warn("nodes", "WindowsMenu not found; refresh skipped.")
         return false
@@ -179,13 +179,13 @@ func refresh_node_catalog() -> bool:
 
 func get_mod_nodes() -> Dictionary:
     var result := {}
-    for mod_id in _mod_nodes:
+    for mod_id: Variant in _mod_nodes:
         result[mod_id] = _mod_nodes[mod_id].duplicate()
     return result
 
 func get_mod_node_count() -> int:
     var count := 0
-    for mod_id in _mod_nodes:
+    for mod_id: Variant in _mod_nodes:
         count += _mod_nodes[mod_id].size()
     return count
 
@@ -347,7 +347,7 @@ func process_pending() -> void:
         _log_info("nodes", "Processing %d pending node(s)." % _pending_windows.size())
     var queue := _pending_windows.duplicate()
     _pending_windows.clear()
-    for item in queue:
+    for item: Variant in queue:
         _register_data_window(item["id"], item["def"])
         _try_refresh_menu(item["id"])
 
@@ -360,7 +360,7 @@ func _sync_attributes(safe_id: String, window_def: Dictionary) -> void:
         return
     Attributes.window_attributes[safe_id] = {}
     for attr_name: String in window_def["attributes"]:
-        var value = window_def["attributes"][attr_name]
+        var value: Variant = window_def["attributes"][attr_name]
         Attributes.window_attributes[safe_id][attr_name] = Attribute.new(value)
 
 func _sync_globals(safe_id: String, window_def: Dictionary) -> void:
@@ -381,16 +381,16 @@ func _remove_from_attributes(node_id: String) -> void:
     if not _autoload_ready("Attributes"):
         return
     if Attributes.window_attributes is Dictionary and Attributes.window_attributes.has(safe_id):
-        Attributes.window_attributes.erase(safe_id)
+        var _ignored: Variant = Attributes.window_attributes.erase(safe_id)
 
 func _remove_from_globals(node_id: String) -> void:
     var safe_id := _sanitize_id(node_id)
     if not _autoload_ready("Globals"):
         return
     if Globals.window_count is Dictionary and Globals.window_count.has(safe_id):
-        Globals.window_count.erase(safe_id)
+        var _ignored: Variant = Globals.window_count.erase(safe_id)
     if Globals.windows_data is Dictionary and Globals.windows_data.has(safe_id):
-        Globals.windows_data.erase(safe_id)
+        var _ignored: Variant = Globals.windows_data.erase(safe_id)
 
 func setup_signals() -> void:
     if _patches == null:
@@ -405,16 +405,16 @@ func _on_desktop_ready() -> void:
     # before we modify Data.windows
     (func():
         process_pending()
-        refresh_node_catalog()
+        var _ignored: Variant = refresh_node_catalog()
     ).call_deferred()
 
 func _try_refresh_menu(node_id: String) -> void:
-    var menu = _find_windows_menu()
+    var menu: Variant = _find_windows_menu()
     if menu == null:
         return
     if not menu.is_node_ready():
         return
-    _add_button_to_menu(menu, node_id)
+    var _ignored: Variant = _add_button_to_menu(menu, node_id)
 
 func _add_button_to_menu(menu: Node, node_id: String) -> bool:
     if not _data_has_window(node_id):
@@ -439,46 +439,46 @@ func _add_button_to_menu(menu: Node, node_id: String) -> bool:
         return false
     var instance: Control = WINDOW_BUTTON_SCENE.instantiate()
     instance.name = safe_id
-    instance.selected.connect(Callable(menu, "_on_window_selected"))
-    instance.hovered.connect(Callable(menu, "_on_window_hovered"))
+    instance.get("selected").connect(Callable(menu, "_on_window_selected"))
+    instance.get("hovered").connect(Callable(menu, "_on_window_hovered"))
     sub_node.add_child(instance)
     if menu.has_signal("window_set"):
-        menu.window_set.connect(Callable(instance, "_on_window_set"))
+        menu.get("window_set").connect(Callable(instance, "_on_window_set"))
     return true
 
 func _remove_from_menu(node_id: String) -> void:
-    var menu = _find_windows_menu()
+    var menu: Variant = _find_windows_menu()
     if menu == null:
         return
     if not menu.has_node("Categories"):
         return
     var categories: Node = menu.get_node("Categories")
-    for category in categories.get_children():
+    for category: Variant in categories.get_children():
         if not category.has_method("get"):
             continue
         var sub_categories: Dictionary = category.get("sub_categories")
         if sub_categories == null:
             continue
-        for sub in sub_categories.values():
+        for sub: Variant in sub_categories.values():
             var safe_id := _sanitize_id(node_id)
             if sub.has_node(safe_id):
                 sub.get_node(safe_id).queue_free()
                 return
 
-func _find_windows_menu():
-    var tree = Engine.get_main_loop()
+func _find_windows_menu() -> Variant:
+    var tree: Variant = Engine.get_main_loop()
     if not (tree is SceneTree):
         return null
     return _find_node_by_script(tree.get_root(), WINDOW_MENU_SCRIPT)
 
-func _find_node_by_script(node: Node, script_path: String):
+func _find_node_by_script(node: Node, script_path: String) -> Variant:
     if node == null:
         return null
-    var script = node.get_script()
+    var script: Variant = node.get_script()
     if script != null and script.resource_path == script_path:
         return node
-    for child in node.get_children():
-        var found = _find_node_by_script(child, script_path)
+    for child: Variant in node.get_children():
+        var found: Variant = _find_node_by_script(child, script_path)
         if found != null:
             return found
     return null
@@ -495,7 +495,7 @@ func _get_window_count(node_id: String) -> int:
     return 0
 
 func _autoload_ready(name: String) -> bool:
-    var tree = Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(name)
@@ -561,7 +561,7 @@ func _track_mod_node(node_id: String, mod_id: String) -> void:
     _mod_nodes[mod_id].append(node_id)
 
 func _untrack_mod_node(node_id: String) -> void:
-    for mod_id in _mod_nodes:
+    for mod_id: Variant in _mod_nodes:
         if _mod_nodes[mod_id].has(node_id):
             _mod_nodes[mod_id].erase(node_id)
 
@@ -598,7 +598,7 @@ func _get_mod_path(mod_id: String) -> String:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

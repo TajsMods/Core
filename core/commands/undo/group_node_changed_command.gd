@@ -4,7 +4,7 @@ extends "res://mods-unpacked/TajemnikTV-Core/core/commands/undo/undo_command.gd"
 var _window_name: String = ""
 var _before_data: Dictionary = {}
 var _after_data: Dictionary = {}
-var _changed_keys: Array = []
+var _changed_keys: Array[Variant] = []
 
 ## Setup the command
 func setup(window_name: String, before: Dictionary, after: Dictionary) -> void:
@@ -15,11 +15,11 @@ func setup(window_name: String, before: Dictionary, after: Dictionary) -> void:
     
     # Identify what changed
     _changed_keys = []
-    for key in after.keys():
+    for key: Variant in after.keys():
         if not before.has(key) or str(before[key]) != str(after[key]):
             _changed_keys.append(key)
     # Check for removed keys
-    for key in before.keys():
+    for key: Variant in before.keys():
         if not after.has(key):
             if not key in _changed_keys:
                 _changed_keys.append(key)
@@ -29,20 +29,20 @@ func setup(window_name: String, before: Dictionary, after: Dictionary) -> void:
 
 ## Execute (apply after data)
 func execute() -> bool:
-    var window = _get_window()
+    var window: Node = _get_window()
     if is_instance_valid(window):
         if window.has_method("load_data"):
-            window.load_data(_after_data)
+            window.call("load_data", _after_data)
             return true
     return false
 
 
 ## Undo (apply before data)
 func undo() -> bool:
-    var window = _get_window()
+    var window: Node = _get_window()
     if is_instance_valid(window):
         if window.has_method("load_data"):
-            window.load_data(_before_data)
+            window.call("load_data", _before_data)
             return true
     return false
 
@@ -51,7 +51,7 @@ func undo() -> bool:
 func _get_window() -> Node:
     if not Globals.desktop:
         return null
-    var windows_root = Globals.desktop.get_node_or_null("Windows")
+    var windows_root: Node = Globals.desktop.get_node_or_null("Windows")
     if not windows_root:
         return null
     
@@ -62,23 +62,25 @@ func _get_window() -> Node:
 
 
 ## Merge with subsequent command (time-based for rapid edits like slider dragging)
-func merge_with(other) -> bool:
-    if other.get_script() != get_script():
+func merge_with(other: Variant) -> bool:
+    if not (other is TajsCoreGroupNodeChangedCommand):
         return false
+
+    var other_command: TajsCoreGroupNodeChangedCommand = other
     
-    if other._window_name != _window_name:
+    if other_command._window_name != _window_name:
         return false
     
     # Ensure we are modifying the same properties
-    if _changed_keys != other._changed_keys:
+    if _changed_keys != other_command._changed_keys:
         return false
     
     # Time-based merge limit
-    if other.timestamp - timestamp > MERGE_WINDOW_MS:
+    if other_command.timestamp - timestamp > MERGE_WINDOW_MS:
         return false
     
-    _after_data = other._after_data.duplicate(true)
-    timestamp = other.timestamp
+    _after_data = other_command._after_data.duplicate(true)
+    timestamp = other_command.timestamp
     return true
 
 

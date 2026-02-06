@@ -6,7 +6,7 @@ func find_windows_by_type(type: String) -> Array[WindowContainer]:
     var windows_root := _get_windows_root()
     if windows_root == null:
         return results
-    for node in windows_root.get_children():
+    for node: Variant in windows_root.get_children():
         if node is WindowContainer:
             if _matches_type(node, type):
                 results.append(node)
@@ -20,7 +20,7 @@ func find_windows_by_pattern(pattern: String) -> Array[WindowContainer]:
     var regex := RegEx.new()
     if regex.compile(pattern) != OK:
         return results
-    for node in windows_root.get_children():
+    for node: Variant in windows_root.get_children():
         if node is WindowContainer and regex.search(node.name) != null:
             results.append(node)
     return results
@@ -32,7 +32,7 @@ func find_windows_by_predicate(predicate: Callable) -> Array[WindowContainer]:
     var windows_root := _get_windows_root()
     if windows_root == null:
         return results
-    for node in windows_root.get_children():
+    for node: Variant in windows_root.get_children():
         if node is WindowContainer:
             if predicate.call(node):
                 results.append(node)
@@ -51,7 +51,7 @@ func get_window_by_name(name: String) -> WindowContainer:
     var fallback := windows_root.get_node_or_null(sanitized)
     if fallback is WindowContainer:
         return fallback
-    for node in windows_root.get_children():
+    for node: Variant in windows_root.get_children():
         if node is WindowContainer and node.name.to_lower() == name.to_lower():
             return node
     return null
@@ -63,14 +63,14 @@ func get_all_connected_to(window: WindowContainer) -> Array[WindowContainer]:
     var containers: Array = []
     if window.has_method("get"):
         containers = window.get("containers") if window.get("containers") != null else []
-    for container in containers:
+    for container: Variant in containers:
         if container is ResourceContainer:
-            for output in container.outputs:
-                var target = _find_window_root(output)
+            for output: Variant in container.outputs:
+                var target: Variant = _find_window_root(output)
                 if target != null and not results.has(target):
                     results.append(target)
             if container.input != null:
-                var input_window = _find_window_root(container.input)
+                var input_window: Variant = _find_window_root(container.input)
                 if input_window != null and not results.has(input_window):
                     results.append(input_window)
     return results

@@ -1,12 +1,12 @@
 class_name TajsCoreMigrations
 extends RefCounted
 
-var _settings
-var _logger
-var _version
+var _settings: Variant
+var _logger: Variant
+var _version: Variant
 var _registry: Dictionary = {}
 
-func _init(settings, logger, version_util) -> void:
+func _init(settings: Variant, logger: Variant, version_util: Variant) -> void:
     _settings = settings
     _logger = logger
     _version = version_util
@@ -30,7 +30,7 @@ func run_pending(ns: String) -> void:
     migrations.sort_custom(func(a, b):
         return _version.compare_versions(a["version"], b["version"]) < 0
     )
-    for migration in migrations:
+    for migration: Variant in migrations:
         if _version.compare_versions(last_version, migration["version"]) >= 0:
             continue
         _log_info("migrations", "Running migration %s for %s" % [migration["version"], ns])

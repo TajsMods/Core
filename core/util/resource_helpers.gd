@@ -19,7 +19,7 @@ func get_production_rate(resource_id: String) -> float:
     if res == null:
         return 0.0
     if res.has_method("get"):
-        var value = res.get("production")
+        var value: Variant = res.get("production")
         if value != null:
             return float(value)
     return 0.0
@@ -29,7 +29,7 @@ func get_consumption_rate(resource_id: String) -> float:
     if res == null:
         return 0.0
     if res.has_method("get"):
-        var value = res.get("required")
+        var value: Variant = res.get("required")
         if value != null:
             return float(value)
     return 0.0

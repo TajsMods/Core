@@ -3,8 +3,8 @@ extends RefCounted
 
 static func deep_merge(base: Dictionary, extra: Dictionary) -> Dictionary:
     var result := base.duplicate(true)
-    for key in extra.keys():
-        var val = extra[key]
+    for key: Variant in extra.keys():
+        var val: Variant = extra[key]
         if result.has(key) and result[key] is Dictionary and val is Dictionary:
             result[key] = deep_merge(result[key], val)
         else:
@@ -20,7 +20,7 @@ static func safe_call(callable: Callable, args: Array = []) -> bool:
     return true
 
 static func has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false
@@ -42,7 +42,7 @@ static func get_mod_data_path(mod_id: String) -> String:
         return "user://mods"
     var path := "user://mods".path_join(mod_id)
     if not DirAccess.dir_exists_absolute(path):
-        DirAccess.make_dir_recursive_absolute(path)
+        var _ignored: Variant = DirAccess.make_dir_recursive_absolute(path)
     return path
 
 static func resolve_texture_path(relative_path: String, mod_id: String) -> String:
@@ -93,7 +93,7 @@ static func parse_number(text: String) -> float:
     if cleaned.find("e") != -1:
         return cleaned.to_float()
     var suffixes := Utils.suffixes
-    for i in range(suffixes.size() - 1, -1, -1):
+    for i: Variant in range(suffixes.size() - 1, -1, -1):
         var suffix: String = suffixes[i]
         if suffix == "":
             continue
@@ -101,7 +101,7 @@ static func parse_number(text: String) -> float:
             var number_part := cleaned.substr(0, cleaned.length() - suffix.length())
             return number_part.to_float() * pow(1000.0, i)
     var latin := Utils.suffixes_latin
-    for k in range(latin.size() - 1, -1, -1):
+    for k: Variant in range(latin.size() - 1, -1, -1):
         var latin_suffix: String = str(latin[k]).to_lower()
         if latin_suffix == "":
             continue
@@ -109,7 +109,7 @@ static func parse_number(text: String) -> float:
             var number_part3 := cleaned.substr(0, cleaned.length() - latin_suffix.length())
             return number_part3.to_float() * pow(1000.0, k)
     var metric := Utils.metric
-    for j in range(metric.size() - 1, -1, -1):
+    for j: Variant in range(metric.size() - 1, -1, -1):
         var metric_suffix: String = metric[j].to_lower()
         if metric_suffix == "":
             continue

@@ -3,12 +3,12 @@ extends RefCounted
 
 var _listeners: Dictionary = {}
 var _sticky: Dictionary = {}
-var _logger
+var _logger: Variant
 
-func _init(logger = null) -> void:
+func _init(logger: Variant = null) -> void:
     _logger = logger
 
-func on(event: String, callable: Callable, owner = null, once: bool = false) -> void:
+func on(event: String, callable: Callable, owner: Variant = null, once: bool = false) -> void:
     if event == "":
         return
     if not _listeners.has(event):
@@ -29,12 +29,12 @@ func off(event: String, callable: Callable) -> void:
         return
     var entries: Array = _listeners[event]
     var filtered: Array = []
-    for entry in entries:
+    for entry: Variant in entries:
         if entry["callable"].is_valid() and entry["callable"] != callable:
             filtered.append(entry)
     _listeners[event] = filtered
 
-func emit(event: String, payload = null, sticky: bool = false) -> void:
+func emit(event: String, payload: Variant = null, sticky: bool = false) -> void:
     var safe_payload: Dictionary = {}
     if payload is Dictionary:
         safe_payload = payload
@@ -43,7 +43,7 @@ func emit(event: String, payload = null, sticky: bool = false) -> void:
     if not _listeners.has(event):
         return
     var entries: Array = _listeners[event].duplicate()
-    for entry in entries:
+    for entry: Variant in entries:
         if entry["owner"] != null and not is_instance_valid(entry["owner"]):
             _listeners[event].erase(entry)
             continue

@@ -1,10 +1,10 @@
 class_name TajsCoreFeatures
 extends RefCounted
 
-var _settings
+var _settings: Variant
 var _features: Dictionary = {}
 
-func setup(settings) -> void:
+func setup(settings: Variant) -> void:
     _settings = settings
     _load_overrides()
 
@@ -39,7 +39,7 @@ func list_features() -> Array:
 
 func _load_overrides() -> void:
     var overrides := _get_overrides()
-    for feature_id in _features:
+    for feature_id: Variant in _features:
         if overrides.has(feature_id):
             _features[feature_id]["enabled"] = bool(overrides[feature_id])
 

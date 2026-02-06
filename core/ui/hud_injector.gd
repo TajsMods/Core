@@ -46,7 +46,7 @@ func get_zone_container(zone: int) -> Control:
 func _create_zones() -> void:
     if _hud == null:
         return
-    var overlay = _hud.get_node_or_null("Main/MainContainer/Overlay")
+    var overlay: Variant = _hud.get_node_or_null("Main/MainContainer/Overlay")
     if overlay == null:
         return
     if overlay.has_node("TajsCoreHudZones"):
@@ -107,9 +107,9 @@ func _make_zone(parent: Control, zone_name: String, anchor: Vector2, pivot: Vect
 func _sort_by_priority(container: Control) -> void:
     var items := container.get_children()
     items.sort_custom(func(a, b):
-        var pa = int(a.get_meta("priority", 0))
-        var pb = int(b.get_meta("priority", 0))
+        var pa: Variant = int(a.get_meta("priority", 0))
+        var pb: Variant = int(b.get_meta("priority", 0))
         return pa < pb
     )
-    for i in range(items.size()):
+    for i: Variant in range(items.size()):
         container.move_child(items[i], i)

@@ -1,16 +1,16 @@
 class_name TajsCoreNodeCompatibilityFilter
 extends RefCounted
 
-const LOG_NAME = "NodeCompatibilityFilter"
+const LOG_NAME: String = "NodeCompatibilityFilter"
 
 # Cache of window connector info to avoid loading scenes repeatedly
 var _window_connectors_cache: Dictionary = {}
 var _cache_built: bool = false
 
-var _logger
+var _logger: Variant
 
 
-func _init(logger = null) -> void:
+func _init(logger: Variant = null) -> void:
     _logger = logger
 
 
@@ -21,16 +21,19 @@ func build_cache() -> void:
 
     _window_connectors_cache.clear()
 
-    for window_id in Data.windows:
+    for window_id: Variant in Data.windows:
         var window_data: Dictionary = Data.windows[window_id]
 
         # Skip windows without scenes
+        @warning_ignore("unsafe_method_access")
         if not window_data.has("scene") or window_data.scene.is_empty():
             continue
 
         # Try to get connector info from the scene
-        var connector_info := _get_window_connector_info(window_id, window_data)
+        @warning_ignore("unsafe_call_argument")
+        var connector_info: Dictionary = _get_window_connector_info(str(window_id), window_data)
         if not connector_info.is_empty():
+            @warning_ignore("unsafe_call_argument")
             _window_connectors_cache[window_id] = connector_info
 
     _cache_built = true
@@ -60,7 +63,7 @@ func _get_window_connector_info(window_id: String, window_data: Dictionary) -> D
     if not instance:
         return {}
 
-    var info := {
+    var info: Dictionary = {
         "id": window_id,
         "name": window_data.get("name", window_id),
         "description": window_data.get("description", ""),
@@ -73,18 +76,26 @@ func _get_window_connector_info(window_id: String, window_data: Dictionary) -> D
 
     # Try using window.containers property (preferred method per game design)
     if "containers" in instance:
-        var containers = instance.containers
+        var containers: Variant = instance.get("containers")
         if containers is Array:
-            for container in containers:
+            for container: Variant in containers:
                 if container is ResourceContainer:
-                    var connector_data = _extract_connector_data(container)
+                    @warning_ignore("unsafe_call_argument")
+                    @warning_ignore("unsafe_cast")
+                    var connector_data: Dictionary = _extract_connector_data(container as ResourceContainer)
+                    @warning_ignore("unsafe_method_access")
                     if not connector_data.is_empty():
+                        @warning_ignore("unsafe_method_access")
                         if container.is_in_group("input"):
+                            @warning_ignore("unsafe_method_access")
                             info.inputs.append(connector_data)
+                        @warning_ignore("unsafe_method_access")
                         if container.is_in_group("output"):
+                            @warning_ignore("unsafe_method_access")
                             info.outputs.append(connector_data)
 
     # Fallback: recursive search if containers property didn't find anything
+    @warning_ignore("unsafe_method_access")
     if info.inputs.is_empty() and info.outputs.is_empty():
         _collect_connectors(instance, info)
 
@@ -102,39 +113,54 @@ func _get_window_connector_info(window_id: String, window_data: Dictionary) -> D
 func _infer_passthrough_outputs(info: Dictionary) -> void:
     # Find the first non-speed typed input (usually the "file" input)
     var typed_file_input: Dictionary = {}
-    for input in info.inputs:
-        var shape = input.get("shape", "")
+    for input: Variant in info.inputs:
+        @warning_ignore("unsafe_method_access")
+        @warning_ignore("unsafe_cast")
+        var shape: String = input.get("shape", "") as String
         # Skip flow/speed inputs (circle is usually clock/speed, we want file shapes like square)
         if shape != "" and shape != "any" and shape != "circle":
-            typed_file_input = input
+            @warning_ignore("unsafe_cast")
+            typed_file_input = input as Dictionary
             break
 
     # If no typed file input found, check for any non-circle typed input
     if typed_file_input.is_empty():
-        for input in info.inputs:
-            var shape = input.get("shape", "")
+        for input: Variant in info.inputs:
+            @warning_ignore("unsafe_method_access")
+            @warning_ignore("unsafe_cast")
+            var shape: String = input.get("shape", "") as String
             if shape != "" and shape != "any":
-                typed_file_input = input
+                @warning_ignore("unsafe_cast")
+                typed_file_input = input as Dictionary
                 break
 
     # Update dynamic outputs to inherit from typed input
     if not typed_file_input.is_empty():
-        for i in range(info.outputs.size()):
-            var output = info.outputs[i]
+        @warning_ignore("unsafe_method_access")
+        for i: int in range(info.outputs.size()):
+            @warning_ignore("unsafe_method_access")
+            var output: Variant = info.outputs[i]
+            @warning_ignore("unsafe_method_access")
             if output.get("shape", "") == "any":
                 # Inherit shape and color from typed input
+                @warning_ignore("unsafe_method_access")
                 output["shape"] = typed_file_input.get("shape", "any")
+                @warning_ignore("unsafe_method_access")
                 output["color"] = typed_file_input.get("color", "white")
                 # Update name to remove "(Dynamic)" and show inherited type
-                var base_name = output.get("name", "Output").replace(" (Dynamic)", "")
+                @warning_ignore("unsafe_method_access")
+                @warning_ignore("unsafe_cast")
+                var base_name: String = (output.get("name", "Output") as String).replace(" (Dynamic)", "")
+                @warning_ignore("unsafe_method_access")
                 output["name"] = base_name
+                @warning_ignore("unsafe_method_access")
                 info.outputs[i] = output
 
 
 ## Extract connector data from a ResourceContainer (safely, without requiring tree entry)
 func _extract_connector_data(rc: ResourceContainer) -> Dictionary:
-    var shape := ""
-    var color := ""
+    var shape: String = ""
+    var color: String = ""
 
     # Safely extract shape/color - can't use get_connection_shape() because data isn't populated yet
     if not rc.override_connector.is_empty():
@@ -160,8 +186,8 @@ func _extract_connector_data(rc: ResourceContainer) -> Dictionary:
 func _collect_connectors(node: Node, info: Dictionary) -> void:
     if node is ResourceContainer:
         var rc: ResourceContainer = node
-        var shape := ""
-        var color := ""
+        var shape: String = ""
+        var color: String = ""
 
         # Safely extract shape/color - can't use get_connection_shape() because data isn't populated yet
         if not rc.override_connector.is_empty():
@@ -173,11 +199,13 @@ func _collect_connectors(node: Node, info: Dictionary) -> void:
             color = resource_data.get("color", "white")
 
         # Check if this container has input/output connectors
-        var is_input = node.has_node("InputConnector") or node.is_in_group("input")
-        var is_output = node.has_node("OutputConnector") or node.is_in_group("output")
+        @warning_ignore("unsafe_method_access")
+        var is_input: bool = node.has_node("InputConnector") or node.is_in_group("input")
+        @warning_ignore("unsafe_method_access")
+        var is_output: bool = node.has_node("OutputConnector") or node.is_in_group("output")
 
         if not shape.is_empty():
-            var connector_data := {
+            var connector_data: Dictionary = {
                 "shape": shape,
                 "color": color,
                 "name": node.name,
@@ -185,19 +213,23 @@ func _collect_connectors(node: Node, info: Dictionary) -> void:
             }
 
             if is_input:
+                @warning_ignore("unsafe_method_access")
                 info.inputs.append(connector_data)
             if is_output:
+                @warning_ignore("unsafe_method_access")
                 info.outputs.append(connector_data)
         else:
             # Dynamic/untyped output - has connector but no fixed resource type
             # These ports accept whatever resource is connected to them
             if is_output:
+                @warning_ignore("unsafe_method_access")
                 info.outputs.append({
                     "shape": "any",
                     "color": "white",
                     "name": node.name + " (Dynamic)"
                 })
             if is_input:
+                @warning_ignore("unsafe_method_access")
                 info.inputs.append({
                     "shape": "any",
                     "color": "white",
@@ -205,30 +237,33 @@ func _collect_connectors(node: Node, info: Dictionary) -> void:
                 })
 
     # Recurse into children
-    for child in node.get_children():
-        _collect_connectors(child, info)
+    for child: Variant in node.get_children():
+        @warning_ignore("unsafe_call_argument")
+        @warning_ignore("unsafe_cast")
+        _collect_connectors(child as Node, info)
 
 
-## Get list of windows compatible with the given origin pin
-## Returns array of window info dictionaries
 func get_compatible_nodes(origin_shape: String, origin_color: String, origin_is_output: bool) -> Array[Dictionary]:
     if not _cache_built:
         build_cache()
 
     var compatible: Array[Dictionary] = []
 
-    for window_id in _window_connectors_cache:
+    for window_id: Variant in _window_connectors_cache:
         var window_info: Dictionary = _window_connectors_cache[window_id]
 
         # If origin is OUTPUT, we need to find windows with compatible INPUTS
         # If origin is INPUT, we need to find windows with compatible OUTPUTS
         var target_pins: Array = window_info.outputs if not origin_is_output else window_info.inputs
 
-        for pin in target_pins:
-            if _is_compatible(origin_shape, origin_color, pin.shape, pin.color):
+        for pin: Variant in target_pins:
+            @warning_ignore("unsafe_call_argument")
+            @warning_ignore("unsafe_method_access")
+            @warning_ignore("unsafe_cast")
+            if _is_compatible(origin_shape, origin_color, pin.get("shape", "") as String, pin.get("color", "") as String):
                 # Add window to compatible list (only once per window)
-                var already_added := false
-                for existing in compatible:
+                var already_added: bool = false
+                for existing: Variant in compatible:
                     if existing.id == window_id:
                         already_added = true
                         break
@@ -272,10 +307,13 @@ func get_nodes_with_input(shape: String, color: String) -> Array[Dictionary]:
 
     var matching: Array[Dictionary] = []
 
-    for window_id in _window_connectors_cache:
+    for window_id: Variant in _window_connectors_cache:
         var window_info: Dictionary = _window_connectors_cache[window_id]
-        for input in window_info.inputs:
-            if _is_compatible(shape, color, input.shape, input.color):
+        for input: Variant in window_info.inputs:
+            @warning_ignore("unsafe_call_argument")
+            @warning_ignore("unsafe_method_access")
+            @warning_ignore("unsafe_cast")
+            if _is_compatible(shape, color, input.get("shape", "") as String, input.get("color", "") as String):
                 matching.append(window_info.duplicate())
                 break
 
@@ -290,10 +328,13 @@ func get_nodes_with_output(shape: String, color: String) -> Array[Dictionary]:
 
     var matching: Array[Dictionary] = []
 
-    for window_id in _window_connectors_cache:
+    for window_id: Variant in _window_connectors_cache:
         var window_info: Dictionary = _window_connectors_cache[window_id]
-        for output in window_info.outputs:
-            if _is_compatible(shape, color, output.shape, output.color):
+        for output: Variant in window_info.outputs:
+            @warning_ignore("unsafe_call_argument")
+            @warning_ignore("unsafe_method_access")
+            @warning_ignore("unsafe_cast")
+            if _is_compatible(shape, color, output.get("shape", "") as String, output.get("color", "") as String):
                 matching.append(window_info.duplicate())
                 break
 
@@ -313,7 +354,9 @@ func get_cache_size() -> int:
 
 
 func _log_info(message: String) -> void:
+    @warning_ignore("unsafe_method_access")
     if _logger != null and _logger.has_method("info"):
+        @warning_ignore("unsafe_method_access")
         _logger.info("core", message)
     elif _has_global_class("ModLoaderLog"):
         ModLoaderLog.info(message, LOG_NAME)
@@ -322,7 +365,8 @@ func _log_info(message: String) -> void:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
+        @warning_ignore("unsafe_method_access")
         if entry.get("class", "") == class_name_str:
             return true
     return false

@@ -25,19 +25,20 @@ func setup(window_name: String, export_data: Dictionary, position: Vector2, impo
 
 ## Execute (delete the window) - used for redo
 func execute() -> bool:
-    var window = _find_window()
+    var window: Node = _find_window()
     if not is_instance_valid(window):
         # Window already gone, consider success
         return true
     
     # Deselect if selected
     if Globals.selections.has(window):
-        var new_sel = Globals.selections.duplicate()
+        var new_sel: Array = Globals.selections.duplicate()
         new_sel.erase(window)
         Globals.set_selection(new_sel, Globals.connector_selection)
     
     # Close/delete the window
-    window.propagate_call("close")
+    if window.has_method("propagate_call"):
+        window.call("propagate_call", "close")
     return true
 
 
@@ -50,13 +51,14 @@ func undo() -> bool:
     if not Globals.desktop:
         return false
     
-    var restore_data = {_window_name: _export_data}
-    Globals.desktop.add_windows_from_data(restore_data, _importing)
+    var restore_data: Dictionary = {_window_name: _export_data}
+    if Globals.desktop.has_method("add_windows_from_data"):
+        Globals.desktop.call("add_windows_from_data", restore_data, _importing)
     
     # Restore position
-    var window = _find_window()
+    var window: Node = _find_window()
     if is_instance_valid(window):
-        window.position = _position
+        window.set("position", _position)
     
     return true
 

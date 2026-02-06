@@ -10,14 +10,14 @@ const GROUP_BASE := "base"
 const GROUP_CORE := "core"
 const GROUP_MODS := "mods"
 
-var _assets
+var _assets: Variant
 var _icons: Array = []
 var _icons_by_id: Dictionary = {}
 var _custom_sources: Dictionary = {}
 var _source_labels: Dictionary = {}
 var _cache_ready: bool = false
 
-func _init(assets = null) -> void:
+func _init(assets: Variant = null) -> void:
     _assets = assets
     _register_builtin_sources()
 
@@ -30,7 +30,7 @@ func get_all_icons_by_group(group_filter: String = "") -> Array:
     if group_filter == "":
         return _icons.duplicate()
     var results := []
-    for entry in _icons:
+    for entry: Variant in _icons:
         if _get_source_group(entry.get("source_id", "")) == group_filter:
             results.append(entry)
     return results
@@ -52,7 +52,7 @@ func get_source_label(source_id: String) -> String:
 func get_group_counts(allowed_groups: Array = []) -> Dictionary:
     _ensure_index()
     var counts := {GROUP_BASE: 0, GROUP_CORE: 0, GROUP_MODS: 0}
-    for entry in _icons:
+    for entry: Variant in _icons:
         if _matches_allowed(entry, allowed_groups):
             var group := _get_source_group(entry.get("source_id", ""))
             if counts.has(group):
@@ -127,7 +127,7 @@ func _register_builtin_sources() -> void:
     register_source(GROUP_CORE, "Core", Callable(self , "_list_core_icons"))
 
 func _index_builtin_sources() -> void:
-    for source_id in [GROUP_BASE, GROUP_CORE]:
+    for source_id: Variant in [GROUP_BASE, GROUP_CORE]:
         var lister: Variant = _custom_sources.get(source_id, null)
         if lister == null or not lister.is_valid():
             continue
@@ -139,7 +139,7 @@ func _index_mod_icons() -> void:
     _add_entries(icons)
 
 func _index_custom_sources() -> void:
-    for source_id in _custom_sources.keys():
+    for source_id: Variant in _custom_sources.keys():
         if source_id == GROUP_BASE or source_id == GROUP_CORE:
             continue
         var lister: Variant = _custom_sources.get(source_id)
@@ -151,7 +151,7 @@ func _index_custom_sources() -> void:
 func _add_entries(entries: Array) -> void:
     if entries == null:
         return
-    for entry in entries:
+    for entry: Variant in entries:
         if typeof(entry) != TYPE_DICTIONARY:
             continue
         var stable_id: String = entry.get("stable_id", "")
@@ -189,7 +189,7 @@ func _list_mod_icons() -> Array:
     var dir := DirAccess.open(base_dir)
     if dir == null:
         return results
-    dir.list_dir_begin()
+    var _ignored: Variant = dir.list_dir_begin()
     while true:
         var dir_name := dir.get_next()
         if dir_name == "":
@@ -232,7 +232,7 @@ func _collect_icons(current_path: String, root_path: String, source_id: String, 
     var dir := DirAccess.open(current_path)
     if dir == null:
         return results
-    dir.list_dir_begin()
+    var _ignored: Variant = dir.list_dir_begin()
     while true:
         var entry_name := dir.get_next()
         if entry_name == "":
@@ -276,7 +276,7 @@ func _format_display_name(relative_path: String) -> String:
 
 func _is_icon_file(file_name: String) -> bool:
     var lower := file_name.to_lower()
-    for ext in ICON_EXTENSIONS:
+    for ext: Variant in ICON_EXTENSIONS:
         if lower.ends_with(ext):
             return true
     return false

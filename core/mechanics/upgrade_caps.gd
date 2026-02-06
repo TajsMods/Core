@@ -2,9 +2,9 @@ class_name TajsCoreUpgradeCaps
 extends RefCounted
 
 var _caps: Dictionary = {}
-var _logger
+var _logger: Variant
 
-func _init(logger = null) -> void:
+func _init(logger: Variant = null) -> void:
     _logger = logger
 
 func register_extended_cap(upgrade_id: String, config: Dictionary) -> void:
@@ -36,7 +36,7 @@ func is_extended_cap_enabled(upgrade_id: String) -> bool:
     var requires: Array = cfg.get("requires", [])
     if requires.is_empty():
         return true
-    for req in requires:
+    for req: Variant in requires:
         if not Globals.unlocks.has(req) or not Globals.unlocks[req]:
             return false
     return true

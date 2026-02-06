@@ -20,14 +20,14 @@ const POSITION_REFS := {
     LayerPosition.BEFORE_UI: "SelectionPanel"
 }
 
-var _logger
-var _event_bus
+var _logger: Variant
+var _event_bus: Variant
 var _layers: Dictionary = {} # layer_id -> {node: Control, position: LayerPosition, owner: String}
 var _desktop: Control = null
 var _pending_layers: Array = [] # Layers registered before desktop was ready
 
 
-func _init(logger = null, event_bus = null) -> void:
+func _init(logger: Variant = null, event_bus: Variant = null) -> void:
     _logger = logger
     _event_bus = event_bus
 
@@ -56,7 +56,7 @@ func _try_get_desktop() -> void:
 func _inject_pending_layers() -> void:
     if _desktop == null:
         return
-    for pending in _pending_layers:
+    for pending: Variant in _pending_layers:
         _inject_layer(pending.id, pending.position, pending.owner)
     _pending_layers.clear()
 
@@ -114,10 +114,10 @@ func has_layer(layer_id: String) -> bool:
 func remove_layer(layer_id: String) -> void:
     if not _layers.has(layer_id):
         return
-    var entry = _layers[layer_id]
+    var entry: Variant = _layers[layer_id]
     if is_instance_valid(entry.node):
         entry.node.queue_free()
-    _layers.erase(layer_id)
+    var _ignored: Variant = _layers.erase(layer_id)
     _log_debug("Layer '%s' removed" % layer_id)
 
 
@@ -140,7 +140,7 @@ func reparent_to_layer(node: Node, layer_id: String) -> bool:
         return false
     
     # Store original parent for potential restoration
-    var old_parent = node.get_parent()
+    var old_parent: Variant = node.get_parent()
     
     # Reparent the node
     if old_parent != null:
@@ -163,13 +163,13 @@ func _inject_layer(layer_id: String, position: int, owner_mod: String) -> void:
         return
     
     var ref_name: String = POSITION_REFS.get(position, "Windows")
-    var ref_node = _desktop.get_node_or_null(ref_name)
+    var ref_node: Variant = _desktop.get_node_or_null(ref_name)
     
     if ref_node == null:
         _log_warn("Reference node '%s' not found in Desktop, adding layer at end" % ref_name)
         _desktop.add_child(layer_node)
     else:
-        var ref_index = ref_node.get_index()
+        var ref_index: Variant = ref_node.get_index()
         _desktop.add_child(layer_node)
         _desktop.move_child(layer_node, ref_index)
     

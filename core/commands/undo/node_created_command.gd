@@ -22,13 +22,13 @@ func setup(window_name: String) -> void:
 
 ## Capture the window's data (called before undo to enable redo)
 func capture_window_data() -> bool:
-    var window = _find_window()
+    var window: Node = _find_window()
     if not is_instance_valid(window):
         return false
     
     if window.has_method("export"):
-        _export_data = window.export()
-    _position = window.position
+        _export_data = window.call("export")
+    _position = window.get("position") if window.get("position") != null else Vector2.ZERO
     _importing = window.get("importing") if window.get("importing") != null else false
     return true
 
@@ -42,42 +42,44 @@ func execute() -> bool:
     if not Globals.desktop:
         return false
     
-    var restore_data = {_window_name: _export_data}
-    Globals.desktop.add_windows_from_data(restore_data, _importing)
+    var restore_data: Dictionary = {_window_name: _export_data}
+    if Globals.desktop.has_method("add_windows_from_data"):
+        Globals.desktop.call("add_windows_from_data", restore_data, _importing)
     
     # Restore position
-    var window = _find_window()
+    var window: Node = _find_window()
     if is_instance_valid(window):
-        window.position = _position
+        window.set("position", _position)
     
     return true
 
 
 ## Undo (delete the window)
 func undo() -> bool:
-    var window = _find_window()
+    var window: Node = _find_window()
     if not is_instance_valid(window):
         push_warning("NodeCreatedCommand: Window '%s' not found for undo" % _window_name)
         return false
     
     # Capture data before deletion (for redo)
-    capture_window_data()
+    var _ignored: bool = capture_window_data()
     
     # Deselect if selected
     if Globals.selections.has(window):
-        var new_sel = Globals.selections.duplicate()
+        var new_sel: Array = Globals.selections.duplicate()
         new_sel.erase(window)
         Globals.set_selection(new_sel, Globals.connector_selection)
     
     # Close/delete the window
-    window.propagate_call("close")
+    if window.has_method("propagate_call"):
+        window.call("propagate_call", "close")
     return true
 
 
 ## Check if command is still valid
 func is_valid() -> bool:
     # For creation commands, there should be a window OR export data (for redo)
-    var window = _find_window()
+    var window: Node = _find_window()
     return is_instance_valid(window) or not _export_data.is_empty()
 
 

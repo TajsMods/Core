@@ -2,7 +2,7 @@ extends "res://main.gd"
 
 func _ready() -> void:
     super ()
-    var core = Engine.get_meta("TajsCore", null)
+    var core: Variant = Engine.get_meta("TajsCore", null)
     if core == null or core.trees == null:
         return
     if has_node("Main2D/Research"):

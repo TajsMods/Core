@@ -1,17 +1,17 @@
 class_name TajsCoreHookManager
 extends Node
 
-var _core
-var _event_bus
-var _logger
+var _core: Variant
+var _event_bus: Variant
+var _logger: Variant
 
-var window_hooks
-var connection_hooks
-var selection_hooks
-var save_load_hooks
-var ui_hooks
+var window_hooks: Variant
+var connection_hooks: Variant
+var selection_hooks: Variant
+var save_load_hooks: Variant
+var ui_hooks: Variant
 
-func setup(core) -> void:
+func setup(core: Variant) -> void:
     _core = core
     _event_bus = core.event_bus if core != null else null
     _logger = core.logger if core != null else null
@@ -43,12 +43,12 @@ func _install_hooks() -> void:
         ui_hooks.setup(_event_bus)
         add_child(ui_hooks)
 
-func _load_hook(path: String, hook_name: String):
-    var script = load(path)
+func _load_hook(path: String, hook_name: String) -> Variant:
+    var script: Variant = load(path)
     if script == null:
         _log_warn("Failed to load hook: %s" % path)
         return null
-    var instance = script.new()
+    var instance: Variant = script.new()
     if instance != null:
         instance.name = hook_name
     return instance

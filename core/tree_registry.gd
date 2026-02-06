@@ -23,14 +23,14 @@ func apply_research_tree(screen: Node, tree: Node) -> void:
     if screen == null or tree == null:
         return
     var handler := Callable(screen, "_on_research_selected")
-    for op in _research_ops:
+    for op: Variant in _research_ops:
         var def: Dictionary = op["def"]
         if op["type"] == "add":
             var node := RESEARCH_BUTTON_SCENE.instantiate()
             node.name = str(def.get("name", node.name))
             _configure_node_position(tree, node, def)
             if handler.is_valid() and node.has_signal("selected"):
-                node.selected.connect(handler)
+                node.get("selected").connect(handler)
             tree.add_child(node)
         elif op["type"] == "move":
             var target := tree.get_node_or_null(str(def.get("name", "")))
@@ -41,14 +41,14 @@ func apply_ascension_tree(screen: Node, tree: Node) -> void:
     if screen == null or tree == null:
         return
     var handler := Callable(screen, "_on_research_selected")
-    for op in _ascension_ops:
+    for op: Variant in _ascension_ops:
         var def: Dictionary = op["def"]
         if op["type"] == "add":
             var node := ASCENSION_BUTTON_SCENE.instantiate()
             node.name = str(def.get("name", node.name))
             _configure_ascension_node(tree, node, def)
             if handler.is_valid() and node.has_signal("selected"):
-                node.selected.connect(handler)
+                node.get("selected").connect(handler)
             tree.add_child(node)
         elif op["type"] == "move":
             var target := tree.get_node_or_null(str(def.get("name", "")))
@@ -66,7 +66,7 @@ func _configure_node_position(tree: Node, node: Node, def: Dictionary) -> void:
         var ref_node_path: String = str(node.name) if ref_id == "self" else str(ref_id)
         var ref := tree.get_node_or_null(ref_node_path)
         if ref != null:
-            pos += Vector2(ref.position.x, ref.position.y)
+            pos += Vector2(ref.get("position").x, ref.position.y)
     node.position = pos
 
 func _configure_ascension_node(tree: Node, node: Node, def: Dictionary) -> void:

@@ -13,10 +13,10 @@ const DEFAULT_LIST_LIMIT := 200
 const DEFAULT_MOD_MESSAGE_LIMIT := 5
 const DEFAULT_NODE_PREVIEW_LIMIT := 20
 
-var _core
-var _logger
+var _core: Variant
+var _logger: Variant
 
-func _init(core, logger = null) -> void:
+func _init(core: Variant, logger: Variant = null) -> void:
     _core = core
     _logger = logger
 
@@ -41,29 +41,29 @@ func collect(options: Dictionary = {}) -> Dictionary:
     data["keybind_conflicts_summary"] = {
         "count": data["keybind_conflicts"].size()
     }
-    var event_bus = _collect_event_bus()
+    var event_bus: Variant = _collect_event_bus()
     if not event_bus.is_empty():
         data["event_bus"] = event_bus
-    var features = _collect_features()
+    var features: Variant = _collect_features()
     if not features.is_empty():
         data["features"] = features
-    var upgrade_caps = _collect_upgrade_caps()
+    var upgrade_caps: Variant = _collect_upgrade_caps()
     if not upgrade_caps.is_empty():
         data["upgrade_caps"] = upgrade_caps
-    var nodes = _collect_nodes()
+    var nodes: Variant = _collect_nodes()
     if not nodes.is_empty():
         data["nodes"] = nodes
     data["patches"] = _collect_patches()
-    var hooks = _collect_hooks()
+    var hooks: Variant = _collect_hooks()
     if not hooks.is_empty():
         data["hooks"] = hooks
-    var commands = _collect_commands()
+    var commands: Variant = _collect_commands()
     if not commands.is_empty():
         data["commands"] = commands
-    var logs = _collect_logs()
+    var logs: Variant = _collect_logs()
     data["logs"] = logs
     data["logs_summary"] = _summarize_log_entries(logs)
-    var mod_loader_logs = _collect_mod_loader_logs(options)
+    var mod_loader_logs: Variant = _collect_mod_loader_logs(options)
     if not mod_loader_logs.is_empty():
         data["mod_loader_logs"] = mod_loader_logs
     data["limits"] = _collect_limits(options)
@@ -128,7 +128,7 @@ func save_dump_to_file(path: String = "", options: Dictionary = {}) -> Dictionar
     var file := FileAccess.open(output_path, FileAccess.WRITE)
     if file == null:
         return {"ok": false, "path": output_path, "error": FileAccess.get_open_error()}
-    file.store_string(dump)
+    var _ignored: Variant = file.store_string(dump)
     file.close()
     return {"ok": true, "path": output_path, "bytes": dump.length()}
 
@@ -150,7 +150,7 @@ func export_json(path: String = "", options: Dictionary = {}) -> Dictionary:
         output_path = DEFAULT_EXPORT_PATH
     var file := FileAccess.open(output_path, FileAccess.WRITE)
     if file != null:
-        file.store_string(json_string)
+        var _ignored: Variant = file.store_string(json_string)
         file.close()
     return {"path": output_path, "json": json_string}
 
@@ -178,13 +178,13 @@ func self_test() -> Dictionary:
     return result
 
 func _try_get_mod_loader_version() -> String:
-    var store = _get_autoload("ModLoaderStore")
+    var store: Variant = _get_autoload("ModLoaderStore")
     if store != null:
-        var version = store.get("MODLOADER_VERSION") if store.has_method("get") else null
+        var version: Variant = store.get("MODLOADER_VERSION") if store.has_method("get") else null
         if version != null:
             return str(version)
     if Engine.has_singleton("ModLoader"):
-        var mod_loader = Engine.get_singleton("ModLoader")
+        var mod_loader: Variant = Engine.get_singleton("ModLoader")
         if mod_loader != null and mod_loader.has_method("get_version"):
             return str(mod_loader.get_version())
     return "unknown"
@@ -239,43 +239,43 @@ func _collect_environment_info() -> Dictionary:
 
 func _collect_mod_loader_info(options: Dictionary = {}) -> Dictionary:
     var info := {}
-    var store = _get_autoload("ModLoaderStore")
+    var store: Variant = _get_autoload("ModLoaderStore")
     if store == null:
         return info
     var list_limit := _get_limit(options, "list_limit", DEFAULT_LIST_LIMIT)
     info["is_initializing"] = bool(store.get("is_initializing")) if store.has_method("get") else false
-    var mod_data = store.get("mod_data") if store.has_method("get") else {}
+    var mod_data: Variant = store.get("mod_data") if store.has_method("get") else {}
     info["mod_count"] = mod_data.size() if mod_data is Dictionary else 0
-    var load_order = store.get("mod_load_order") if store.has_method("get") else []
+    var load_order: Variant = store.get("mod_load_order") if store.has_method("get") else []
     info["mod_load_order"] = _mod_load_order_to_ids(load_order)
-    var missing_deps = store.get("mod_missing_dependencies") if store.has_method("get") else {}
+    var missing_deps: Variant = store.get("mod_missing_dependencies") if store.has_method("get") else {}
     info["missing_dependencies"] = _sorted_dictionary(missing_deps if missing_deps is Dictionary else {})
-    var script_extensions_raw = store.get("script_extensions") if store.has_method("get") else null
-    var script_extensions = _to_string_array(script_extensions_raw if script_extensions_raw != null else [])
+    var script_extensions_raw: Variant = store.get("script_extensions") if store.has_method("get") else null
+    var script_extensions: Variant = _to_string_array(script_extensions_raw if script_extensions_raw != null else [])
     info["script_extensions_count"] = script_extensions.size()
     info["script_extensions"] = _limit_array(script_extensions, list_limit)
-    var hooked_scripts_raw = store.get("hooked_script_paths") if store.has_method("get") else null
-    var hooked_scripts = _sorted_keys(hooked_scripts_raw if hooked_scripts_raw != null else {})
+    var hooked_scripts_raw: Variant = store.get("hooked_script_paths") if store.has_method("get") else null
+    var hooked_scripts: Variant = _sorted_keys(hooked_scripts_raw if hooked_scripts_raw != null else {})
     info["hooked_scripts_count"] = hooked_scripts.size()
     info["hooked_scripts"] = _limit_array(hooked_scripts, list_limit)
-    var modding_hooks_raw = store.get("modding_hooks") if store.has_method("get") else null
-    var modding_hooks = _sorted_keys(modding_hooks_raw if modding_hooks_raw != null else {})
+    var modding_hooks_raw: Variant = store.get("modding_hooks") if store.has_method("get") else null
+    var modding_hooks: Variant = _sorted_keys(modding_hooks_raw if modding_hooks_raw != null else {})
     info["modding_hooks_count"] = modding_hooks.size()
     info["modding_hooks"] = _limit_array(modding_hooks, list_limit)
-    var options_obj = store.get("ml_options") if store.has_method("get") else null
+    var options_obj: Variant = store.get("ml_options") if store.has_method("get") else null
     var options_dict := _collect_mod_loader_options(options_obj)
     if not options_dict.is_empty():
         info["options"] = options_dict
         info["mods_enabled"] = bool(options_dict.get("enable_mods", true))
     return info
 
-func _collect_mod_loader_options(options_obj) -> Dictionary:
+func _collect_mod_loader_options(options_obj: Variant) -> Dictionary:
     var options := {}
     if options_obj == null:
         return options
     var get_value := func(key: String, fallback: Variant) -> Variant:
         if options_obj.has_method("get"):
-            var value = options_obj.get(key)
+            var value: Variant = options_obj.get(key)
             return value if value != null else fallback
         return fallback
     options["enable_mods"] = bool(get_value.call("enable_mods", true))
@@ -312,16 +312,16 @@ func _collect_mods_info(options: Dictionary = {}) -> Dictionary:
     }
     if not _has_global_class("ModLoaderMod"):
         return result
-    var all_mods = ModLoaderMod.get_mod_data_all()
+    var all_mods: Variant = ModLoaderMod.get_mod_data_all()
     if not (all_mods is Dictionary):
         return result
-    var mod_ids := all_mods.keys()
+    var mod_ids: Array = all_mods.keys()
     mod_ids.sort_custom(func(a, b):
         return str(a).naturalnocasecmp_to(str(b)) < 0
     )
     var source_counts := {}
-    for mod_id in mod_ids:
-        var mod_data = all_mods[mod_id]
+    for mod_id: Variant in mod_ids:
+        var mod_data: Variant = all_mods[mod_id]
         var entry := _build_mod_entry(str(mod_id), mod_data, options)
         result["list"].append(entry)
         result["total"] += 1
@@ -335,7 +335,7 @@ func _collect_mods_info(options: Dictionary = {}) -> Dictionary:
             result["with_errors"] += 1
         if entry.get("warnings_count", 0) > 0:
             result["with_warnings"] += 1
-        var source = str(entry.get("source", "unknown"))
+        var source: Variant = str(entry.get("source", "unknown"))
         source_counts[source] = int(source_counts.get(source, 0)) + 1
     if not source_counts.is_empty():
         result["source_counts"] = _sorted_dictionary(source_counts)
@@ -356,7 +356,7 @@ func _build_mod_entry(mod_id: String, mod_data: Variant, options: Dictionary) ->
         "errors_count": 0,
         "warnings_count": 0
     }
-    var manifest = _get_field(mod_data, "manifest", null)
+    var manifest: Variant = _get_field(mod_data, "manifest", null)
     var display_name := str(_get_manifest_value(manifest, "display_name", ""))
     if display_name == "":
         display_name = str(_get_manifest_value(manifest, "name", mod_id))
@@ -393,7 +393,7 @@ func _collect_modules() -> Array:
 func _collect_settings_snapshot() -> Dictionary:
     if _core == null or _core.settings == null or not _core.settings.has_method("get_snapshot"):
         return {}
-    var snapshot = _core.settings.get_snapshot(true)
+    var snapshot: Variant = _core.settings.get_snapshot(true)
     if snapshot is Dictionary:
         return _sorted_recursive(snapshot)
     return {}
@@ -408,8 +408,8 @@ func _collect_settings_meta(snapshot: Dictionary) -> Dictionary:
         var changed_keys: Array = _core.settings.get_changed_keys()
         changed_keys.sort()
         meta["changed_keys"] = changed_keys
-    for key in snapshot.keys():
-        var value = snapshot[key]
+    for key: Variant in snapshot.keys():
+        var value: Variant = snapshot[key]
         if value is String and value == "<redacted>":
             meta["redacted_keys"].append(str(key))
     meta["redacted_keys"].sort()
@@ -441,7 +441,7 @@ func _collect_event_bus() -> Dictionary:
     var events: Array = _core.event_bus.list_events() if _core.event_bus.has_method("list_events") else []
     events.sort()
     var counts := {}
-    for evt in events:
+    for evt: Variant in events:
         if _core.event_bus.has_method("get_listener_count"):
             counts[evt] = _core.event_bus.get_listener_count(evt)
     return {
@@ -466,7 +466,7 @@ func _collect_nodes() -> Dictionary:
         return {}
     var mod_nodes: Dictionary = _core.node_registry.get_mod_nodes()
     var sorted_nodes := {}
-    for mod_id in _sorted_keys(mod_nodes):
+    for mod_id: Variant in _sorted_keys(mod_nodes):
         var nodes: Array = _to_string_array(mod_nodes.get(mod_id, []))
         nodes.sort()
         sorted_nodes[mod_id] = nodes
@@ -488,7 +488,7 @@ func _collect_hooks() -> Dictionary:
     if not is_instance_valid(_core.hook_manager):
         return {}
     var hook_list: Array = []
-    for child in _core.hook_manager.get_children():
+    for child: Variant in _core.hook_manager.get_children():
         if child != null:
             hook_list.append(child.name)
     hook_list.sort()
@@ -500,7 +500,7 @@ func _collect_hooks() -> Dictionary:
 func _collect_commands() -> Dictionary:
     if _core == null:
         return {}
-    var registry = _core.commands if _core.commands != null else _core.command_registry
+    var registry: Variant = _core.commands if _core.commands != null else _core.command_registry
     if registry == null:
         return {}
     var all_commands: Array = []
@@ -512,7 +512,7 @@ func _collect_commands() -> Dictionary:
         all_commands = registry.list()
     var command_ids: Array = []
     var categories := 0
-    for cmd in all_commands:
+    for cmd: Variant in all_commands:
         if cmd is Dictionary:
             var cmd_id := str(cmd.get("id", ""))
             if cmd_id != "":
@@ -535,13 +535,13 @@ func _collect_mod_loader_logs(options: Dictionary = {}) -> Dictionary:
     if not _has_global_class("ModLoaderLog"):
         return {}
     var summary := {"total": 0, "by_type": {}}
-    var logged = ModLoaderLog.logged_messages
+    var logged: Variant = ModLoaderLog.logged_messages
     if logged is Dictionary:
         if logged.has("all") and logged["all"] is Dictionary:
             summary["total"] = logged["all"].size()
         if logged.has("by_type") and logged["by_type"] is Dictionary:
-            for log_type in logged["by_type"].keys():
-                var bucket = logged["by_type"][log_type]
+            for log_type: Variant in logged["by_type"].keys():
+                var bucket: Variant = logged["by_type"][log_type]
                 if bucket is Dictionary:
                     summary["by_type"][str(log_type)] = bucket.size()
     var entries: Array = ModLoaderLog.get_all_as_string()
@@ -568,7 +568,7 @@ func _summarize_log_entries(entries: Array) -> Dictionary:
         "total": entries.size(),
         "levels": {}
     }
-    for entry in entries:
+    for entry: Variant in entries:
         if not (entry is Dictionary):
             continue
         var level := str(entry.get("level", ""))
@@ -628,7 +628,7 @@ func _build_registries_section(data: Dictionary, options: Dictionary) -> Diction
     if nodes is Dictionary and nodes.has("mods"):
         var mods: Dictionary = nodes.get("mods", {})
         var preview := {}
-        for mod_id in _sorted_keys(mods):
+        for mod_id: Variant in _sorted_keys(mods):
             var node_list: Array = _to_string_array(mods.get(mod_id, []))
             preview[mod_id] = _limit_array(node_list, node_limit)
         registries["nodes"] = {
@@ -674,7 +674,7 @@ func _format_godot_version(info: Dictionary) -> String:
 func _mod_load_order_to_ids(load_order: Variant) -> Array:
     var result: Array = []
     if load_order is Array:
-        for entry in load_order:
+        for entry: Variant in load_order:
             var mod_id := _get_mod_id_from_data(entry)
             result.append(mod_id if mod_id != "" else str(entry))
     return result
@@ -685,10 +685,10 @@ func _get_mod_id_from_data(mod_data: Variant) -> String:
     if mod_data is Dictionary:
         return str(mod_data.get("id", mod_data.get("dir_name", "")))
     if mod_data.has_method("get"):
-        var manifest = mod_data.get("manifest")
+        var manifest: Variant = mod_data.get("manifest")
         if manifest != null and manifest.has_method("get_mod_id"):
             return str(manifest.get_mod_id())
-        var dir_name = mod_data.get("dir_name")
+        var dir_name: Variant = mod_data.get("dir_name")
         if dir_name != null:
             return str(dir_name)
     return ""
@@ -709,7 +709,7 @@ func _get_manifest_value(manifest: Variant, key: String, fallback: Variant) -> V
     if manifest is Dictionary:
         return manifest.get(key, fallback)
     if manifest != null and manifest.has_method("get"):
-        var value = manifest.get(key)
+        var value: Variant = manifest.get(key)
         return value if value != null else fallback
     return fallback
 
@@ -717,7 +717,7 @@ func _get_field(target: Variant, key: String, fallback: Variant) -> Variant:
     if target is Dictionary:
         return target.get(key, fallback)
     if target != null and target.has_method("get"):
-        var value = target.get(key)
+        var value: Variant = target.get(key)
         return value if value != null else fallback
     return fallback
 
@@ -737,19 +737,19 @@ func _sorted_keys(dict: Dictionary) -> Array:
 
 func _sorted_dictionary(dict: Dictionary) -> Dictionary:
     var sorted := {}
-    for key in _sorted_keys(dict):
+    for key: Variant in _sorted_keys(dict):
         sorted[key] = dict[key]
     return sorted
 
 func _sorted_recursive(value: Variant) -> Variant:
     if value is Dictionary:
         var sorted := {}
-        for key in _sorted_keys(value):
+        for key: Variant in _sorted_keys(value):
             sorted[key] = _sorted_recursive(value[key])
         return sorted
     if value is Array:
         var result: Array = []
-        for entry in value:
+        for entry: Variant in value:
             result.append(_sorted_recursive(entry))
         return result
     return value
@@ -757,10 +757,10 @@ func _sorted_recursive(value: Variant) -> Variant:
 func _to_string_array(value: Variant) -> Array:
     var result: Array = []
     if value is PackedStringArray:
-        for entry in value:
+        for entry: Variant in value:
             result.append(str(entry))
     elif value is Array:
-        for entry in value:
+        for entry: Variant in value:
             result.append(str(entry))
     return result
 
@@ -788,14 +788,14 @@ func _get_autoload(name: String) -> Object:
         return Engine.get_singleton(name)
     if Engine.get_main_loop() == null:
         return null
-    var root = Engine.get_main_loop().root
+    var root: Variant = Engine.get_main_loop().root
     if root == null:
         return null
     return root.get_node_or_null(name)
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

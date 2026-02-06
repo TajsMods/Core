@@ -5,13 +5,13 @@ const CUSTOM_START := 60
 const MIN_CUSTOM_BIT := 32
 const MAP_SETTING_KEY := "core.file_variations.map"
 
-var _settings
-var _logger
+var _settings: Variant
+var _logger: Variant
 var _bit_map: Dictionary = {}
 var _entries: Dictionary = {}
 var _symbols: Dictionary = {}
 
-func _init(settings = null, logger = null) -> void:
+func _init(settings: Variant = null, logger: Variant = null) -> void:
     _settings = settings
     _logger = logger
     _load_map()
@@ -20,7 +20,7 @@ func register_variations(mod_id: String, defs: Dictionary, symbols: Dictionary =
     var masks: Dictionary = {}
     if defs.is_empty():
         return masks
-    for local_id in defs.keys():
+    for local_id: Variant in defs.keys():
         var full_id := _make_id(mod_id, str(local_id))
         var bit := _ensure_bit(full_id)
         if bit < 0:
@@ -45,7 +45,7 @@ func register_symbols(symbol_type: String, symbols: Dictionary, mod_id: String =
         return
     if not _symbols.has(symbol_type):
         _symbols[symbol_type] = {}
-    for local_id in symbols.keys():
+    for local_id: Variant in symbols.keys():
         var full_id := _make_id(mod_id, str(local_id))
         _symbols[symbol_type][full_id] = symbols[local_id]
 
@@ -61,7 +61,7 @@ func get_multiplier(variation: int, key: String) -> float:
     if key == "":
         return 1.0
     var multiplier := 1.0
-    for entry in _entries.values():
+    for entry: Variant in _entries.values():
         var mask := int(entry["mask"])
         if variation & mask:
             var config: Dictionary = entry["config"]
@@ -76,7 +76,7 @@ func get_symbols(symbol_type: String, variation: int) -> String:
         return ""
     var output := ""
     var table: Dictionary = _symbols[symbol_type]
-    for full_id in table.keys():
+    for full_id: Variant in table.keys():
         var mask := get_mask_by_id(full_id)
         if mask != 0 and variation & mask:
             output += str(table[full_id])
@@ -105,9 +105,9 @@ func _ensure_bit(full_id: String) -> int:
 
 func _find_free_bit() -> int:
     var used: Dictionary = {}
-    for full_id in _bit_map.keys():
+    for full_id: Variant in _bit_map.keys():
         used[int(_bit_map[full_id])] = true
-    for bit in range(CUSTOM_START, MIN_CUSTOM_BIT - 1, -1):
+    for bit: Variant in range(CUSTOM_START, MIN_CUSTOM_BIT - 1, -1):
         if not used.has(bit):
             return bit
     return -1
@@ -117,7 +117,7 @@ func _load_map() -> void:
         return
     var stored: Variant = _settings.get_dict(MAP_SETTING_KEY, {})
     if stored is Dictionary:
-        for key in stored.keys():
+        for key: Variant in stored.keys():
             _bit_map[str(key)] = int(stored[key])
 
 func _store_map() -> void:

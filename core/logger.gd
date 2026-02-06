@@ -83,12 +83,12 @@ func _log_to_file(level: String, tag: String, message: String) -> void:
         return
     var timestamp := Time.get_datetime_string_from_system()
     var line := "[%s] %s [%s] %s\n" % [timestamp, tag, level, message]
-    file.store_string(line)
+    var _ignored: Variant = file.store_string(line)
     file.close()
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

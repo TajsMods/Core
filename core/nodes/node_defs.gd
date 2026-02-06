@@ -53,7 +53,7 @@ static func _make_relative_path(from_dir: String, to_path: String) -> String:
         from_parts.remove_at(0)
         to_parts.remove_at(0)
     var rel_parts: Array[String] = []
-    for _i in from_parts:
+    for _i: Variant in from_parts:
         rel_parts.append("..")
     rel_parts.append_array(to_parts)
     return "/".join(rel_parts)

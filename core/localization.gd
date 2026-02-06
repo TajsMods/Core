@@ -30,7 +30,7 @@ func register_translations_dir(dir_path: String) -> int:
     if dir == null:
         return 0
     var count := 0
-    for file_name in dir.get_files():
+    for file_name: Variant in dir.get_files():
         if file_name.ends_with(".translation") or file_name.ends_with(".tres"):
             if register_translation(dir_path.path_join(file_name)):
                 count += 1
@@ -46,7 +46,7 @@ func _get_mod_path(mod_id: String) -> String:
 
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false

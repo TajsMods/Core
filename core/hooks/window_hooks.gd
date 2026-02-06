@@ -1,10 +1,10 @@
 class_name TajsCoreWindowHooks
 extends Node
 
-var _event_bus
-var _logger
+var _event_bus: Variant
+var _logger: Variant
 
-func setup(event_bus, logger = null) -> void:
+func setup(event_bus: Variant, logger: Variant = null) -> void:
     _event_bus = event_bus
     _logger = logger
 
@@ -58,7 +58,7 @@ func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false
     return {}
 
 func _autoload_ready(autoload_name: String) -> bool:
-    var tree = Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(autoload_name)

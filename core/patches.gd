@@ -4,9 +4,9 @@ extends RefCounted
 var _applied: Dictionary = {}
 var _script_patches: Dictionary = {}
 var _registered: Dictionary = {}
-var _logger
+var _logger: Variant
 
-func _init(logger = null) -> void:
+func _init(logger: Variant = null) -> void:
     _logger = logger
 
 func apply_once(patch_id: String, callable: Callable) -> bool:
@@ -37,7 +37,7 @@ func connect_signal_once(target: Object, signal_name: String, callable: Callable
             return
         if target.is_connected(signal_name, callable):
             return
-        target.connect(signal_name, callable)
+        var _ignored: Variant = target.connect(signal_name, callable)
     )
 
 func register_patch(patch_id: String, script_path: String, target: String, replacement: String) -> void:
@@ -48,7 +48,7 @@ func register_patch(patch_id: String, script_path: String, target: String, repla
         "target": target,
         "replacement": replacement
     }
-    patch_script(script_path, target, replacement, patch_id)
+    var _ignored: Variant = patch_script(script_path, target, replacement, patch_id)
 
 func patch_script(script_path: String, target: String, replacement: String, patch_id: String = "") -> bool:
     if script_path == "" or target == "":
@@ -90,7 +90,7 @@ func _get_script_source(script_path: String) -> String:
     if FileAccess.file_exists(script_path):
         return FileAccess.get_file_as_string(script_path)
     if ResourceLoader.exists(script_path):
-        var script = load(script_path)
+        var script: Variant = load(script_path)
         if script is GDScript:
             return script.source_code
     return ""
@@ -130,7 +130,7 @@ func patch_node_script(node: Node, extension_script_path: String, patch_id: Stri
         return true # Already patched
 
     # Load the extension script
-    var new_script = load(extension_script_path)
+    var new_script: Variant = load(extension_script_path)
     if new_script == null:
         _log_warn("patches", "Failed to load extension script: %s" % extension_script_path)
         return false
@@ -159,18 +159,18 @@ func patch_desktop(extension_script_path: String) -> bool:
 
     # Save state that might be lost during script swap
     var property_names: Dictionary = {}
-    for prop in Globals.desktop.get_property_list():
+    for prop: Variant in Globals.desktop.get_property_list():
         property_names[prop.name] = true
-    var old_resources = Globals.desktop.resources
-    var old_connections = null
+    var old_resources: Variant = Globals.desktop.resources
+    var old_connections: Variant = null
     var has_connections_prop := property_names.has("connections")
     if has_connections_prop:
-        old_connections = Globals.desktop.connections
-    var old_win_selections = Globals.desktop.window_selections
-    var old_grab_selections = Globals.desktop.grabber_selections
+        old_connections = Globals.desktop.get("connections")
+    var old_win_selections: Variant = Globals.desktop.window_selections
+    var old_grab_selections: Variant = Globals.desktop.grabber_selections
 
     # Load and apply new script
-    var new_script = load(extension_script_path)
+    var new_script: Variant = load(extension_script_path)
     if new_script == null:
         _log_warn("patches", "Failed to load desktop extension: %s" % extension_script_path)
         return false

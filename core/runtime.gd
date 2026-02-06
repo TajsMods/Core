@@ -5,52 +5,52 @@ var CORE_VERSION: String = "0.0.0"
 const API_LEVEL := 1
 const META_KEY := "TajsCore"
 
-var logger
-var settings
-var migrations
-var event_bus
-var command_registry
-var commands
-var context_menu
-var context_menus
-var command_palette
-var command_palette_controller
-var command_palette_overlay
-var keybinds
-var patches
-var diagnostics
-var module_registry
-var modules
-var workshop_sync
-var ui_manager
-var node_registry
-var nodes
-var util
+var logger: Variant
+var settings: Variant
+var migrations: Variant
+var event_bus: Variant
+var command_registry: Variant
+var commands: Variant
+var context_menu: Variant
+var context_menus: Variant
+var command_palette: Variant
+var command_palette_controller: Variant
+var command_palette_overlay: Variant
+var keybinds: Variant
+var patches: Variant
+var diagnostics: Variant
+var module_registry: Variant
+var modules: Variant
+var workshop_sync: Variant
+var ui_manager: Variant
+var node_registry: Variant
+var nodes: Variant
+var util: Variant
 
-var features
-var assets
-var localization
-var theme_manager
-var icon_registry
-var window_scenes
-var file_variations
-var window_menus
-var tree_registry
-var trees
-var hook_manager
-var upgrade_caps
-var undo_manager
-var node_finder
-var safe_ops
-var calculations
-var economy_helpers
-var node_limit_helpers
-var resource_helpers
-var connectivity_helpers
-var boot_screen
-var desktop_layers
+var features: Variant
+var assets: Variant
+var localization: Variant
+var theme_manager: Variant
+var icon_registry: Variant
+var window_scenes: Variant
+var file_variations: Variant
+var window_menus: Variant
+var tree_registry: Variant
+var trees: Variant
+var hook_manager: Variant
+var upgrade_caps: Variant
+var undo_manager: Variant
+var node_finder: Variant
+var safe_ops: Variant
+var calculations: Variant
+var economy_helpers: Variant
+var node_limit_helpers: Variant
+var resource_helpers: Variant
+var connectivity_helpers: Variant
+var boot_screen: Variant
+var desktop_layers: Variant
 
-var _version_util
+var _version_util: Variant
 var _extended_globals: Dictionary = {}
 var _base_dir: String = ""
 
@@ -86,153 +86,153 @@ func bootstrap() -> void:
     CORE_VERSION = _read_version_from_manifest(base_dir.get_base_dir().path_join("manifest.json"))
     # Init order: version -> logger -> settings -> migrations -> event_bus -> commands -> keybinds -> patches -> diagnostics -> module_registry -> core.ready
     _version_util = _load_script(base_dir.path_join("version.gd"))
-    var logger_script = _load_script(base_dir.path_join("logger.gd"))
+    var logger_script: Variant = _load_script(base_dir.path_join("logger.gd"))
     if logger_script != null:
         logger = logger_script.new()
 
-    var settings_script = _load_script(base_dir.path_join("settings.gd"))
+    var settings_script: Variant = _load_script(base_dir.path_join("settings.gd"))
     if settings_script != null:
         settings = settings_script.new(logger)
         _register_core_schema()
         _apply_logger_settings()
 
-    var features_script = _load_script(base_dir.path_join("features.gd"))
+    var features_script: Variant = _load_script(base_dir.path_join("features.gd"))
     if features_script != null and settings != null:
         features = features_script.new()
         features.setup(settings)
 
-    var migrations_script = _load_script(base_dir.path_join("migrations.gd"))
+    var migrations_script: Variant = _load_script(base_dir.path_join("migrations.gd"))
     if migrations_script != null and settings != null:
         migrations = migrations_script.new(settings, logger, _version_util)
         _register_core_migrations()
         migrations.run_pending("core")
 
-    var event_bus_script = _load_script(base_dir.path_join("event_bus.gd"))
+    var event_bus_script: Variant = _load_script(base_dir.path_join("event_bus.gd"))
     if event_bus_script != null:
         event_bus = event_bus_script.new(logger)
         _bridge_settings_events()
         _bind_command_palette_events()
 
-    var command_registry_script = _load_script(base_dir.path_join("commands/command_registry.gd"))
+    var command_registry_script: Variant = _load_script(base_dir.path_join("commands/command_registry.gd"))
     if command_registry_script != null:
         command_registry = command_registry_script.new(logger, event_bus)
         commands = command_registry
 
-    var context_menu_script = _load_script(base_dir.path_join("context_menu/context_menu_service.gd"))
+    var context_menu_script: Variant = _load_script(base_dir.path_join("context_menu/context_menu_service.gd"))
     if context_menu_script != null:
         context_menu = context_menu_script.new(logger, event_bus)
         context_menus = context_menu
 
-    var assets_script = _load_script(base_dir.path_join("assets.gd"))
+    var assets_script: Variant = _load_script(base_dir.path_join("assets.gd"))
     if assets_script != null:
         assets = assets_script.new()
-    var icon_registry_script = _load_script(base_dir.path_join("icon_registry.gd"))
+    var icon_registry_script: Variant = _load_script(base_dir.path_join("icon_registry.gd"))
     if icon_registry_script != null:
         icon_registry = icon_registry_script.new(assets)
 
-    var localization_script = _load_script(base_dir.path_join("localization.gd"))
+    var localization_script: Variant = _load_script(base_dir.path_join("localization.gd"))
     if localization_script != null:
         localization = localization_script.new()
 
-    var theme_script = _load_script(base_dir.path_join("theme_manager.gd"))
+    var theme_script: Variant = _load_script(base_dir.path_join("theme_manager.gd"))
     if theme_script != null:
         theme_manager = theme_script.new()
         # Apply tooltip styling to match in-game UI design
         if theme_manager.has_method("apply_tooltip_styling"):
             call_deferred("_apply_tooltip_styling")
 
-    var window_scenes_script = _load_script(base_dir.path_join("window_scenes.gd"))
+    var window_scenes_script: Variant = _load_script(base_dir.path_join("window_scenes.gd"))
     if window_scenes_script != null:
         window_scenes = window_scenes_script.new(logger)
 
-    var file_variations_script = _load_script(base_dir.path_join("file_variations.gd"))
+    var file_variations_script: Variant = _load_script(base_dir.path_join("file_variations.gd"))
     if file_variations_script != null:
         file_variations = file_variations_script.new(settings, logger)
 
-    var window_menus_script = _load_script(base_dir.path_join("window_menus.gd"))
+    var window_menus_script: Variant = _load_script(base_dir.path_join("window_menus.gd"))
     if window_menus_script != null:
         window_menus = window_menus_script.new()
 
-    var tree_script = _load_script(base_dir.path_join("tree_registry.gd"))
+    var tree_script: Variant = _load_script(base_dir.path_join("tree_registry.gd"))
     if tree_script != null:
         tree_registry = tree_script.new()
         trees = tree_registry
 
-    var keybinds_script = _load_script(base_dir.path_join("keybinds.gd"))
+    var keybinds_script: Variant = _load_script(base_dir.path_join("keybinds.gd"))
     if keybinds_script != null:
         keybinds = keybinds_script.new()
         add_child(keybinds)
         keybinds.setup(settings, logger, event_bus)
 
-    var patches_script = _load_script(base_dir.path_join("patches.gd"))
+    var patches_script: Variant = _load_script(base_dir.path_join("patches.gd"))
     if patches_script != null:
         patches = patches_script.new(logger)
 
-    var util_script = _load_script(base_dir.path_join("util.gd"))
+    var util_script: Variant = _load_script(base_dir.path_join("util.gd"))
     if util_script != null:
         util = util_script.new()
 
-    var calculations_script = _load_script(base_dir.path_join("util/calculations.gd"))
+    var calculations_script: Variant = _load_script(base_dir.path_join("util/calculations.gd"))
     if calculations_script != null:
         calculations = calculations_script.new()
 
-    var economy_helpers_script = _load_script(base_dir.path_join("util/economy_helpers.gd"))
+    var economy_helpers_script: Variant = _load_script(base_dir.path_join("util/economy_helpers.gd"))
     if economy_helpers_script != null:
         economy_helpers = economy_helpers_script.new()
 
-    var node_limit_helpers_script = _load_script(base_dir.path_join("util/node_limit_helpers.gd"))
+    var node_limit_helpers_script: Variant = _load_script(base_dir.path_join("util/node_limit_helpers.gd"))
     if node_limit_helpers_script != null:
         node_limit_helpers = node_limit_helpers_script.new()
 
-    var node_finder_script = _load_script(base_dir.path_join("util/node_finder.gd"))
+    var node_finder_script: Variant = _load_script(base_dir.path_join("util/node_finder.gd"))
     if node_finder_script != null:
         node_finder = node_finder_script.new()
 
-    var resource_helpers_script = _load_script(base_dir.path_join("util/resource_helpers.gd"))
+    var resource_helpers_script: Variant = _load_script(base_dir.path_join("util/resource_helpers.gd"))
     if resource_helpers_script != null:
         resource_helpers = resource_helpers_script.new()
 
-    var connectivity_script = _load_script(base_dir.path_join("util/connectivity_helpers.gd"))
+    var connectivity_script: Variant = _load_script(base_dir.path_join("util/connectivity_helpers.gd"))
     if connectivity_script != null:
         connectivity_helpers = connectivity_script.new()
 
-    var safe_ops_script = _load_script(base_dir.path_join("util/safe_ops.gd"))
+    var safe_ops_script: Variant = _load_script(base_dir.path_join("util/safe_ops.gd"))
     if safe_ops_script != null:
         safe_ops = safe_ops_script.new()
 
-    var undo_script = _load_script(base_dir.path_join("util/undo_manager.gd"))
+    var undo_script: Variant = _load_script(base_dir.path_join("util/undo_manager.gd"))
     if undo_script != null:
         undo_manager = undo_script.new(logger)
         undo_manager.setup()
         _register_undo_keybinds()
 
-    var upgrade_caps_script = _load_script(base_dir.path_join("mechanics/upgrade_caps.gd"))
+    var upgrade_caps_script: Variant = _load_script(base_dir.path_join("mechanics/upgrade_caps.gd"))
     if upgrade_caps_script != null:
         upgrade_caps = upgrade_caps_script.new(logger)
 
-    var node_registry_script = _load_script(base_dir.path_join("nodes/node_registry.gd"))
+    var node_registry_script: Variant = _load_script(base_dir.path_join("nodes/node_registry.gd"))
     if node_registry_script != null:
         node_registry = node_registry_script.new(logger, event_bus, patches)
         nodes = node_registry
 
 
-    var diagnostics_script = _load_script(base_dir.path_join("diagnostics.gd"))
+    var diagnostics_script: Variant = _load_script(base_dir.path_join("diagnostics.gd"))
     if diagnostics_script != null:
         diagnostics = diagnostics_script.new(self , logger)
 
-    var registry_script = _load_script(base_dir.path_join("module_registry.gd"))
+    var registry_script: Variant = _load_script(base_dir.path_join("module_registry.gd"))
     if registry_script != null:
         module_registry = registry_script.new(self , logger, event_bus)
         modules = module_registry
 
-    var hooks_script = _load_script(base_dir.path_join("hooks/hook_manager.gd"))
+    var hooks_script: Variant = _load_script(base_dir.path_join("hooks/hook_manager.gd"))
     if hooks_script != null:
         hook_manager = hooks_script.new()
         hook_manager.name = "CoreHooks"
         hook_manager.setup(self )
         add_child(hook_manager)
 
-    var desktop_layers_script = _load_script(base_dir.path_join("desktop_layers.gd"))
+    var desktop_layers_script: Variant = _load_script(base_dir.path_join("desktop_layers.gd"))
     if desktop_layers_script != null:
         desktop_layers = desktop_layers_script.new(logger, event_bus)
         desktop_layers.setup()
@@ -309,12 +309,12 @@ func notify(icon: String, message: String) -> void:
     if ui_manager != null and ui_manager.has_method("show_notification"):
         ui_manager.show_notification(icon, message)
         return
-    var signals = _get_autoload("Signals")
+    var signals: Variant = _get_autoload("Signals")
     if signals != null and signals.has_signal("notify"):
-        signals.emit_signal("notify", icon, message)
+        var _ignored: Variant = signals.emit_signal("notify", icon, message)
 
 func play_sound(sound_id: String) -> void:
-    var sound = _get_autoload("Sound")
+    var sound: Variant = _get_autoload("Sound")
     if sound != null and sound.has_method("play"):
         sound.play(sound_id)
 
@@ -342,7 +342,7 @@ func get_game_theme() -> Theme:
         return load("res://themes/main.tres")
     return null
 
-func get_icon_registry(): # Returns TajsCoreIconRegistry (Variant to avoid parse errors)
+func get_icon_registry() -> Variant: # Returns TajsCoreIconRegistry (Variant to avoid parse errors)
     return icon_registry
 
 static func instance() -> TajsCoreRuntime:
@@ -351,7 +351,7 @@ static func instance() -> TajsCoreRuntime:
     return null
 
 static func require_core(min_version: String) -> bool:
-    var core = instance()
+    var core: Variant = instance()
     if core == null:
         return false
     return core.require(min_version)
@@ -431,8 +431,8 @@ func _apply_logger_settings() -> void:
     var file_path: String = settings.get_string("core.log_file_path", "user://tajs_core.log")
     logger.set_file_logging(settings.get_bool("core.log_to_file", false), file_path)
 
-func _load_script(path: String):
-    var script = load(path)
+func _load_script(path: String) -> Variant:
+    var script: Variant = load(path)
     if script == null:
         _log_fallback("Failed to load script: %s" % path)
     return script
@@ -442,16 +442,16 @@ func _read_version_from_manifest(path: String) -> String:
         _log_fallback("Manifest not found: %s" % path)
         return "0.0.0"
 
-    var file = FileAccess.open(path, FileAccess.READ)
+    var file: Variant = FileAccess.open(path, FileAccess.READ)
     if file == null:
         _log_fallback("Failed to open manifest: %s" % path)
         return "0.0.0"
 
-    var content = file.get_as_text()
-    var json = JSON.new()
-    var error = json.parse(content)
+    var content: Variant = file.get_as_text()
+    var json: Variant = JSON.new()
+    var error: Variant = json.parse(content)
     if error == OK:
-        var data = json.data
+        var data: Variant = json.data
         if data is Dictionary and data.has("version_number"):
             return data["version_number"]
 
@@ -465,7 +465,7 @@ func _log_fallback(message: String) -> void:
         print("TajsCore: %s" % message)
 
 func _has_global_class(class_name_str: String) -> bool:
-    for entry in ProjectSettings.get_global_class_list():
+    for entry: Variant in ProjectSettings.get_global_class_list():
         if entry.get("class", "") == class_name_str:
             return true
     return false
@@ -475,7 +475,7 @@ func _get_autoload(autoload_name: String) -> Object:
         return Engine.get_singleton(autoload_name)
     if Engine.get_main_loop() == null:
         return null
-    var root = Engine.get_main_loop().root
+    var root: Variant = Engine.get_main_loop().root
     if root == null:
         return null
     return root.get_node_or_null(autoload_name)
@@ -572,7 +572,7 @@ func _on_redo() -> void:
 func _init_optional_services(base_dir: String) -> void:
     if settings == null:
         return
-    var workshop_script = _load_script(base_dir.path_join("workshop_sync.gd"))
+    var workshop_script: Variant = _load_script(base_dir.path_join("workshop_sync.gd"))
     if workshop_script != null:
         workshop_sync = workshop_script.new()
         workshop_sync.name = "WorkshopSync"
@@ -584,7 +584,7 @@ func _init_optional_services(base_dir: String) -> void:
         if workshop_sync.sync_on_startup:
             call_deferred("_start_workshop_sync")
 
-    var ui_manager_script = _load_script(base_dir.path_join("ui/ui_manager.gd"))
+    var ui_manager_script: Variant = _load_script(base_dir.path_join("ui/ui_manager.gd"))
     if ui_manager_script != null:
         ui_manager = ui_manager_script.new()
         ui_manager.name = "CoreUiManager"
@@ -600,7 +600,7 @@ func _apply_tooltip_styling() -> void:
         theme_manager.apply_tooltip_styling()
 
 func _init_boot_screen(base_dir: String) -> void:
-    var boot_screen_script = _load_script(base_dir.path_join("features/boot_screen_feature.gd"))
+    var boot_screen_script: Variant = _load_script(base_dir.path_join("features/boot_screen_feature.gd"))
     if boot_screen_script != null:
         boot_screen = boot_screen_script.new()
         boot_screen.setup(self )
@@ -622,5 +622,5 @@ func _install_modloader_extensions(base_dir: String) -> void:
         base_dir.path_join("extensions/main.gd"),
         base_dir.path_join("extensions/utils.gd")
     ]
-    for path in paths:
+    for path: Variant in paths:
         ModLoaderMod.install_script_extension(path)

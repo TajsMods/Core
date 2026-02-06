@@ -4,9 +4,9 @@ extends RefCounted
 static func safe_get_node(path: NodePath, default: Node = null) -> Node:
     if path == null or String(path) == "":
         return default
-    var tree = Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     if tree is SceneTree:
-        var node = tree.root.get_node_or_null(path)
+        var node: Variant = tree.root.get_node_or_null(path)
         if node != null:
             return node
     return default
@@ -16,7 +16,7 @@ static func safe_connect(signal_ref: Signal, callable: Callable) -> void:
         return
     if signal_ref.is_connected(callable):
         return
-    signal_ref.connect(callable)
+    var _ignored: Variant = signal_ref.connect(callable)
 
 static func safe_disconnect(signal_ref: Signal, callable: Callable) -> void:
     if signal_ref == null or callable == null or not callable.is_valid():

@@ -16,8 +16,8 @@ func setup(output_window: String, output_path: String, input_window: String, inp
 
 
 func execute() -> bool:
-    var output_id = _get_resource_id(_output_window_name, _output_path)
-    var input_id = _get_resource_id(_input_window_name, _input_path)
+    var output_id: String = _get_resource_id(_output_window_name, _output_path)
+    var input_id: String = _get_resource_id(_input_window_name, _input_path)
     
     if output_id == "" or input_id == "":
         return false
@@ -27,8 +27,8 @@ func execute() -> bool:
 
 
 func undo() -> bool:
-    var output_id = _get_resource_id(_output_window_name, _output_path)
-    var input_id = _get_resource_id(_input_window_name, _input_path)
+    var output_id: String = _get_resource_id(_output_window_name, _output_path)
+    var input_id: String = _get_resource_id(_input_window_name, _input_path)
     
     if output_id == "" or input_id == "":
         return false
@@ -38,8 +38,8 @@ func undo() -> bool:
 
 
 func is_valid() -> bool:
-    var output_id = _get_resource_id(_output_window_name, _output_path)
-    var input_id = _get_resource_id(_input_window_name, _input_path)
+    var output_id: String = _get_resource_id(_output_window_name, _output_path)
+    var input_id: String = _get_resource_id(_input_window_name, _input_path)
     return output_id != "" and input_id != ""
 
 
@@ -47,12 +47,14 @@ func _get_resource_id(window_name: String, relative_path: String) -> String:
     if not Globals.desktop:
         return ""
     
-    var window = Globals.desktop.get_node_or_null("Windows/" + window_name)
+    var window: Node = Globals.desktop.get_node_or_null("Windows/" + window_name)
     if not window:
         return ""
     
-    var resource_node = window.get_node_or_null(relative_path)
+    var resource_node: Node = window.get_node_or_null(relative_path)
     if resource_node and "id" in resource_node:
-        return resource_node.id
+        var id_value: Variant = resource_node.get("id")
+        if id_value != null:
+            return str(id_value)
     
     return ""

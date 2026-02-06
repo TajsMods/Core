@@ -43,9 +43,9 @@ static func _compare_pre(a: Array, b: Array) -> int:
     if not a.is_empty() and b.is_empty():
         return -1
     var count: int = min(a.size(), b.size())
-    for i in range(count):
-        var ai = a[i]
-        var bi = b[i]
+    for i: Variant in range(count):
+        var ai: Variant = a[i]
+        var bi: Variant = b[i]
         var a_is_int: bool = ai is String and ai.is_valid_int()
         var b_is_int: bool = bi is String and bi.is_valid_int()
         if a_is_int and b_is_int:

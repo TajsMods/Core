@@ -89,7 +89,7 @@ var _is_creating_buttons: bool = false
 var _button_create_batch_size: int = 50 # Buttons to create per batch
 
 func _init() -> void:
-    var core = Engine.get_meta("TajsCore")
+    var core: Variant = Engine.get_meta("TajsCore")
     if core != null:
         _registry = core.get_icon_registry()
     _default_texture = _resolve_texture(_registry.get_default_icon_id() if _registry != null else "")
@@ -99,7 +99,7 @@ func _init() -> void:
     _texture_cache.clear()
 
 static func open(options: Dictionary = {}, callback: Callable = Callable()) -> bool:
-    var core = Engine.get_meta("TajsCore")
+    var core: Variant = Engine.get_meta("TajsCore")
     if core == null or core.ui_manager == null:
         return false
     var opts := {}
@@ -150,7 +150,7 @@ func build_ui(parent: Control, options: Dictionary = {}) -> void:
     set_selection_callback(callback)
     _allowed_sources = _normalize_allowed_sources(opts.get("allowed_sources", []))
     _allowed_source_set.clear()
-    for src in _allowed_sources:
+    for src: Variant in _allowed_sources:
         _allowed_source_set[src] = true
     _load_icons()
     _prepare_tabs()
@@ -195,7 +195,7 @@ func update_layout() -> void:
         _grid.add_theme_constant_override("h_separation", spacing)
         _grid.add_theme_constant_override("v_separation", spacing)
         _grid.columns = _calculate_columns(parent_width, spacing)
-    for btn in _buttons:
+    for btn: Variant in _buttons:
         if not is_instance_valid(btn):
             continue
         var btn_size := ICON_SIZE_SMALL if _compact_mode else ICON_SIZE
@@ -210,7 +210,7 @@ func update_layout() -> void:
         _select_btn.add_theme_font_size_override("font_size", 12 if _compact_mode else 14)
     if _clear_btn != null:
         _clear_btn.add_theme_font_size_override("font_size", 12 if _compact_mode else 14)
-    for key in _tab_buttons.keys():
+    for key: Variant in _tab_buttons.keys():
         var btn: Button = _tab_buttons[key]
         if is_instance_valid(btn):
             btn.add_theme_font_size_override("font_size", 12 if _compact_mode else 14)
@@ -254,7 +254,7 @@ func _build_tabs(parent: Control) -> void:
     tabs.name = "IconSourceTabs"
     tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     tabs.add_theme_constant_override("separation", 4) # Reduced from 8
-    for group in _tab_groups:
+    for group: Variant in _tab_groups:
         var btn := Button.new()
         btn.toggle_mode = true
         btn.focus_mode = Control.FOCUS_NONE
@@ -348,7 +348,7 @@ func _load_icons() -> void:
         return
     _all_icons = _registry.get_all_icons()
     _icons_by_id.clear()
-    for entry in _all_icons:
+    for entry: Variant in _all_icons:
         var id: String = entry.get("stable_id", "")
         if id == "":
             continue
@@ -361,7 +361,7 @@ func _normalize_allowed_sources(value: Variant) -> Array:
     elif typeof(raw) != TYPE_ARRAY:
         raw = []
     var result := []
-    for item in raw:
+    for item: Variant in raw:
         if typeof(item) != TYPE_STRING:
             continue
         var cleaned: String = item.strip_edges()
@@ -379,10 +379,10 @@ func _prepare_tabs() -> void:
     if _registry != null:
         counts = _registry.get_group_counts(_allowed_sources)
     _tab_counts.clear()
-    for group in [GROUP_BASE, GROUP_CORE, GROUP_MODS]:
+    for group: Variant in [GROUP_BASE, GROUP_CORE, GROUP_MODS]:
         _tab_counts[group] = counts.get(group, 0)
     _tab_groups.clear()
-    for group in [GROUP_BASE, GROUP_CORE, GROUP_MODS]:
+    for group: Variant in [GROUP_BASE, GROUP_CORE, GROUP_MODS]:
         if _tab_counts.get(group, 0) > 0:
             _tab_groups.append(group)
     if _tab_groups.is_empty():
@@ -408,7 +408,7 @@ func _apply_filters() -> void:
     var term := ""
     if _search_box != null:
         term = _search_box.text.strip_edges().to_lower()
-    for entry in _all_icons:
+    for entry: Variant in _all_icons:
         if not _matches_allowed(entry):
             continue
         if _show_source_tabs and _tab_groups.size() > 0 and not _matches_active_tab(entry):
@@ -426,7 +426,7 @@ func _rebuild_grid() -> void:
     _pending_button_create_index = 0
     _is_creating_buttons = false
 
-    for btn in _buttons:
+    for btn: Variant in _buttons:
         if is_instance_valid(btn):
             btn.queue_free()
     _buttons.clear()
@@ -441,7 +441,7 @@ func _rebuild_grid() -> void:
 
     # Create first batch immediately for instant feedback
     var first_batch := mini(total_icons, _button_create_batch_size)
-    for i in range(first_batch):
+    for i: Variant in range(first_batch):
         var entry: Dictionary = _filtered_icons[i]
         var btn := _create_icon_button(entry, i)
         _grid.add_child(btn)
@@ -478,7 +478,7 @@ func _create_next_button_batch() -> void:
     var total_icons := _filtered_icons.size()
     var end_index := mini(_pending_button_create_index + _button_create_batch_size, total_icons)
 
-    for i in range(_pending_button_create_index, end_index):
+    for i: Variant in range(_pending_button_create_index, end_index):
         var entry: Dictionary = _filtered_icons[i]
         var btn := _create_icon_button(entry, i)
         _grid.add_child(btn)
@@ -538,7 +538,7 @@ func _queue_visible_texture_loads() -> void:
     _pending_texture_loads.clear()
 
     # Find buttons that need textures loaded
-    for btn in _buttons:
+    for btn: Variant in _buttons:
         if not is_instance_valid(btn):
             continue
         var icon_id: String = btn.get_meta("icon_id")
@@ -559,7 +559,7 @@ func _load_next_texture_batch() -> void:
     _is_loading_batch = true
     var batch_count := mini(_pending_texture_loads.size(), _load_batch_size)
 
-    for i in range(batch_count):
+    for i: Variant in range(batch_count):
         var item: Dictionary = _pending_texture_loads.pop_front()
         var btn: Button = item.get("button")
         var icon_id: String = item.get("icon_id")
@@ -598,7 +598,7 @@ func _set_active_tab(group: String) -> void:
     if group == "" or _active_tab == group:
         return
     _active_tab = group
-    for tab_name in _tab_buttons.keys():
+    for tab_name: Variant in _tab_buttons.keys():
         var btn: Button = _tab_buttons[tab_name]
         if is_instance_valid(btn):
             btn.button_pressed = tab_name == group
@@ -633,7 +633,7 @@ func _on_icon_pressed(entry: Dictionary) -> void:
     _select_entry(entry)
 
 func _on_icon_gui_input(event: InputEvent, entry: Dictionary) -> void:
-    if event is InputEventMouseButton and event.double_click:
+    if event is InputEventMouseButton and event.get("double_click"):
         _select_entry(entry)
         _confirm_selection()
 
@@ -645,7 +645,7 @@ func _select_entry(entry: Variant) -> void:
             _select_btn.disabled = true
         return
     _selected_entry = entry
-    for btn in _buttons:
+    for btn: Variant in _buttons:
         if not is_instance_valid(btn):
             continue
         var btn_id: String = btn.get_meta("icon_id")
@@ -710,7 +710,7 @@ func _on_clear_pressed() -> void:
 func _close_parent_popup() -> void:
     if not _owns_popup:
         return
-    var core = Engine.get_meta("TajsCore")
+    var core: Variant = Engine.get_meta("TajsCore")
     if core == null or core.ui_manager == null:
         return
     core.ui_manager.close_popup()
@@ -746,7 +746,7 @@ func _find_entry(identifier: String) -> Variant:
     if entry != null:
         return entry
     var target := identifier.to_lower()
-    for item in _all_icons:
+    for item: Variant in _all_icons:
         if item == null:
             continue
         if item.get("name", "").to_lower() == target:
