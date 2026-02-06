@@ -363,8 +363,8 @@ func _build_mod_settings_tabs() -> void:
     # Sort mods alphabetically by display name
     var sorted_mods = all_mods.keys()
     sorted_mods.sort_custom(func(a, b):
-        var name_a = _get_mod_display_name(all_mods[a].manifest)
-        var name_b = _get_mod_display_name(all_mods[b].manifest)
+        var name_a = _get_mod_display_name(all_mods[a].manifest, str(a))
+        var name_b = _get_mod_display_name(all_mods[b].manifest, str(b))
         return str(name_a).naturalnocasecmp_to(str(name_b)) < 0
     )
 
@@ -379,7 +379,7 @@ func _build_mod_settings_tabs() -> void:
             continue
 
         var manifest = mod_data.manifest
-        var display_name = _get_mod_display_name(manifest)
+        var display_name = _get_mod_display_name(manifest, mod_id)
         var icon_path = _get_mod_icon_path(manifest, mod_id)
 
         if _core != null and _core.ui_manager != null and _core.ui_manager.has_mod_settings_tab(mod_id):
@@ -467,19 +467,49 @@ func _generate_settings_from_schema(container: VBoxContainer, schema: Dictionary
                 unknown_label.text = "%s: Unknown type '%s'" % [label_text, type]
                 container.add_child(unknown_label)
 
-func _get_mod_display_name(manifest) -> String:
+func _get_mod_display_name(manifest, mod_id: String = "") -> String:
     # Extracts display name from mod manifest, handling both Object and Dictionary types
     var display_name := ""
+    var fallback_name := ""
     if manifest is Dictionary:
-        display_name = str(manifest.get("display_name", manifest.get("name", "")))
+        display_name = str(manifest.get("display_name", ""))
+        fallback_name = str(manifest.get("name", ""))
     elif manifest != null:
         if "display_name" in manifest:
             display_name = str(manifest.display_name)
-        elif "name" in manifest:
-            display_name = str(manifest.name)
-    if display_name.strip_edges() != "":
+        if "name" in manifest:
+            fallback_name = str(manifest.name)
+
+    display_name = display_name.strip_edges()
+    if display_name != "":
         return display_name
+
+    if mod_id.strip_edges() != "":
+        var manifest_display_name := _read_manifest_display_name_from_file(mod_id)
+        if manifest_display_name.strip_edges() != "":
+            return manifest_display_name
+
+    fallback_name = fallback_name.strip_edges()
+    if fallback_name != "":
+        return fallback_name
     return "Unknown Mod"
+
+func _read_manifest_display_name_from_file(mod_id: String) -> String:
+    var manifest_path := "res://mods-unpacked/%s/manifest.json" % mod_id
+    if not FileAccess.file_exists(manifest_path):
+        return ""
+    var file := FileAccess.open(manifest_path, FileAccess.READ)
+    if file == null:
+        return ""
+    var json_string := file.get_as_text()
+    file.close()
+    var parser := JSON.new()
+    if parser.parse(json_string) != OK:
+        return ""
+    var data = parser.get_data()
+    if not (data is Dictionary):
+        return ""
+    return str(data.get("display_name", "")).strip_edges()
 
 func _is_valid_mod(mod_id: String, manifest) -> bool:
     # Checks if a mod entry is valid (not a stray folder like .idea)
@@ -492,7 +522,7 @@ func _is_valid_mod(mod_id: String, manifest) -> bool:
         return false
 
     # Check if manifest has meaningful data
-    var display_name := _get_mod_display_name(manifest)
+    var display_name := _get_mod_display_name(manifest, mod_id)
     var version := _get_mod_version(manifest)
 
     # If both name is "Unknown Mod" and version is empty or "0.0.0", likely not a real mod
@@ -599,8 +629,8 @@ func _populate_mod_list(container: VBoxContainer) -> void:
             return true
         if b == "TajemnikTV-Core":
             return false
-        var name_a = _get_mod_display_name(all_mods[a].manifest)
-        var name_b = _get_mod_display_name(all_mods[b].manifest)
+        var name_a = _get_mod_display_name(all_mods[a].manifest, str(a))
+        var name_b = _get_mod_display_name(all_mods[b].manifest, str(b))
         return str(name_a).naturalnocasecmp_to(str(name_b)) < 0
     )
 
@@ -655,7 +685,7 @@ func _populate_mod_list(container: VBoxContainer) -> void:
             status_dot.tooltip_text = "Disabled"
         row.add_child(status_dot)
 
-        var display_name = _get_mod_display_name(manifest)
+        var display_name = _get_mod_display_name(manifest, mod_id)
         var name_label = Label.new()
         var version_number = _get_mod_version(manifest)
         name_label.text = "%s v%s" % [display_name, version_number] if version_number != "" else display_name
@@ -767,11 +797,9 @@ func _render_mod_details(manifest, mod_id: String) -> void:
     if _mod_details_panel_root == null or _mod_details_placeholder == null:
         return
 
-    var display_name = _get_mod_display_name(manifest)
+    var display_name = _get_mod_display_name(manifest, mod_id)
     var version = _get_mod_version(manifest)
-    var author = str(_get_manifest_value(manifest, "author", "Unknown"))
-    if author.strip_edges() == "":
-        author = "Unknown"
+    var author = _resolve_mod_author(manifest)
 
     var resolved_mod_id := mod_id
     if resolved_mod_id.strip_edges() == "":
@@ -931,6 +959,54 @@ func _get_mod_version(manifest) -> String:
     if version.strip_edges() == "":
         version = str(_get_manifest_value(manifest, "version_number", ""))
     return version
+
+func _resolve_mod_author(manifest) -> String:
+    var author = str(_get_manifest_value(manifest, "author", "")).strip_edges()
+    if author != "":
+        return author
+
+    author = _authors_to_display(_get_manifest_value(manifest, "authors", null))
+    if author != "":
+        return author
+
+    var extra = _get_manifest_extra(manifest)
+    author = str(extra.get("author", "")).strip_edges()
+    if author != "":
+        return author
+
+    author = _authors_to_display(extra.get("authors", null))
+    if author != "":
+        return author
+
+    if extra.has("godot") and extra.get("godot") is Dictionary:
+        var godot_extra: Dictionary = extra.get("godot")
+        author = str(godot_extra.get("author", "")).strip_edges()
+        if author != "":
+            return author
+
+        author = _authors_to_display(godot_extra.get("authors", null))
+        if author != "":
+            return author
+
+    return "Unknown"
+
+func _authors_to_display(value: Variant) -> String:
+    if value == null:
+        return ""
+
+    if value is String:
+        return str(value).strip_edges()
+
+    var names: Array[String] = []
+    if value is PackedStringArray or value is Array:
+        for entry in value:
+            var name = str(entry).strip_edges()
+            if name != "":
+                names.append(name)
+
+    if names.is_empty():
+        return ""
+    return ", ".join(names)
 
 func _get_manifest_value(manifest, key: String, fallback: Variant) -> Variant:
     if manifest is Dictionary:

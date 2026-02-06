@@ -102,6 +102,8 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
     if _mod_tabs.has(mod_id):
         var cached_tab = _mod_tabs[mod_id]
         if is_instance_valid(cached_tab):
+            if _ui != null and _ui.has_method("update_tab_display_name"):
+                _ui.update_tab_display_name(mod_id, display_name)
             return cached_tab
         else:
             # Tab was freed (e.g., on reload), remove stale reference
@@ -113,8 +115,12 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
     var effective_icon := icon_path
     if _pending_mod_tabs.has(mod_id):
         var entry: Dictionary = _pending_mod_tabs[mod_id]
-        effective_name = entry.get("name", display_name)
-        effective_icon = entry.get("icon", icon_path)
+        var pending_name := str(entry.get("name", "")).strip_edges()
+        var pending_icon := str(entry.get("icon", "")).strip_edges()
+        if str(effective_name).strip_edges() == "":
+            effective_name = pending_name
+        if str(effective_icon).strip_edges() == "":
+            effective_icon = pending_icon
         _pending_mod_tabs.erase(mod_id)
     var container = _ui.add_mod_tab_ex(effective_name, effective_icon, mod_id, "manual")
     if container != null:

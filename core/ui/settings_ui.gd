@@ -371,6 +371,32 @@ func _register_tab_meta(index: int, display_name: String, tab_id: String, kind: 
         "kind": kind
     }
 
+func update_tab_display_name(tab_id: String, display_name: String) -> void:
+    var normalized_id := tab_id.strip_edges()
+    var normalized_name := display_name.strip_edges()
+    if normalized_id == "" or normalized_name == "":
+        return
+
+    for i in range(_tab_meta.size()):
+        var meta = _tab_meta[i]
+        if not (meta is Dictionary):
+            continue
+        if str(meta.get("id", "")).strip_edges() != normalized_id:
+            continue
+
+        meta["display"] = normalized_name
+        _tab_meta[i] = meta
+
+        if i >= 0 and i < _tab_buttons.size():
+            var btn = _tab_buttons[i]
+            if is_instance_valid(btn):
+                btn.name = normalized_name + "Tab"
+                if _sidebar_expanded:
+                    btn.text = "  " + normalized_name
+                else:
+                    btn.text = ""
+        break
+
 func _get_tab_meta(index: int) -> Dictionary:
     if index >= 0 and index < _tab_meta.size():
         var meta = _tab_meta[index]
