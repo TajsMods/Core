@@ -27,8 +27,7 @@
 		}
 	},
 	"name": "Core",
-	"display_name": "Taj's Core",
 	"namespace": "TajemnikTV",
-	"version_number": "2.0.2",
+	"version_number": "2.0.3",
 	"website_url": "https://github.com/TajsMods/Core"
 }
