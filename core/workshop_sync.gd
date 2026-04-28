@@ -59,22 +59,18 @@ func _get_steam_api() -> Object:
         var global_steam: Variant = Engine.get_main_loop().root.get_node("GlobalSteam")
         if global_steam.initialized and global_steam.api != null:
             return global_steam.api
-    if Engine.has_singleton("Steam"):
-        return Engine.get_singleton("Steam")
     return null
 
 func _check_steam_availability() -> void:
+    if Engine.is_editor_hint():
+        _log("Editor environment detected. Workshop Sync disabled.")
+        _steam_available = false
+        return
     if Engine.get_main_loop() and Engine.get_main_loop().root.has_node("GlobalSteam"):
         var global_steam: Variant = Engine.get_main_loop().root.get_node("GlobalSteam")
         if global_steam.initialized and global_steam.api != null:
             _steam_available = true
             _log("Steam is available via GlobalSteam. Workshop Sync enabled.")
-            return
-    if Engine.has_singleton("Steam"):
-        var steam: Variant = Engine.get_singleton("Steam")
-        if steam != null:
-            _steam_available = true
-            _log("Steam is available via Engine singleton. Workshop Sync enabled.")
             return
     _log("Steam not available. Workshop Sync disabled.")
     _steam_available = false
@@ -113,7 +109,7 @@ func start_sync() -> void:
     var _ignored: Variant = emit_signal("sync_started")
     _log("Starting Workshop Sync...")
     var steam: Variant = _get_steam_api()
-    if steam == null:
+    if steam == null or not _can_use_workshop_api(steam):
         _log("Failed to get Steam API.")
         _finish_sync()
         return
@@ -170,6 +166,8 @@ func _on_sync_timeout() -> void:
     _finish_sync()
 
 func _get_num_subscribed_items(steam: Variant) -> int:
+    if not _can_use_workshop_api(steam):
+        return 0
     if not steam.has_method("get_method_list"):
         return 0
     var methods: Variant = steam.get_method_list()
@@ -182,6 +180,8 @@ func _get_num_subscribed_items(steam: Variant) -> int:
     return 0
 
 func _get_subscribed_items(steam: Variant, _count: int) -> Array:
+    if not _can_use_workshop_api(steam):
+        return []
     if not steam.has_method("get_method_list"):
         return []
     var methods: Variant = steam.get_method_list()
@@ -359,6 +359,18 @@ func _log(message: String) -> void:
         print(LOG_NAME + ": " + message)
     if _debug_log_callback.is_valid():
         _debug_log_callback.call(message)
+
+
+func _can_use_workshop_api(steam: Variant) -> bool:
+    if steam == null:
+        return false
+    if steam.has_method("isSteamRunning") and not bool(steam.isSteamRunning()):
+        return false
+    if not steam.has_method("getNumSubscribedItems"):
+        return false
+    if not steam.has_method("getSubscribedItems"):
+        return false
+    return true
 
 
 func _has_global_class(class_name_str: String) -> bool:

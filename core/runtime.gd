@@ -57,6 +57,9 @@ var _base_dir: String = ""
 # Runtime patching state for scripts with class_name (can't use install_script_extension)
 var _desktop_patched := false
 var _desktop_patch_failed := false
+var _loading_save_sanitized := false
+var _loading_save_sanitize_attempts := 0
+var _scene_text_cache: Dictionary = {}
 
 func _init() -> void:
     bootstrap()
@@ -64,8 +67,10 @@ func _init() -> void:
 func _ready() -> void:
     if node_registry != null:
         node_registry.setup_signals()
+    _sanitize_loading_save_if_needed()
 
 func _process(_delta: float) -> void:
+    _sanitize_loading_save_if_needed()
     # Runtime patching for Desktop (has class_name, can't use install_script_extension)
     if not _desktop_patched and not _desktop_patch_failed:
         if is_instance_valid(Globals.desktop) and patches != null:
@@ -75,6 +80,114 @@ func _process(_delta: float) -> void:
                 _desktop_patched = true
             else:
                 _desktop_patch_failed = true
+
+func _sanitize_loading_save_if_needed() -> void:
+    if _loading_save_sanitized:
+        return
+    _loading_save_sanitize_attempts += 1
+    var data_autoload: Variant = _get_autoload("Data")
+    if data_autoload == null:
+        if _loading_save_sanitize_attempts <= 3:
+            logd("core", "Save sanitize: Data autoload not available yet (attempt %d)." % _loading_save_sanitize_attempts)
+        return
+    if not data_autoload.has_method("get"):
+        return
+    var loading: Variant = data_autoload.get("loading")
+    if not (loading is Dictionary):
+        if _loading_save_sanitize_attempts <= 3:
+            logd("core", "Save sanitize: Data.loading not ready yet (attempt %d)." % _loading_save_sanitize_attempts)
+        return
+    if loading.is_empty():
+        if _loading_save_sanitize_attempts <= 3:
+            logd("core", "Save sanitize: Data.loading is empty (attempt %d)." % _loading_save_sanitize_attempts)
+        return
+    if not loading.has("desktop_data"):
+        _loading_save_sanitized = true
+        return
+    var desktop_data: Variant = loading.get("desktop_data", {})
+    if not (desktop_data is Dictionary):
+        _loading_save_sanitized = true
+        return
+    var windows_data: Variant = desktop_data.get("windows", [])
+    if not (windows_data is Array):
+        _loading_save_sanitized = true
+        return
+
+    var windows_defs: Variant = data_autoload.get("windows")
+    logi("core", "Save sanitize: processing %d desktop windows." % windows_data.size())
+    var filtered: Array = []
+    var dropped_count := 0
+    for entry_var: Variant in windows_data:
+        if not (entry_var is Dictionary):
+            continue
+        var entry: Dictionary = entry_var
+        var filename := str(entry.get("filename", ""))
+        var window_id := str(entry.get("window", ""))
+        var window_name := str(entry.get("name", ""))
+        var original_filename := filename
+
+        # Migrate legacy script filenames to scene filenames before Desktop loads windows.
+        if filename.ends_with(".gd"):
+            var mapped_scene := ""
+            if windows_defs is Dictionary and window_id != "" and windows_defs.has(window_id):
+                var def: Variant = windows_defs[window_id]
+                if def is Dictionary:
+                    mapped_scene = str(def.get("scene", ""))
+            if mapped_scene != "":
+                filename = mapped_scene + ".tscn"
+            else:
+                filename = filename.trim_suffix(".gd") + ".tscn"
+            entry["filename"] = filename
+            logw("core", "Save sanitize: converted legacy script filename '%s' -> '%s' (window '%s', id '%s')." % [original_filename, filename, window_name, window_id])
+
+        # Guard broken legacy entries known to crash on 4.6.2 load paths.
+        var normalized := filename.to_lower()
+        if normalized == "window_encompressor" or normalized == "window_encompressor.tscn":
+            dropped_count += 1
+            logw("core", "Save sanitize: dropped legacy window '%s' filename '%s'." % [window_name, filename])
+            continue
+        if normalized == "window_machine_producer.gd" or normalized == "window_machine_producer":
+            dropped_count += 1
+            logw("core", "Save sanitize: dropped invalid producer script entry '%s' (name '%s')." % [filename, window_name])
+            continue
+        if window_name.to_lower() == "miner0":
+            dropped_count += 1
+            logw("core", "Save sanitize: quarantined crashing entry '%s' (window '%s', filename '%s')." % [window_name, window_id, filename])
+            continue
+
+        # Structural guard: drop save entries incompatible with target scene layout.
+        var scene_path := "res://scenes/windows/" + filename
+        if not ResourceLoader.exists(scene_path):
+            dropped_count += 1
+            logw("core", "Save sanitize: dropped missing scene '%s' (window '%s', id '%s')." % [scene_path, window_name, window_id])
+            continue
+        if entry.has("progress") and not _scene_has_node_name(scene_path, "Process"):
+            dropped_count += 1
+            logw("core", "Save sanitize: dropped entry needing Process node but missing in scene '%s' (window '%s', id '%s')." % [filename, window_name, window_id])
+            continue
+        if entry.has("level") and not _scene_has_node_name(scene_path, "Component"):
+            dropped_count += 1
+            logw("core", "Save sanitize: dropped entry needing Component node but missing in scene '%s' (window '%s', id '%s')." % [filename, window_name, window_id])
+            continue
+
+        filtered.append(entry)
+
+    desktop_data["windows"] = filtered
+    loading["desktop_data"] = desktop_data
+    data_autoload.set("loading", loading)
+    _loading_save_sanitized = true
+    logi("core", "Save sanitize complete: kept %d, dropped %d windows." % [filtered.size(), dropped_count])
+
+func _scene_has_node_name(scene_path: String, node_name: String) -> bool:
+    if scene_path == "" or node_name == "":
+        return false
+    var text: String = _scene_text_cache.get(scene_path, "")
+    if text == "":
+        if not FileAccess.file_exists(scene_path):
+            return false
+        text = FileAccess.get_file_as_string(scene_path)
+        _scene_text_cache[scene_path] = text
+    return text.contains("name=\"%s\"" % node_name)
 
 func bootstrap() -> void:
     if Engine.has_meta(META_KEY) and Engine.get_meta(META_KEY) != self:

@@ -7,10 +7,10 @@
 				"TajemnikTV"
 			],
 			"compatible_game_version": [
-				"2.1.7"
+				"2.2.6"
 			],
 			"compatible_mod_loader_version": [
-				"7.0.0"
+				"7.0.1"
 			],
 			"config_schema": {
 
@@ -29,6 +29,6 @@
 	"name": "Core",
 	"display_name": "Taj's Core",
 	"namespace": "TajemnikTV",
-	"version_number": "2.0.1",
+	"version_number": "2.0.2",
 	"website_url": "https://github.com/TajsMods/Core"
 }

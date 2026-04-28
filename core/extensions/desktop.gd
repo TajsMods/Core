@@ -355,30 +355,41 @@ func update_heatspot() -> void:
 
 
 func update_selection() -> void:
-    if selections == null:
-        selections = get_node_or_null("Selections")
-    if selections == null:
+    if not _ensure_runtime_canvas_refs():
         _clear_selection_rids()
         return
     super.update_selection()
 
 
+func update_lod() -> void:
+    if not _ensure_runtime_canvas_refs():
+        return
+    super.update_lod()
+
+
+func _ensure_runtime_canvas_refs() -> bool:
+    if windows == null:
+        windows = get_node_or_null("Windows")
+    if windows_lod == null:
+        windows_lod = get_node_or_null("WindowsLOD")
+    if selections == null:
+        selections = get_node_or_null("Selections")
+    if windows == null or windows_lod == null or selections == null:
+        return false
+
+    if not window_lod.is_valid():
+        window_lod = RenderingServer.canvas_item_create()
+    if not selection_rid.is_valid():
+        selection_rid = RenderingServer.canvas_item_create()
+
+    RenderingServer.canvas_item_set_parent(window_lod, windows_lod.get_canvas_item())
+    RenderingServer.canvas_item_set_parent(selection_rid, selections.get_canvas_item())
+    return true
+
+
 func _clear_selection_rids() -> void:
-    if window_selections == null:
-        window_selections = {}
-    if grabber_selections == null:
-        grabber_selections = {}
-
-    for i: WindowContainer in window_selections:
-        RenderingServer.canvas_item_clear(window_selections[i])
-        RenderingServer.free_rid(window_selections[i])
-
-    for i: Control in grabber_selections:
-        RenderingServer.canvas_item_clear(grabber_selections[i])
-        RenderingServer.free_rid(grabber_selections[i])
-
-    window_selections.clear()
-    grabber_selections.clear()
+    if selection_rid.is_valid():
+        RenderingServer.canvas_item_clear(selection_rid)
 
 
 func _on_tool_set() -> void:

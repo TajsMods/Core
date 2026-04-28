@@ -166,8 +166,14 @@ func patch_desktop(extension_script_path: String) -> bool:
     var has_connections_prop := property_names.has("connections")
     if has_connections_prop:
         old_connections = Globals.desktop.get("connections")
-    var old_win_selections: Variant = Globals.desktop.window_selections
-    var old_grab_selections: Variant = Globals.desktop.grabber_selections
+    var old_win_selections: Variant = null
+    var old_grab_selections: Variant = null
+    var has_window_selections_prop := property_names.has("window_selections")
+    var has_grabber_selections_prop := property_names.has("grabber_selections")
+    if has_window_selections_prop:
+        old_win_selections = Globals.desktop.get("window_selections")
+    if has_grabber_selections_prop:
+        old_grab_selections = Globals.desktop.get("grabber_selections")
 
     # Load and apply new script
     var new_script: Variant = load(extension_script_path)
@@ -181,8 +187,10 @@ func patch_desktop(extension_script_path: String) -> bool:
     Globals.desktop.resources = old_resources
     if has_connections_prop:
         Globals.desktop.connections = old_connections
-    Globals.desktop.window_selections = old_win_selections
-    Globals.desktop.grabber_selections = old_grab_selections
+    if has_window_selections_prop:
+        Globals.desktop.set("window_selections", old_win_selections)
+    if has_grabber_selections_prop:
+        Globals.desktop.set("grabber_selections", old_grab_selections)
 
     _applied["desktop_patch"] = true
     _log_info("patches", "Desktop runtime patched with: %s" % extension_script_path)
