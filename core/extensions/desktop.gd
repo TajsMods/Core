@@ -403,6 +403,26 @@ func _on_tool_set() -> void:
 func _on_screen_transition_started() -> void:
     if input_blocker == null:
         input_blocker = get_node_or_null("InputBlocker")
+    if ambience == null:
+        ambience = get_node_or_null("AmbiencePlayer")
+
+    if Globals.cur_screen == 0 and ambience != null:
+        var tween: Tween = create_tween()
+        tween.tween_property(ambience, "volume_db", -40.0, 0.5)
+
+    if input_blocker != null:
+        input_blocker.set("visible", true)
+
+
+func _on_screen_transition_finished() -> void:
     if input_blocker == null:
-        return
-    super._on_screen_transition_started()
+        input_blocker = get_node_or_null("InputBlocker")
+    if ambience == null:
+        ambience = get_node_or_null("AmbiencePlayer")
+
+    if Globals.cur_screen == 0 and ambience != null:
+        var tween: Tween = create_tween()
+        tween.tween_property(ambience, "volume_db", heatspot_volume, 0.5)
+
+    if input_blocker != null:
+        input_blocker.set("visible", get_blocker_visibility())
