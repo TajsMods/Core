@@ -75,6 +75,7 @@ func add_windows_from_data(data: Dictionary, importing: bool = false) -> Array[W
             new_object.name = window_id
             $Windows.add_child(new_object)
             created_windows.append(new_object)
+            _emit_core_window_restored(new_object, filename)
         else:
             new_object.name = window_id
             for key: String in data[window_id]:
@@ -426,3 +427,25 @@ func _on_screen_transition_finished() -> void:
 
     if input_blocker != null:
         input_blocker.set("visible", get_blocker_visibility())
+
+func _emit_core_window_restored(window: Variant, scene_id: String) -> void:
+    var core: Variant = Engine.get_meta("TajsCore", null)
+    if core == null or core.event_bus == null:
+        return
+    var payload := {
+        "window_id": str(window.name) if window != null else "",
+        "window_type_id": str(window.get("window")) if window != null and window.has_method("get") else "",
+        "scene_id": scene_id,
+        "owner_mod_id": "base"
+    }
+    if core.event_bus.has_method("emit_event"):
+        core.event_bus.emit_event("core.desktop.window_restored", "core", payload, false)
+        return
+    if core.event_bus.has_method("emit"):
+        core.event_bus.emit("core.desktop.window_restored", {
+            "source": "core",
+            "timestamp": Time.get_unix_time_from_system(),
+            "data": payload,
+            "cancellable": false,
+            "cancelled": false
+        })

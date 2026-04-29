@@ -6,6 +6,15 @@ const CATEGORY_TAB_SCRIPT := "res://scripts/window_category_tab.gd"
 
 var _tabs: Array = []
 var _tabs_by_key: Dictionary = {}
+var _event_bus: Variant = null
+
+# Event payloads:
+# - core.window_menu.tab_registered:
+#   {tab_index:int, tab_id:String, tab_key:String, button_name:String, owner_mod_id:String}
+# - core.window_menu.button_created:
+#   {tab_index:int, tab_id:String, tab_key:String, button_name:String, owner_mod_id:String}
+func set_event_bus(event_bus: Variant) -> void:
+    _event_bus = event_bus
 
 func register_tab(mod_id: String, tab_id: String, config: Dictionary = {}) -> int:
     if tab_id == "":
@@ -31,6 +40,13 @@ func register_tab(mod_id: String, tab_id: String, config: Dictionary = {}) -> in
     }
     _tabs.append(def)
     _tabs_by_key[key] = def
+    _emit_event("core.window_menu.tab_registered", {
+        "tab_index": index,
+        "tab_id": str(def["tab_id"]),
+        "tab_key": str(def["key"]),
+        "button_name": str(def["button_name"]),
+        "owner_mod_id": str(def["mod_id"])
+    })
     return index
 
 func get_tab_index(mod_id: String, tab_id: String) -> int:
@@ -70,6 +86,13 @@ func build_buttons(menu_buttons: Node) -> void:
         menu_buttons.add_child(button)
         if move_index != -1:
             menu_buttons.move_child(button, move_index)
+        _emit_event("core.window_menu.button_created", {
+            "tab_index": int(tab["index"]),
+            "tab_id": str(tab["tab_id"]),
+            "tab_key": str(tab["key"]),
+            "button_name": str(tab["button_name"]),
+            "owner_mod_id": str(tab["mod_id"])
+        })
 
 func get_panel_for_tab(index: int, categories_node: Node) -> Control:
     if categories_node == null:
@@ -290,3 +313,19 @@ func _has_global_class(class_name_str: String) -> bool:
         if entry.get("class", "") == class_name_str:
             return true
     return false
+
+func _emit_event(event_name: String, data: Dictionary) -> void:
+    if _event_bus == null:
+        return
+    if _event_bus.has_method("emit_event"):
+        _event_bus.emit_event(event_name, "core", data, false)
+        return
+    if _event_bus.has_method("emit"):
+        var payload := {
+            "source": "core",
+            "timestamp": Time.get_unix_time_from_system(),
+            "data": data,
+            "cancellable": false,
+            "cancelled": false
+        }
+        _event_bus.emit(event_name, payload)

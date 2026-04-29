@@ -157,6 +157,7 @@ func bootstrap() -> void:
     var window_menus_script: Variant = _load_script(base_dir.path_join("window_menus.gd"))
     if window_menus_script != null:
         window_menus = window_menus_script.new()
+        window_menus.set_event_bus(event_bus)
 
     var tree_script: Variant = _load_script(base_dir.path_join("tree_registry.gd"))
     if tree_script != null:

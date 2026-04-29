@@ -4,6 +4,8 @@ extends Node
 var _event_bus: Variant
 var _logger: Variant
 
+# Event payload for core.desktop.window_* events:
+# {window_id:String, window_type_id:String, owner_mod_id:String}
 func setup(event_bus: Variant, logger: Variant = null) -> void:
     _event_bus = event_bus
     _logger = logger
@@ -21,30 +23,30 @@ func _ready() -> void:
 func request_window_create(window: WindowContainer) -> bool:
     if window == null:
         return false
-    var payload := _emit_event("window.pre_create", {"window": window}, true)
+    var payload := _emit_event("core.desktop.window_create_requested", _build_window_payload(window), true)
     if payload.get("cancelled", false):
         return false
     Signals.create_window.emit(window)
     return true
 
 func _on_create_window(window: WindowContainer) -> void:
-    _emit_event("window.pre_create", {"window": window}, true)
+    _emit_event("core.desktop.window_create_requested", _build_window_payload(window), true)
 
 func _on_window_created(window: WindowContainer) -> void:
-    _emit_event("window.created", {"window": window})
+    _emit_event("core.desktop.window_created", _build_window_payload(window))
 
 func _on_window_initialized(window: WindowContainer) -> void:
-    _emit_event("window.initialized", {"window": window})
+    _emit_event("core.desktop.window_initialized", _build_window_payload(window))
 
 func _on_window_deleted(window: WindowContainer) -> void:
-    _emit_event("window.pre_delete", {"window": window}, true)
-    _emit_event("window.deleted", {"window": window})
+    _emit_event("core.desktop.window_delete_requested", _build_window_payload(window), true)
+    _emit_event("core.desktop.window_deleted", _build_window_payload(window))
 
 func _on_window_moved(window: Control) -> void:
-    _emit_event("window.moved", {"window": window})
+    _emit_event("core.desktop.window_moved", _build_window_payload(window))
 
 func _on_new_upgrade(upgrade: String, levels: int) -> void:
-    _emit_event("window.upgraded", {"upgrade": upgrade, "levels": levels})
+    _emit_event("core.desktop.window_upgraded", {"upgrade_id": upgrade, "levels": levels})
 
 func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false) -> Dictionary:
     if _event_bus == null:
@@ -62,3 +64,20 @@ func _autoload_ready(autoload_name: String) -> bool:
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(autoload_name)
+
+func _build_window_payload(window: Variant) -> Dictionary:
+    if window == null:
+        return {"window_id": "", "window_type_id": "", "owner_mod_id": "base"}
+    var window_id := ""
+    if window is Node:
+        window_id = str(window.name)
+    var window_type_id := ""
+    if window.has_method("get"):
+        window_type_id = str(window.get("window"))
+        if window_type_id == "":
+            window_type_id = str(window.get("filename"))
+    return {
+        "window_id": window_id,
+        "window_type_id": window_type_id,
+        "owner_mod_id": "base"
+    }

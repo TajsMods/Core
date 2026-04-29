@@ -4,6 +4,11 @@ extends Node
 var _event_bus: Variant
 var _last_menu: int = 0
 
+# Event payloads:
+# - core.ui.ready:
+#   {owner_mod_id:String, has_hud:bool, has_desktop:bool}
+# - core.window_menu.tab_opened:
+#   {menu_id:int, tab_index:int, owner_mod_id:String, tab_id:String, tab_key:String}
 func setup(event_bus: Variant) -> void:
     _event_bus = event_bus
 
@@ -13,19 +18,36 @@ func _ready() -> void:
     Signals.menu_set.connect(_on_menu_set)
     Signals.popup.connect(_on_popup)
     Signals.prompt.connect(_on_prompt)
+    _emit_event("core.ui.ready", {
+        "owner_mod_id": "TajemnikTV-Core",
+        "has_hud": _has_node("/root/Main/HUD"),
+        "has_desktop": is_instance_valid(Globals.desktop)
+    })
 
 func _on_menu_set(menu: int, tab: int) -> void:
-    if menu != Utils.menu_types.NONE and _last_menu == Utils.menu_types.NONE:
-        _emit_event("ui.menu_opened", {"menu": menu, "tab": tab})
-    elif menu == Utils.menu_types.NONE and _last_menu != Utils.menu_types.NONE:
-        _emit_event("ui.menu_closed", {"menu": _last_menu, "tab": tab})
+    if menu == Utils.menu_types.WINDOWS and menu != Utils.menu_types.NONE:
+        var payload := {
+            "menu_id": menu,
+            "tab_index": tab,
+            "owner_mod_id": "base",
+            "tab_id": "",
+            "tab_key": ""
+        }
+        var core: Variant = Engine.get_meta("TajsCore", null)
+        if core != null and core.window_menus != null:
+            var tab_data: Dictionary = core.window_menus.get_tab_by_index(tab)
+            if not tab_data.is_empty():
+                payload["owner_mod_id"] = str(tab_data.get("mod_id", ""))
+                payload["tab_id"] = str(tab_data.get("tab_id", ""))
+                payload["tab_key"] = str(tab_data.get("key", ""))
+        _emit_event("core.window_menu.tab_opened", payload)
     _last_menu = menu
 
 func _on_popup(popup_id: String) -> void:
-    _emit_event("ui.popup_shown", {"id": popup_id})
+    _emit_event("core.ui.popup_shown", {"id": popup_id})
 
 func _on_prompt(title: String, _desc: String, _callback: Callable) -> void:
-    _emit_event("ui.popup_shown", {"id": title})
+    _emit_event("core.ui.popup_shown", {"id": title})
 
 func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false) -> Dictionary:
     if _event_bus == null:
@@ -43,3 +65,9 @@ func _autoload_ready(autoload_name: String) -> bool:
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(autoload_name)
+
+func _has_node(path: String) -> bool:
+    var tree: Variant = Engine.get_main_loop()
+    if not (tree is SceneTree):
+        return false
+    return tree.get_root().has_node(path.trim_prefix("/root/"))
