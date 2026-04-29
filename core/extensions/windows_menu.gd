@@ -1,9 +1,12 @@
 extends "res://scripts/windows_menu.gd"
 
 func _ready() -> void:
+    var categories_node: Control = get_node_or_null("Categories")
+    if categories_node == null:
+        categories_node = get_node_or_null("VBoxContainer/WindowsPanel/MainContainer/TabsPanels")
     var core: Variant = Engine.get_meta("TajsCore", null)
-    if core != null and core.window_menus != null:
-        core.window_menus.ensure_tabs($Categories)
+    if core != null and core.window_menus != null and categories_node != null:
+        core.window_menus.ensure_tabs(categories_node)
     super ()
 
 func open_tab(tab: int) -> void:
@@ -132,13 +135,16 @@ func _on_unlocked(unlocked: Dictionary) -> void:
                 Signals.notify.emit(category_id, notice)
 
 func _get_tab_node(tab: int) -> Control:
+    var categories_node: Control = get_node_or_null("Categories")
+    if categories_node == null:
+        categories_node = get_node_or_null("VBoxContainer/WindowsPanel/MainContainer/TabsPanels")
     var core: Variant = Engine.get_meta("TajsCore", null)
-    if core != null and core.window_menus != null:
-        var custom: Control = core.window_menus.get_panel_for_tab(tab, $Categories)
+    if core != null and core.window_menus != null and categories_node != null:
+        var custom: Control = core.window_menus.get_panel_for_tab(tab, categories_node)
         if custom != null:
             return custom
-    if category_tabs.has(tab):
-        return $Categories.get_node(category_tabs[tab])
+    if category_tabs.has(tab) and categories_node != null:
+        return categories_node.get_node_or_null(category_tabs[tab])
     return null
 
 func _resolve_window_scene(window_id: String) -> String:
