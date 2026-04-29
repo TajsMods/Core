@@ -20,31 +20,4 @@
 
 *.import
 
-docs/private/*
-
-# build output
-/docs/dist/
-# generated types
-/docs/astro/
-
-# dependencies
-/docs/node_modules/
-
-# logs
-/docs/npm-debug.log*
-/docs/yarn-debug.log*
-/docs/yarn-error.log*
-/docs/pnpm-debug.log*
-
-
-# environment variables
-/docs/.env
-/docs/.env.production
-
-# macOS-specific files
-/docs/.DS_Store
-
-
-.vscode/
-
-docs/.vscode
+Hidden/
