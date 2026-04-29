@@ -59,6 +59,10 @@ func _get_steam_api() -> Object:
         var global_steam: Variant = Engine.get_main_loop().root.get_node("GlobalSteam")
         if global_steam.initialized and global_steam.api != null:
             return global_steam.api
+    if Engine.has_singleton("Steam"):
+        var steam_singleton: Variant = Engine.get_singleton("Steam")
+        if steam_singleton != null:
+            return steam_singleton
     return null
 
 func _check_steam_availability() -> void:
@@ -71,6 +75,12 @@ func _check_steam_availability() -> void:
         if global_steam.initialized and global_steam.api != null:
             _steam_available = true
             _log("Steam is available via GlobalSteam. Workshop Sync enabled.")
+            return
+    if Engine.has_singleton("Steam"):
+        var steam_singleton: Variant = Engine.get_singleton("Steam")
+        if _can_use_workshop_api(steam_singleton):
+            _steam_available = true
+            _log("Steam is available via Engine singleton. Workshop Sync enabled.")
             return
     _log("Steam not available. Workshop Sync disabled.")
     _steam_available = false
