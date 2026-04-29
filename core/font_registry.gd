@@ -9,7 +9,7 @@ var _theme_manager: Variant
 
 var _fonts: Dictionary = {} # font_id -> Font
 var _font_paths: Dictionary = {} # font_id -> String
-var _class_font_ids: Dictionary = {} # class_name -> font_id
+var _class_font_ids: Dictionary = {} # class_name -> {property_name -> font_id}
 var _errors: Array = []
 var _warnings: Array = []
 var _fallback_uses: int = 0
@@ -47,11 +47,14 @@ func get_font(font_id: String) -> Font:
 func list_fonts() -> Dictionary:
     return _font_paths.duplicate(true)
 
-func apply_font_to_class(class_name: String, font_id: String, property_name: String = "font") -> Dictionary:
+func apply_font_to_class(control_class_name: String, font_id: String, property_name: String = "font") -> Dictionary:
     var id := font_id.strip_edges()
-    var target_class := class_name.strip_edges()
+    var target_class := control_class_name.strip_edges()
     if target_class == "":
-        return _fail("class_name_empty", {"class_name": class_name, "font_id": id})
+        return _fail("class_name_empty", {"class_name": control_class_name, "font_id": id})
+    var property_key := property_name.strip_edges()
+    if property_key == "":
+        return _fail("property_name_empty", {"class_name": target_class, "font_id": id})
     if not _fonts.has(id):
         var fallback_font: Font = _get_fallback_font()
         if fallback_font == null:
@@ -61,19 +64,22 @@ func apply_font_to_class(class_name: String, font_id: String, property_name: Str
         var fallback_theme := _get_game_theme()
         if fallback_theme == null:
             return _fail("theme_unavailable", {"class_name": target_class, "font_id": id})
-        fallback_theme.set_font(property_name, target_class, fallback_font)
-        return {"ok": true, "class_name": target_class, "font_id": id, "property": property_name, "fallback_used": true}
-    _class_font_ids[target_class] = id
+        fallback_theme.set_font(property_key, target_class, fallback_font)
+        _set_class_binding(target_class, property_key, id)
+        return {"ok": true, "class_name": target_class, "font_id": id, "property": property_key, "fallback_used": true}
+    _set_class_binding(target_class, property_key, id)
 
     var theme := _get_game_theme()
     if theme == null:
         return _fail("theme_unavailable", {"class_name": target_class, "font_id": id})
-    theme.set_font(property_name, target_class, _fonts[id])
-    return {"ok": true, "class_name": target_class, "font_id": id, "property": property_name}
+    theme.set_font(property_key, target_class, _fonts[id])
+    return {"ok": true, "class_name": target_class, "font_id": id, "property": property_key}
 
 func apply_font_to_node(node: Node, font_id: String, opts: Dictionary = {}) -> Dictionary:
     if node == null:
         return _fail("node_null", {"font_id": font_id})
+    if not (node is Control):
+        return _fail("node_not_control", {"font_id": font_id, "node": str(node.name)})
     var id := font_id.strip_edges()
     if not _fonts.has(id):
         var fallback_font: Font = _get_fallback_font()
@@ -81,12 +87,12 @@ func apply_font_to_node(node: Node, font_id: String, opts: Dictionary = {}) -> D
             return _fail("font_not_registered", {"font_id": id, "node": str(node.name)})
         _fallback_uses += 1
         _warn("font_not_registered_using_fallback", {"font_id": id, "node": str(node.name)})
+        if node is RichTextLabel:
+            return _apply_font_to_rich_text_with_font(node, fallback_font, id, opts, true)
         return _apply_font_to_node_with_font(node, fallback_font, id, opts, true)
     if node is RichTextLabel:
-        return _apply_font_to_rich_text(node, id, opts)
-    if node is Control:
-        return _apply_font_to_node_with_font(node, _fonts[id], id, opts, false)
-    return _fail("node_not_control", {"font_id": id, "node": str(node.name)})
+        return _apply_font_to_rich_text_with_font(node, _fonts[id], id, opts, false)
+    return _apply_font_to_node_with_font(node, _fonts[id], id, opts, false)
 
 func apply_font_to_tree(root: Node, font_id: String, class_filter: String = "Control") -> Dictionary:
     if root == null:
@@ -108,18 +114,32 @@ func apply_font_to_tree(root: Node, font_id: String, class_filter: String = "Con
 func build_theme(class_map: Dictionary, save_to_user: bool = false, output_path: String = "") -> Dictionary:
     var theme := Theme.new()
     var fallback_count := 0
-    for class_name: Variant in class_map.keys():
-        var id := str(class_map[class_name]).strip_edges()
+    for class_key: Variant in class_map.keys():
+        var class_name_str := str(class_key)
+        var mapping: Variant = class_map[class_key]
+        var id := ""
+        var properties: Array[String] = []
+        if mapping is Dictionary:
+            id = str(mapping.get("font_id", "")).strip_edges()
+            properties = _to_string_array(mapping.get("properties", []))
+        else:
+            id = str(mapping).strip_edges()
+        if id == "":
+            _warn("font_mapping_missing_font_id", {"class_name": class_name_str})
+            continue
+        if properties.is_empty():
+            properties = _default_properties_for_class(class_name_str)
         var font_res: Font = _fonts.get(id, null)
         if font_res == null:
             font_res = _get_fallback_font()
             if font_res == null:
-                _warn("font_not_registered", {"class_name": str(class_name), "font_id": id})
+                _warn("font_not_registered", {"class_name": class_name_str, "font_id": id})
                 continue
             fallback_count += 1
             _fallback_uses += 1
-            _warn("font_not_registered_using_fallback", {"class_name": str(class_name), "font_id": id})
-        theme.set_font("font", str(class_name), font_res)
+            _warn("font_not_registered_using_fallback", {"class_name": class_name_str, "font_id": id})
+        for property_name: String in properties:
+            theme.set_font(property_name, class_name_str, font_res)
     var path := output_path if output_path != "" else DEFAULT_PERSIST_PATH
     if save_to_user:
         var err: Error = ResourceSaver.save(theme, path)
@@ -131,10 +151,10 @@ func build_theme(class_map: Dictionary, save_to_user: bool = false, output_path:
 func maybe_persist_theme(class_map: Dictionary) -> Dictionary:
     if _settings == null:
         return {"ok": false, "error": "settings_unavailable"}
-    var enabled := _settings.get_bool("core.fonts.persist_generated_theme", false)
+    var enabled: bool = bool(_settings.get_bool("core.fonts.persist_generated_theme", false))
     if not enabled:
         return {"ok": true, "saved": false, "reason": "disabled"}
-    var path := _settings.get_string("core.fonts.persist_path", DEFAULT_PERSIST_PATH)
+    var path: String = str(_settings.get_string("core.fonts.persist_path", DEFAULT_PERSIST_PATH))
     return build_theme(class_map, true, path)
 
 func get_diagnostics() -> Dictionary:
@@ -148,12 +168,11 @@ func get_diagnostics() -> Dictionary:
         "fallback_uses": _fallback_uses
     }
 
-func _apply_font_to_rich_text(node: RichTextLabel, font_id: String, opts: Dictionary) -> Dictionary:
-    var font_res: Font = _fonts[font_id]
-    var props: Array = opts.get("rich_text_props", ["normal_font", "bold_font", "bold_italics_font", "italics_font", "mono_font"])
+func _apply_font_to_rich_text_with_font(node: RichTextLabel, font_res: Font, font_id: String, opts: Dictionary, fallback_used: bool) -> Dictionary:
+    var props: Array = opts.get("rich_text_props", _default_rich_text_properties())
     for prop: Variant in props:
         node.add_theme_font_override(str(prop), font_res)
-    return {"ok": true, "node": str(node.name), "font_id": font_id, "target": "RichTextLabel", "properties": props}
+    return {"ok": true, "node": str(node.name), "font_id": font_id, "target": "RichTextLabel", "properties": props, "fallback_used": fallback_used}
 
 func _apply_font_tree_recursive(node: Node, font_res: Font, font_id: String, class_filter: String, count: int) -> int:
     if class_filter == "RichTextLabel" and node is RichTextLabel:
@@ -172,12 +191,38 @@ func _apply_font_tree_recursive(node: Node, font_res: Font, font_id: String, cla
     return count
 
 func _apply_font_to_node_with_font(node: Node, font_res: Font, font_id: String, opts: Dictionary, fallback_used: bool) -> Dictionary:
+    if not (node is Control):
+        return _fail("node_not_control", {"font_id": font_id, "node": str(node.name)})
     var prop := str(opts.get("property", "font"))
-    var class_name := str(opts.get("class_name", ""))
-    if class_name == "":
-        class_name = "Control"
+    var control_class_name := str(opts.get("class_name", ""))
+    if control_class_name == "":
+        control_class_name = "Control"
     (node as Control).add_theme_font_override(prop, font_res)
-    return {"ok": true, "node": str(node.name), "class_name": class_name, "font_id": font_id, "property": prop, "fallback_used": fallback_used}
+    return {"ok": true, "node": str(node.name), "class_name": control_class_name, "font_id": font_id, "property": prop, "fallback_used": fallback_used}
+
+func _default_properties_for_class(control_class_name: String) -> Array[String]:
+    if control_class_name == "RichTextLabel":
+        return _default_rich_text_properties()
+    return ["font"]
+
+func _default_rich_text_properties() -> Array[String]:
+    return ["normal_font", "bold_font", "bold_italics_font", "italics_font", "mono_font"]
+
+func _to_string_array(value: Variant) -> Array[String]:
+    var out: Array[String] = []
+    if value is PackedStringArray or value is Array:
+        for v: Variant in value:
+            var item := str(v).strip_edges()
+            if item != "":
+                out.append(item)
+    return out
+
+func _set_class_binding(control_class_name: String, property_name: String, font_id: String) -> void:
+    if not _class_font_ids.has(control_class_name):
+        _class_font_ids[control_class_name] = {}
+    var class_bindings: Dictionary = _class_font_ids[control_class_name]
+    class_bindings[property_name] = font_id
+    _class_font_ids[control_class_name] = class_bindings
 
 func _get_game_theme() -> Theme:
     if _theme_manager != null and _theme_manager.has_method("get_game_theme"):

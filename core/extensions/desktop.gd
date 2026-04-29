@@ -239,7 +239,7 @@ func find_window_name(cur_name: String) -> String:
         windows = get_node_or_null("Windows")
     var group_layer: Variant = get_node_or_null("CoreLayer_qol_groups")
 
-    var id: int
+    var id: int = 0
     @warning_ignore("unsafe_call_argument")
     while _window_name_exists(cur_name + str(id), windows, group_layer):
         id += 1
@@ -432,9 +432,14 @@ func _emit_core_window_restored(window: Variant, scene_id: String) -> void:
     var core: Variant = Engine.get_meta("TajsCore", null)
     if core == null or core.event_bus == null:
         return
+    var window_type_id := ""
+    if window != null and window.has_method("get"):
+        window_type_id = str(window.get("window"))
+        if window_type_id == "":
+            window_type_id = str(window.get("filename"))
     var payload := {
         "window_id": str(window.name) if window != null else "",
-        "window_type_id": str(window.get("window")) if window != null and window.has_method("get") else "",
+        "window_type_id": window_type_id,
         "scene_id": scene_id,
         "owner_mod_id": "base"
     }

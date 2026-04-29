@@ -3,6 +3,7 @@ extends Node
 
 var _event_bus: Variant
 var _logger: Variant
+var _suppress_create_event_for_window_ids: Dictionary = {}
 
 # Event payload for core.desktop.window_* events:
 # {window_id:String, window_type_id:String, owner_mod_id:String}
@@ -26,10 +27,17 @@ func request_window_create(window: WindowContainer) -> bool:
     var payload := _emit_event("core.desktop.window_create_requested", _build_window_payload(window), true)
     if payload.get("cancelled", false):
         return false
+    var window_key := _get_window_key(window)
+    if window_key != "":
+        _suppress_create_event_for_window_ids[window_key] = true
     Signals.create_window.emit(window)
     return true
 
 func _on_create_window(window: WindowContainer) -> void:
+    var window_key := _get_window_key(window)
+    if window_key != "" and _suppress_create_event_for_window_ids.has(window_key):
+        _suppress_create_event_for_window_ids.erase(window_key)
+        return
     _emit_event("core.desktop.window_create_requested", _build_window_payload(window), true)
 
 func _on_window_created(window: WindowContainer) -> void:
@@ -46,7 +54,13 @@ func _on_window_moved(window: Control) -> void:
     _emit_event("core.desktop.window_moved", _build_window_payload(window))
 
 func _on_new_upgrade(upgrade: String, levels: int) -> void:
-    _emit_event("core.desktop.window_upgraded", {"upgrade_id": upgrade, "levels": levels})
+    _emit_event("core.desktop.window_upgraded", {
+        "window_id": "",
+        "window_type_id": "",
+        "owner_mod_id": "base",
+        "upgrade_id": upgrade,
+        "levels": levels
+    })
 
 func _emit_event(event_name: String, data: Dictionary, cancellable: bool = false) -> Dictionary:
     if _event_bus == null:
@@ -81,3 +95,10 @@ func _build_window_payload(window: Variant) -> Dictionary:
         "window_type_id": window_type_id,
         "owner_mod_id": "base"
     }
+
+func _get_window_key(window: Variant) -> String:
+    if window == null:
+        return ""
+    if window is Object:
+        return str(window.get_instance_id())
+    return ""

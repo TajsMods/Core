@@ -179,6 +179,48 @@ func self_test() -> Dictionary:
         _core.event_bus.emit("core.self_test", {})
         checks.append({"name": "event_bus", "ok": flag_dict["value"]})
         ok = ok and flag_dict["value"]
+        _core.event_bus.on("core.self_test.cancel", func(payload: Dictionary) -> void:
+            if payload.get("cancellable", false):
+                payload["cancelled"] = true
+        , self , true)
+        var cancel_payload: Dictionary = _core.event_bus.emit_event("core.self_test.cancel", "diagnostics", {}, true)
+        var cancel_ok: bool = bool(cancel_payload.get("cancelled", false))
+        checks.append({"name": "event_bus_cancellable_payload", "ok": cancel_ok})
+        ok = ok and cancel_ok
+
+    if _core != null and _core.font_registry != null:
+        var bad_font: Dictionary = _core.register_font("TajemnikTV-Core.selftest_font", "res://mods-unpacked/TajemnikTV-Core/fonts/does_not_exist.ttf")
+        var bad_font_ok: bool = not bad_font.get("ok", true) and bad_font.get("error", "") == "font_path_not_found"
+        checks.append({"name": "font_invalid_path_rejected", "ok": bad_font_ok})
+        ok = ok and bad_font_ok
+
+        var null_node_res: Dictionary = _core.apply_font_to_node(null, "TajemnikTV-Core.selftest_font", {})
+        var null_node_ok: bool = not null_node_res.get("ok", true) and null_node_res.get("error", "") == "node_null"
+        checks.append({"name": "font_apply_null_node_rejected", "ok": null_node_ok})
+        ok = ok and null_node_ok
+
+        var non_control_res: Dictionary = _core.apply_font_to_node(Node.new(), "TajemnikTV-Core.selftest_font", {})
+        var non_control_ok: bool = not non_control_res.get("ok", true) and non_control_res.get("error", "") == "node_not_control"
+        checks.append({"name": "font_apply_non_control_rejected", "ok": non_control_ok})
+        ok = ok and non_control_ok
+
+    if _core != null and _core.theme_editor != null:
+        var bad_profile: Dictionary = _core.theme_create_profile("invalid_profile")
+        var bad_profile_ok: bool = not bad_profile.get("ok", true) and bad_profile.get("error", "") == "profile_id_must_be_namespaced_modid.localid"
+        checks.append({"name": "theme_profile_requires_namespaced_id", "ok": bad_profile_ok})
+        ok = ok and bad_profile_ok
+
+    if _core != null:
+        var bad_mode: Dictionary = _core.register_research_entry("TajemnikTV-Core.selftest_node", {"x": 0, "y": 0}, "bad_mode")
+        var bad_mode_ok: bool = not bad_mode.get("ok", true) and bad_mode.get("error", "") == "invalid_mode"
+        checks.append({"name": "tree_invalid_mode_rejected", "ok": bad_mode_ok})
+        ok = ok and bad_mode_ok
+
+        var dup_a: Dictionary = _core.register_window_tab({"id": "TajemnikTV-Core.selftest_tab", "title": "Self Test"})
+        var dup_b: Dictionary = _core.register_window_tab({"id": "TajemnikTV-Core.selftest_tab", "title": "Self Test"})
+        var duplicate_ok: bool = dup_a.get("ok", false) and (not dup_b.get("ok", true)) and dup_b.get("error", "") == "duplicate_id"
+        checks.append({"name": "window_tab_duplicate_rejected", "ok": duplicate_ok})
+        ok = ok and duplicate_ok
     var result := {"ok": ok, "checks": checks}
     _log_info("diagnostics", "Self-test results: %s" % str(result))
     return result

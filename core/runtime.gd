@@ -367,15 +367,17 @@ func get_icon_registry() -> Variant: # Returns TajsCoreIconRegistry (Variant to 
 func register_window_tab(data: Dictionary) -> Dictionary:
     if window_menus == null:
         return {"ok": false, "error": "window_menus_unavailable"}
+    if data.is_empty():
+        return {"ok": false, "error": "tab_data_empty"}
     var id_info: Dictionary = _split_namespaced_id(str(data.get("id", "")))
     if not id_info.get("ok", false):
-        _log_warn("core", "register_window_tab failed: %s" % id_info.get("error", "invalid_id"))
+        logw("core", "register_window_tab failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     var mod_id: String = id_info["mod_id"]
     var tab_id: String = id_info["local_id"]
-    var existing_index := window_menus.get_tab_index(mod_id, tab_id)
+    var existing_index: int = int(window_menus.get_tab_index(mod_id, tab_id))
     if existing_index >= 0:
-        _log_warn("core", "register_window_tab duplicate id: %s" % str(data.get("id", "")))
+        logw("core", "register_window_tab duplicate id: %s" % str(data.get("id", "")))
         return {
             "ok": false,
             "error": "duplicate_id",
@@ -404,13 +406,15 @@ func register_window_tab(data: Dictionary) -> Dictionary:
 func register_file_variation(id: String, variation_data: Dictionary, symbol: String = "", symbol_type: String = "file") -> Dictionary:
     if file_variations == null:
         return {"ok": false, "error": "file_variations_unavailable"}
+    if variation_data.is_empty():
+        return {"ok": false, "error": "variation_data_empty", "id": id}
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_file_variation failed: %s" % id_info.get("error", "invalid_id"))
+        logw("core", "register_file_variation failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     var existing_mask: int = file_variations.get_mask(id_info["mod_id"], id_info["local_id"])
     if existing_mask != 0:
-        _log_warn("core", "register_file_variation duplicate id: %s" % id)
+        logw("core", "register_file_variation duplicate id: %s" % id)
         return {
             "ok": false,
             "error": "duplicate_id",
@@ -435,40 +439,48 @@ func register_file_variation(id: String, variation_data: Dictionary, symbol: Str
 func register_research_entry(id: String, entry_data: Dictionary, mode: String = "add") -> Dictionary:
     if tree_registry == null:
         return {"ok": false, "error": "tree_registry_unavailable"}
+    var normalized_mode := mode.strip_edges().to_lower()
+    if normalized_mode != "add" and normalized_mode != "move":
+        return {"ok": false, "error": "invalid_mode", "id": id, "mode": mode}
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_research_entry failed: %s" % id_info.get("error", "invalid_id"))
+        logw("core", "register_research_entry failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     var payload: Dictionary = entry_data.duplicate(true)
-    payload["name"] = id_info["local_id"]
-    if mode == "move":
+    payload["name"] = id_info["id"]
+    payload["owner_mod_id"] = id_info["mod_id"]
+    if normalized_mode == "move":
         tree_registry.move_research_node(payload)
     else:
         tree_registry.add_research_node(payload)
-    return {"ok": true, "id": id, "mode": mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]}
+    return {"ok": true, "id": id_info["id"], "mode": normalized_mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]}
 
 func register_ascension_entry(id: String, entry_data: Dictionary, mode: String = "add") -> Dictionary:
     if tree_registry == null:
         return {"ok": false, "error": "tree_registry_unavailable"}
+    var normalized_mode := mode.strip_edges().to_lower()
+    if normalized_mode != "add" and normalized_mode != "move":
+        return {"ok": false, "error": "invalid_mode", "id": id, "mode": mode}
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_ascension_entry failed: %s" % id_info.get("error", "invalid_id"))
+        logw("core", "register_ascension_entry failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     var payload: Dictionary = entry_data.duplicate(true)
-    payload["name"] = id_info["local_id"]
-    if mode == "move":
+    payload["name"] = id_info["id"]
+    payload["owner_mod_id"] = id_info["mod_id"]
+    if normalized_mode == "move":
         tree_registry.move_ascension_node(payload)
     else:
         tree_registry.add_ascension_node(payload)
-    return {"ok": true, "id": id, "mode": mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]}
+    return {"ok": true, "id": id_info["id"], "mode": normalized_mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]}
 
 func register_icon(id: String, icon_path: String) -> Dictionary:
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_icon failed: %s" % id_info.get("error", "invalid_id"))
+        logw("core", "register_icon failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     if _manual_icons.has(id):
-        _log_warn("core", "register_icon duplicate id: %s" % id)
+        logw("core", "register_icon duplicate id: %s" % id)
         return {"ok": false, "error": "duplicate_id", "id": id, "path": str(_manual_icons[id])}
     if icon_path == "" or not ResourceLoader.exists(icon_path):
         return {"ok": false, "error": "icon_not_found", "id": id, "path": icon_path}
@@ -481,13 +493,15 @@ func register_icon(id: String, icon_path: String) -> Dictionary:
 func register_translation_path(path: String) -> Dictionary:
     if localization == null:
         return {"ok": false, "error": "localization_unavailable"}
-    var ok := localization.register_translation(path)
+    if path.strip_edges() == "":
+        return {"ok": false, "error": "path_empty"}
+    var ok: bool = bool(localization.register_translation(path))
     return {"ok": ok, "path": path, "error": "" if ok else "register_failed"}
 
 func register_translation(mod_id: String, path: String) -> Dictionary:
     var id_info: Dictionary = _validate_mod_id(mod_id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_translation failed: %s" % id_info.get("error", "invalid_mod_id"))
+        logw("core", "register_translation failed: %s" % id_info.get("error", "invalid_mod_id"))
         return id_info
     var result: Dictionary = register_translation_path(path)
     result["mod_id"] = mod_id
@@ -496,13 +510,15 @@ func register_translation(mod_id: String, path: String) -> Dictionary:
 func register_translations_dir(dir_path: String) -> Dictionary:
     if localization == null:
         return {"ok": false, "error": "localization_unavailable"}
-    var count := localization.register_translations_dir(dir_path)
-    return {"ok": count > 0, "dir_path": dir_path, "count": count}
+    if dir_path.strip_edges() == "":
+        return {"ok": false, "error": "dir_path_empty"}
+    var count: int = int(localization.register_translations_dir(dir_path))
+    return {"ok": count > 0, "dir_path": dir_path, "count": count, "error": "" if count > 0 else "register_failed"}
 
 func register_translation_dir(mod_id: String, dir_path: String) -> Dictionary:
     var id_info: Dictionary = _validate_mod_id(mod_id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_translation_dir failed: %s" % id_info.get("error", "invalid_mod_id"))
+        logw("core", "register_translation_dir failed: %s" % id_info.get("error", "invalid_mod_id"))
         return id_info
     var result: Dictionary = register_translations_dir(dir_path)
     result["mod_id"] = mod_id
@@ -511,12 +527,18 @@ func register_translation_dir(mod_id: String, dir_path: String) -> Dictionary:
 func register_window_directory(dir_path: String) -> Dictionary:
     if window_scenes == null:
         return {"ok": false, "error": "window_scenes_unavailable"}
-    var ok := window_scenes.register_dir(dir_path)
+    if dir_path.strip_edges() == "":
+        return {"ok": false, "error": "dir_path_empty"}
+    var ok: bool = bool(window_scenes.register_dir(dir_path))
     return {"ok": ok, "dir_path": dir_path, "error": "" if ok else "register_failed"}
 
 func register_settings_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "") -> Dictionary:
     if settings == null:
         return {"ok": false, "error": "settings_unavailable"}
+    if module_id.strip_edges() == "":
+        return {"ok": false, "error": "module_id_empty"}
+    if schema.is_empty():
+        return {"ok": false, "error": "schema_empty", "module_id": module_id}
     settings.register_schema(module_id, schema, namespace_prefix)
     return {"ok": true, "module_id": module_id, "keys": schema.keys().size()}
 
@@ -525,7 +547,7 @@ func register_action(command_id: String, meta: Dictionary = {}, callback: Callab
         return {"ok": false, "error": "command_registry_unavailable"}
     var id_info: Dictionary = _split_namespaced_id(command_id)
     if not id_info.get("ok", false):
-        _log_warn("core", "register_action failed: %s" % id_info.get("error", "invalid_id"))
+        logw("core", "register_action failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     var ok: bool = command_registry.register_command(command_id, meta, callback)
     return {"ok": ok, "id": command_id, "error": "" if ok else "register_failed"}
@@ -540,10 +562,10 @@ func register_font(font_id: String, font_path: String) -> Dictionary:
         return {"ok": false, "error": "font_registry_unavailable"}
     return font_registry.register_font(font_id, font_path)
 
-func apply_font_to_class(class_name: String, font_id: String, property_name: String = "font") -> Dictionary:
+func apply_font_to_class(control_class_name: String, font_id: String, property_name: String = "font") -> Dictionary:
     if font_registry == null:
         return {"ok": false, "error": "font_registry_unavailable"}
-    return font_registry.apply_font_to_class(class_name, font_id, property_name)
+    return font_registry.apply_font_to_class(control_class_name, font_id, property_name)
 
 func apply_font_to_node(node: Node, font_id: String, opts: Dictionary = {}) -> Dictionary:
     if font_registry == null:
@@ -579,27 +601,29 @@ func apply_font_to_window_menu_panel(panel: Node, font_id: String) -> Dictionary
 func theme_create_profile(profile_id: String, base_theme_id: String = "default") -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
+    if not _split_namespaced_id(profile_id).get("ok", false):
+        return {"ok": false, "error": "profile_id_must_be_namespaced_modid.localid", "profile_id": profile_id}
     return theme_editor.create_profile(profile_id, base_theme_id)
 
-func theme_set_color(profile_id: String, color_name: String, class_name: String, color: Color) -> Dictionary:
+func theme_set_color(profile_id: String, color_name: String, control_class_name: String, color: Color) -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
-    return theme_editor.set_color(profile_id, color_name, class_name, color)
+    return theme_editor.set_color(profile_id, color_name, control_class_name, color)
 
-func theme_set_constant(profile_id: String, constant_name: String, class_name: String, value: int) -> Dictionary:
+func theme_set_constant(profile_id: String, constant_name: String, control_class_name: String, value: int) -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
-    return theme_editor.set_constant(profile_id, constant_name, class_name, value)
+    return theme_editor.set_constant(profile_id, constant_name, control_class_name, value)
 
-func theme_set_font(profile_id: String, class_name: String, property_name: String, font_id: String) -> Dictionary:
+func theme_set_font(profile_id: String, control_class_name: String, property_name: String, font_id: String) -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
-    return theme_editor.set_font(profile_id, class_name, property_name, font_id)
+    return theme_editor.set_font(profile_id, control_class_name, property_name, font_id)
 
-func theme_set_stylebox_flat(profile_id: String, stylebox_name: String, class_name: String, opts: Dictionary) -> Dictionary:
+func theme_set_stylebox_flat(profile_id: String, stylebox_name: String, control_class_name: String, opts: Dictionary) -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
-    return theme_editor.set_stylebox_flat(profile_id, stylebox_name, class_name, opts)
+    return theme_editor.set_stylebox_flat(profile_id, stylebox_name, control_class_name, opts)
 
 func theme_apply_profile_to_node(profile_id: String, node: Control) -> Dictionary:
     if theme_editor == null:
@@ -614,6 +638,10 @@ func theme_save_profile(profile_id: String, output_path: String = "") -> Diction
 func theme_load_profile(profile_id: String, input_path: String) -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
+    if not _split_namespaced_id(profile_id).get("ok", false):
+        return {"ok": false, "error": "profile_id_must_be_namespaced_modid.localid", "profile_id": profile_id}
+    if input_path.strip_edges() == "":
+        return {"ok": false, "error": "input_path_empty", "profile_id": profile_id}
     return theme_editor.load_profile(profile_id, input_path)
 
 static func instance() -> TajsCoreRuntime:
