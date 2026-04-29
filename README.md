@@ -60,6 +60,40 @@ Available wrappers:
 
 All wrappers enforce namespaced IDs (`mod_id.local_id`) where applicable and return structured result dictionaries with `ok` and `error` fields.
 
+## Core Events
+
+Readiness/lifecycle events:
+- `core.ready`: Core runtime services initialized.
+- `core.ui.ready`: UI hooks node initialized and baseline UI state detected.
+- `core.ui.manager_ready`: Core UI manager/services initialized.
+
+Window menu events:
+- `core.window_menu.tab_registered`: tab definition registered.
+- `core.window_menu.button_created`: menu button instance created.
+- `core.window_menu.tab_opened`: user opened/switched window menu tab.
+
+Desktop/window events:
+- `core.desktop.window_create_requested` (cancellable)
+- `core.desktop.window_created`
+- `core.desktop.window_initialized`
+- `core.desktop.window_delete_requested` (cancellable)
+- `core.desktop.window_deleted`
+- `core.desktop.window_moved`
+- `core.desktop.window_restored`
+- `core.desktop.window_upgraded`
+
+Window payload shape (base fields):
+
+```gdscript
+{
+    "window_id": String,
+    "window_type_id": String,
+    "owner_mod_id": String
+}
+```
+
+`core.desktop.window_restored` also includes `scene_id`.
+
 ## Font Registry
 
 Core now provides a font registry service exposed as `_core.fonts` (or wrapper calls on runtime).
@@ -93,6 +127,26 @@ Service methods (via `_core.fonts`):
 - `build_theme(class_map, save_to_user := false, output_path := "")`
 - `get_diagnostics()`
 
+`build_theme()` mapping supports both forms:
+
+```gdscript
+# Simple
+{
+    "Label": "TajemnikTV-QoL.body",
+    "Button": "TajemnikTV-QoL.body"
+}
+
+# Advanced (RichTextLabel-specific properties)
+{
+    "RichTextLabel": {
+        "font_id": "TajemnikTV-QoL.body",
+        "properties": ["normal_font", "bold_font", "italics_font", "bold_italics_font", "mono_font"]
+    }
+}
+```
+
+For simple `RichTextLabel` mapping, Core applies common rich-text font properties automatically.
+
 ## Theme Editor API
 
 Core now exposes a custom theme profile editor API for mod-owned theme workflows.
@@ -124,6 +178,8 @@ Available theme editor wrappers:
 - `theme_apply_profile_to_node(profile_id, node)`
 - `theme_save_profile(profile_id, output_path := "")`
 - `theme_load_profile(profile_id, input_path)`
+
+Theme profile IDs must be namespaced (`mod_id.local_id`).
 
 
 ## Credits
