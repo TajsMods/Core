@@ -4,63 +4,87 @@ extends RefCounted
 signal value_changed(key: String, value: Variant, old_value: Variant)
 signal settings_synced(settings_namespace: String)
 
-const CONFIG_PATH := "user://tajs_core_settings.json"
+const LEGACY_CONFIG_PATH := "user://tajs_core_settings.json"
+const META_MIGRATION_KEY := "split_module_storage"
 
 var _values: Dictionary = {}
 var _meta: Dictionary = {}
 var _schemas: Dictionary = {}
+var _module_values: Dictionary = {}
 var _restart_baseline: Dictionary = {}
 var _batch_depth: int = 0
 var _pending_save := false
 var _logger: Variant
+var _storage: Variant
 
-func _init(logger: Variant = null) -> void:
+func _init(logger: Variant = null, storage: Variant = null) -> void:
     _logger = logger
+    _storage = storage
     load_settings()
 
 func load_settings() -> void:
-    if not FileAccess.file_exists(CONFIG_PATH):
-        _values = {}
-        _meta = {"migrations": {}}
-        save_settings()
-        _log_info("settings", "No settings file found, created defaults.")
+    _values = {}
+    _module_values = {}
+    _meta = {"migrations": {}}
+    if _storage == null:
+        _load_legacy_flat_settings()
         return
-    var file := FileAccess.open(CONFIG_PATH, FileAccess.READ)
-    if file == null:
-        _log_warn("settings", "Failed to open settings file for reading.")
-        return
-    var json_string := file.get_as_text()
-    file.close()
-    var json := JSON.new()
-    var result := json.parse(json_string)
-    if result != OK:
-        _log_warn("settings", "Settings JSON parse error: %s" % json.get_error_message())
-        return
-    var data: Variant = json.get_data()
-    if data is Dictionary:
-        if data.has("values"):
-            _values = data.get("values", {})
-            _meta = data.get("meta", {})
-        else:
-            _values = data
-            _meta = {"migrations": {}}
-        if not _meta.has("migrations"):
-            _meta["migrations"] = {}
-        _log_info("settings", "Settings loaded.")
-    else:
-        _log_warn("settings", "Settings file malformed, expected a dictionary.")
+    _migrate_legacy_if_needed()
+    for module_id: String in _storage.list_known_modules():
+        var config_path = _storage.get_config_path(module_id)
+        var data = _storage.read_json(config_path, {})
+        if not (data is Dictionary):
+            continue
+        var values: Variant = data.get("values", {})
+        if values is Dictionary:
+            _module_values[module_id] = values.duplicate(true)
+            for key: Variant in values.keys():
+                _values[str(key)] = values[key]
+        if module_id == "TajemnikTV-Core":
+            var module_meta: Variant = data.get("meta", {})
+            if module_meta is Dictionary and module_meta.has("migrations"):
+                _meta["migrations"] = module_meta["migrations"]
+    if not _meta.has("migrations"):
+        _meta["migrations"] = {}
+    _log_info("settings", "Settings loaded from module configs.")
 
 func save_settings() -> void:
-    var payload := {
-        "values": _values,
-        "meta": _meta
-    }
-    var file := FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
-    if file == null:
-        _log_warn("settings", "Failed to open settings file for writing.")
+    if _storage == null:
+        var payload = {
+            "values": _values,
+            "meta": _meta
+        }
+        var file = FileAccess.open(LEGACY_CONFIG_PATH, FileAccess.WRITE)
+        if file == null:
+            _log_warn("settings", "Failed to open settings file for writing.")
+            return
+        var _ignored: Variant = file.store_string(JSON.stringify(payload, "\t"))
+        file.close()
+        _pending_save = false
         return
-    var _ignored: Variant = file.store_string(JSON.stringify(payload, "\t"))
-    file.close()
+    _module_values.clear()
+    for key: Variant in _values.keys():
+        var key_str := str(key)
+        var owner = _resolve_owner_module(key_str)
+        if not _module_values.has(owner):
+            _module_values[owner] = {}
+        _module_values[owner][key_str] = _values[key]
+    if not _module_values.has("TajemnikTV-Core"):
+        _module_values["TajemnikTV-Core"] = {}
+    for module_id: Variant in _module_values.keys():
+        var values: Dictionary = _module_values[module_id]
+        var kind = "config"
+        var meta = _storage.make_meta(str(module_id), kind)
+        if str(module_id) == "TajemnikTV-Core":
+            meta["migrations"] = _meta.get("migrations", {})
+        var payload = {
+            "meta": meta,
+            "values": values
+        }
+        var path = _storage.get_config_path(str(module_id))
+        var err: Error = _storage.write_json(path, payload, true)
+        if err != OK:
+            _log_warn("settings", "Failed writing module config: %s (err=%s)" % [path, err])
     _pending_save = false
 
 func begin_batch() -> void:
@@ -633,6 +657,88 @@ func _flush_pending_if_ready(save: bool) -> void:
         return
     if _pending_save:
         save_settings()
+
+func _load_legacy_flat_settings() -> void:
+    if not FileAccess.file_exists(LEGACY_CONFIG_PATH):
+        _values = {}
+        _meta = {"migrations": {}}
+        save_settings()
+        return
+    var file := FileAccess.open(LEGACY_CONFIG_PATH, FileAccess.READ)
+    if file == null:
+        return
+    var json_string := file.get_as_text()
+    file.close()
+    var json := JSON.new()
+    if json.parse(json_string) != OK:
+        return
+    var data: Variant = json.get_data()
+    if data is Dictionary:
+        if data.has("values"):
+            _values = data.get("values", {})
+            _meta = data.get("meta", {})
+        else:
+            _values = data
+            _meta = {"migrations": {}}
+    if not _meta.has("migrations"):
+        _meta["migrations"] = {}
+
+func _migrate_legacy_if_needed() -> void:
+    if not FileAccess.file_exists(LEGACY_CONFIG_PATH):
+        return
+    var core_config = _storage.read_json(_storage.get_config_path("TajemnikTV-Core"), {})
+    var meta: Dictionary = core_config.get("meta", {}) if core_config is Dictionary else {}
+    var migrations: Dictionary = meta.get("migrations", {}) if meta is Dictionary else {}
+    if migrations.has(META_MIGRATION_KEY):
+        return
+    var file := FileAccess.open(LEGACY_CONFIG_PATH, FileAccess.READ)
+    if file == null:
+        return
+    var json_string := file.get_as_text()
+    file.close()
+    var json := JSON.new()
+    if json.parse(json_string) != OK:
+        return
+    var data: Variant = json.get_data()
+    if not (data is Dictionary):
+        return
+    var values: Dictionary = data.get("values", data) if data.has("values") else data
+    _storage.backup_file(LEGACY_CONFIG_PATH, "tajs_core_settings")
+    var grouped: Dictionary = {}
+    for key: Variant in values.keys():
+        var key_str := str(key)
+        var owner := _resolve_owner_module(key_str)
+        if not grouped.has(owner):
+            grouped[owner] = {}
+        grouped[owner][key_str] = values[key]
+    for module_id: Variant in grouped.keys():
+        var existing = _storage.read_json(_storage.get_config_path(str(module_id)), {})
+        var existing_values: Dictionary = existing.get("values", {}) if existing is Dictionary else {}
+        for key: Variant in grouped[module_id].keys():
+            existing_values[str(key)] = grouped[module_id][key]
+        var out_meta = _storage.make_meta(str(module_id), "config")
+        if str(module_id) == "TajemnikTV-Core":
+            out_meta["migrations"] = migrations.duplicate(true)
+            out_meta["migrations"][META_MIGRATION_KEY] = "1.0.0"
+        var payload := {"meta": out_meta, "values": existing_values}
+        _storage.write_json(_storage.get_config_path(str(module_id)), payload, true)
+
+func _resolve_owner_module(key: String) -> String:
+    var schema_entry := _get_schema_entry(key)
+    var module_id := str(schema_entry.get("module_id", ""))
+    if module_id != "":
+        if module_id == "core":
+            return "TajemnikTV-Core"
+        return module_id
+    if key.begins_with("core."):
+        return "TajemnikTV-Core"
+    if key.begins_with("tajs_qol."):
+        return "TajemnikTV-QoL"
+    if key.begins_with("TajemnikTV-CommandPalette."):
+        return "TajemnikTV-CommandPalette"
+    if key.begins_with("TajemnikTV-Cheats."):
+        return "TajemnikTV-Cheats"
+    return "TajemnikTV-Core"
 
 func _log_info(module_id: String, message: String) -> void:
     if _logger != null and _logger.has_method("info"):

@@ -24,6 +24,8 @@ func register_module(meta: Dictionary) -> bool:
         min_version = str(meta["min_core_version"])
     var enabled: bool = _core != null and _core.require(min_version)
     var entry := meta.duplicate(true)
+    if _core != null and _core.storage != null and _core.storage.has_method("get_storage_id"):
+        entry["storage_id"] = _core.storage.get_storage_id(module_id)
     entry["enabled"] = enabled
     entry["disabled_reason"] = "" if enabled else "min_core_version_not_met"
     _modules[module_id] = entry

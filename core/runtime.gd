@@ -6,6 +6,7 @@ const API_LEVEL := 1
 const META_KEY := "TajsCore"
 
 var logger: Variant
+var storage: Variant
 var settings: Variant
 var migrations: Variant
 var event_bus: Variant
@@ -90,9 +91,13 @@ func bootstrap() -> void:
     if logger_script != null:
         logger = logger_script.new()
 
+    var storage_script: Variant = _load_script(base_dir.path_join("storage.gd"))
+    if storage_script != null:
+        storage = storage_script.new(logger)
+
     var settings_script: Variant = _load_script(base_dir.path_join("settings.gd"))
     if settings_script != null:
-        settings = settings_script.new(logger)
+        settings = settings_script.new(logger, storage)
         _register_core_schema()
         _apply_logger_settings()
 
