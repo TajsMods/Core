@@ -61,6 +61,8 @@ var _restart_required_changed: Dictionary = {}
 var _restart_from_settings: bool = false
 var _restart_from_external: bool = false
 var _popup_provider: Callable = Callable()
+var _visibility_listener: Callable = Callable()
+var _tab_selected_listener: Callable = Callable()
 
 var _is_animating: bool = false
 var _tween: Tween = null
@@ -336,6 +338,9 @@ func _on_tab_selected(index: int) -> void:
             _tab_buttons[i].set_pressed_no_signal(bool(i == index))
     _filter_rows(_search_field.text if _search_field else "")
     _update_tab_action_buttons()
+    if _tab_selected_listener != null and _tab_selected_listener.is_valid():
+        var meta: Dictionary = _get_tab_meta(index)
+        _tab_selected_listener.call(index, str(meta.get("id", "")), str(meta.get("display", "")))
 
 func set_settings(settings_ref: Variant) -> void:
     if _settings_ref != null and _settings_ref.has_signal("value_changed"):
@@ -436,6 +441,7 @@ func _update_tab_action_buttons() -> void:
 func set_visible(visible: bool) -> void:
     if _is_animating:
         return
+    var old_visible: bool = is_visible()
 
     if visible:
         _emit_menu_close()
@@ -474,11 +480,19 @@ func set_visible(visible: bool) -> void:
             _is_animating = false
         )
         _play_sound("menu_close")
+    if old_visible != visible and _visibility_listener != null and _visibility_listener.is_valid():
+        _visibility_listener.call(visible)
 
 func is_visible() -> bool:
     if not is_instance_valid(settings_panel):
         return false
     return settings_panel.visible
+
+func set_visibility_listener(listener: Callable) -> void:
+    _visibility_listener = listener
+
+func set_tab_selected_listener(listener: Callable) -> void:
+    _tab_selected_listener = listener
 
 func _create_search_field(parent: Control) -> void:
     var search_container: PanelContainer = PanelContainer.new()

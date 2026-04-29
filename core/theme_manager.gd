@@ -2,6 +2,7 @@ class_name TajsCoreThemeManager
 extends RefCounted
 
 const DEFAULT_THEME_ID := "default"
+const DEFAULT_PROFILE_SAVE_PATH := "user://tajs_core_theme_profile_%s.tres"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Font Size Constants (matched to game's JetBrains Mono Thin font)
@@ -17,11 +18,18 @@ const FONT_SIZE_XLARGE := 36 # Headers
 var _themes: Dictionary = {}
 var _tooltip_styling: Variant = null
 var _tooltip_applied := false
+var _profiles: Dictionary = {} # profile_id -> Theme
+var _font_registry: Variant = null
+var _logger: Variant = null
 
 func _init(default_theme_path: String = "res://themes/main.tres") -> void:
     if ResourceLoader.exists(default_theme_path):
         _themes[DEFAULT_THEME_ID] = load(default_theme_path)
     _init_tooltip_styling()
+
+func set_services(font_registry: Variant, logger: Variant = null) -> void:
+    _font_registry = font_registry
+    _logger = logger
 
 func _init_tooltip_styling() -> void:
     var base_dir: String = get_script().resource_path.get_base_dir()
@@ -85,3 +93,111 @@ func reset_tooltip_styling() -> void:
     if _tooltip_styling != null:
         _tooltip_styling.reset()
         _tooltip_applied = false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Theme Editor API
+# ─────────────────────────────────────────────────────────────────────────────
+
+func create_profile(profile_id: String, base_theme_id: String = DEFAULT_THEME_ID) -> Dictionary:
+    var id := profile_id.strip_edges()
+    if id == "":
+        return {"ok": false, "error": "profile_id_empty"}
+    if _profiles.has(id):
+        return {"ok": false, "error": "duplicate_profile_id", "profile_id": id}
+    var base_theme := get_theme(base_theme_id)
+    if base_theme == null:
+        return {"ok": false, "error": "base_theme_unavailable", "base_theme_id": base_theme_id}
+    _profiles[id] = base_theme.duplicate(true)
+    return {"ok": true, "profile_id": id, "base_theme_id": base_theme_id}
+
+func set_color(profile_id: String, color_name: String, class_name: String, color: Color) -> Dictionary:
+    var theme := _get_profile(profile_id)
+    if theme == null:
+        return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
+    theme.set_color(color_name, class_name , color)
+    return {"ok": true, "profile_id": profile_id, "type": "color", "key": color_name, "class_name": class_name }
+
+func set_constant(profile_id: String, constant_name: String, class_name: String, value: int) -> Dictionary:
+    var theme := _get_profile(profile_id)
+    if theme == null:
+        return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
+    theme.set_constant(constant_name, class_name , value)
+    return {"ok": true, "profile_id": profile_id, "type": "constant", "key": constant_name, "class_name": class_name }
+
+func set_font(profile_id: String, class_name: String, property_name: String, font_id: String) -> Dictionary:
+    var theme := _get_profile(profile_id)
+    if theme == null:
+        return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
+    if _font_registry == null or not _font_registry.has_method("get_font"):
+        return {"ok": false, "error": "font_registry_unavailable"}
+    var font_res: Font = _font_registry.get_font(font_id)
+    if font_res == null:
+        return {"ok": false, "error": "font_not_registered", "font_id": font_id}
+    theme.set_font(property_name, class_name , font_res)
+    return {"ok": true, "profile_id": profile_id, "type": "font", "font_id": font_id, "class_name": class_name , "property": property_name}
+
+func set_stylebox_flat(profile_id: String, stylebox_name: String, class_name: String, opts: Dictionary) -> Dictionary:
+    var theme := _get_profile(profile_id)
+    if theme == null:
+        return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
+    var box := StyleBoxFlat.new()
+    if opts.has("bg_color"):
+        box.bg_color = opts["bg_color"]
+    if opts.has("border_color"):
+        box.border_color = opts["border_color"]
+    if opts.has("border_width"):
+        var w: int = int(opts["border_width"])
+        box.border_width_left = w
+        box.border_width_top = w
+        box.border_width_right = w
+        box.border_width_bottom = w
+    if opts.has("corner_radius"):
+        var r: int = int(opts["corner_radius"])
+        box.set_corner_radius_all(r)
+    theme.set_stylebox(stylebox_name, class_name , box)
+    return {"ok": true, "profile_id": profile_id, "type": "stylebox_flat", "key": stylebox_name, "class_name": class_name }
+
+func apply_profile_to_node(profile_id: String, node: Control) -> Dictionary:
+    if node == null:
+        return {"ok": false, "error": "node_null"}
+    var theme := _get_profile(profile_id)
+    if theme == null:
+        return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
+    node.theme = theme
+    return {"ok": true, "profile_id": profile_id, "node": str(node.name)}
+
+func save_profile(profile_id: String, output_path: String = "") -> Dictionary:
+    var theme := _get_profile(profile_id)
+    if theme == null:
+        return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
+    var path := output_path if output_path != "" else DEFAULT_PROFILE_SAVE_PATH % profile_id
+    var err: Error = ResourceSaver.save(theme, path)
+    if err != OK:
+        return {"ok": false, "error": "save_failed", "profile_id": profile_id, "path": path, "error_code": int(err)}
+    return {"ok": true, "profile_id": profile_id, "path": path}
+
+func load_profile(profile_id: String, input_path: String) -> Dictionary:
+    if input_path == "" or not ResourceLoader.exists(input_path):
+        return {"ok": false, "error": "path_not_found", "profile_id": profile_id, "path": input_path}
+    var res: Variant = load(input_path)
+    if not (res is Theme):
+        return {"ok": false, "error": "resource_not_theme", "profile_id": profile_id, "path": input_path}
+    _profiles[profile_id] = res
+    return {"ok": true, "profile_id": profile_id, "path": input_path}
+
+func list_profiles() -> Array:
+    var ids := _profiles.keys()
+    ids.sort()
+    return ids
+
+func get_profile_theme(profile_id: String) -> Theme:
+    return _get_profile(profile_id)
+
+func get_diagnostics() -> Dictionary:
+    return {
+        "profiles": list_profiles(),
+        "profile_count": _profiles.size()
+    }
+
+func _get_profile(profile_id: String) -> Theme:
+    return _profiles.get(profile_id, null)

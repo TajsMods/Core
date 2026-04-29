@@ -47,7 +47,9 @@ func _setup_for_main(main_node: Node) -> void:
         return
 
     _ui = ui_script.new(hud, _core.get_version() if _core != null else "")
-    _ui.add_mod_button(func(): _ui.set_visible(!_ui.is_visible()))
+    _ui.set_visibility_listener(Callable(self, "_on_settings_panel_visibility_changed"))
+    _ui.set_tab_selected_listener(Callable(self, "_on_settings_tab_selected"))
+    _ui.add_mod_button(Callable(self, "_on_settings_button_pressed"))
     if _core != null:
         _ui.set_settings(_core.settings)
 
@@ -65,6 +67,12 @@ func _setup_for_main(main_node: Node) -> void:
 
     _setup_hud_services(hud)
     _emit_hud_ready()
+    _emit_ui_event("core.ui.manager_ready", {
+        "owner_mod_id": "TajemnikTV-Core",
+        "has_settings_ui": _ui != null,
+        "has_hud_injector": _hud_injector != null,
+        "has_popup_manager": _popup_manager != null
+    })
 
 func _setup_hud_services(hud: Node) -> void:
     var base_dir: Variant = get_script().resource_path.get_base_dir()
@@ -125,6 +133,13 @@ func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: 
     var container: Variant = _ui.add_mod_tab_ex(effective_name, effective_icon, mod_id, "manual")
     if container != null:
         _mod_tabs[mod_id] = container
+        _emit_ui_event("core.ui.settings_tab_registered", {
+            "owner_mod_id": str(mod_id),
+            "tab_id": str(mod_id),
+            "display_name": str(effective_name),
+            "icon_path": str(effective_icon),
+            "source": "manual"
+        })
     return container
 
 func get_mod_settings_tab(mod_id: String) -> VBoxContainer:
@@ -198,6 +213,10 @@ func get_hud_zone(zone: int) -> Control:
 func show_popup(title: String, content: Control, buttons: Array[Dictionary]) -> void:
     if _popup_manager == null:
         return
+    _emit_ui_event("core.ui.popup_opened", {
+        "owner_mod_id": "TajemnikTV-Core",
+        "title": title
+    })
     _popup_manager.show_popup(title, content, buttons)
 
 func show_confirmation(title: String, message: String, on_confirm: Callable, on_cancel: Callable = Callable()) -> void:
@@ -237,6 +256,7 @@ func close_popup() -> void:
     if _popup_manager == null:
         return
     _popup_manager.close_popup()
+    _emit_ui_event("core.ui.popup_closed", {"owner_mod_id": "TajemnikTV-Core"})
 
 func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
     var _ignored: Variant = IconBrowserScript.open({
@@ -325,6 +345,39 @@ func _emit_hud_ready() -> void:
         _core.event_bus.emit_event("game.hud_ready", "core", {})
     elif _core.event_bus.has_method("emit"):
         _core.event_bus.emit("game.hud_ready", {"source": "core", "timestamp": Time.get_unix_time_from_system(), "data": {}})
+
+func _on_settings_button_pressed() -> void:
+    if _ui == null:
+        return
+    _ui.set_visible(not _ui.is_visible())
+
+func _on_settings_panel_visibility_changed(is_open: bool) -> void:
+    _emit_ui_event("core.ui.settings_panel_toggled", {
+        "owner_mod_id": "TajemnikTV-Core",
+        "is_open": is_open
+    })
+
+func _on_settings_tab_selected(tab_index: int, tab_id: String, display_name: String) -> void:
+    _emit_ui_event("core.ui.settings_tab_selected", {
+        "owner_mod_id": "TajemnikTV-Core",
+        "tab_index": tab_index,
+        "tab_id": tab_id,
+        "display_name": display_name
+    })
+
+func _emit_ui_event(event_name: String, data: Dictionary) -> void:
+    if _core == null or _core.event_bus == null:
+        return
+    if _core.event_bus.has_method("emit_event"):
+        _core.event_bus.emit_event(event_name, "core", data)
+    elif _core.event_bus.has_method("emit"):
+        _core.event_bus.emit(event_name, {
+            "source": "core",
+            "timestamp": Time.get_unix_time_from_system(),
+            "data": data,
+            "cancellable": false,
+            "cancelled": false
+        })
 
 func _input(event: InputEvent) -> void:
     if _ui == null or not _ui.is_visible():

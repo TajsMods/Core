@@ -60,6 +60,12 @@ func collect(options: Dictionary = {}) -> Dictionary:
     var commands: Variant = _collect_commands()
     if not commands.is_empty():
         data["commands"] = commands
+    var fonts: Variant = _collect_fonts()
+    if not fonts.is_empty():
+        data["fonts"] = fonts
+    var theme_editor: Variant = _collect_theme_editor()
+    if not theme_editor.is_empty():
+        data["theme_editor"] = theme_editor
     var logs: Variant = _collect_logs()
     data["logs"] = logs
     data["logs_summary"] = _summarize_log_entries(logs)
@@ -526,6 +532,20 @@ func _collect_commands() -> Dictionary:
         "commands": command_ids
     }
 
+func _collect_fonts() -> Dictionary:
+    if _core == null or _core.font_registry == null:
+        return {}
+    if not _core.font_registry.has_method("get_diagnostics"):
+        return {}
+    return _sorted_recursive(_core.font_registry.get_diagnostics())
+
+func _collect_theme_editor() -> Dictionary:
+    if _core == null or _core.theme_editor == null:
+        return {}
+    if not _core.theme_editor.has_method("get_diagnostics"):
+        return {}
+    return _sorted_recursive(_core.theme_editor.get_diagnostics())
+
 func _collect_logs() -> Array:
     if _core == null or _core.logger == null or not _core.logger.has_method("get_entries"):
         return []
@@ -646,6 +666,10 @@ func _build_registries_section(data: Dictionary, options: Dictionary) -> Diction
         "categories": commands.get("categories", 0),
         "items": _limit_array(command_ids, command_limit)
     }
+    if data.has("fonts"):
+        registries["fonts"] = data.get("fonts", {})
+    if data.has("theme_editor"):
+        registries["theme_editor"] = data.get("theme_editor", {})
     return registries
 
 func _build_logs_section(data: Dictionary, options: Dictionary) -> Dictionary:
