@@ -13,7 +13,7 @@ const WINDOW_BUTTON_SCENE := preload("res://scenes/window_button.tscn")
 const WINDOW_MENU_SCRIPT := "res://scripts/windows_menu.gd"
 const NodeDefs := preload("res://mods-unpacked/TajemnikTV-Core/core/nodes/node_defs.gd")
 
-var _allowed_categories: Array[String] = ["network", "cpu", "gpu", "research", "hacking", "factory", "coding", "utility"]
+var _allowed_categories: Array[String] = ["network", "cpu", "gpu", "research", "ai", "hacking", "factory", "power", "coding", "utility"]
 
 var _nodes: Dictionary = {}
 var _mod_nodes: Dictionary = {}
@@ -460,65 +460,101 @@ func _on_desktop_ready() -> void:
 func _try_refresh_menu(node_id: String) -> void:
     var menu: Variant = _find_windows_menu()
     if menu == null:
+        _log_debug("nodes", "Node menu refresh skipped for '%s': windows_menu_not_found" % node_id)
         return
     if not menu.is_node_ready():
+        _log_debug("nodes", "Node menu refresh skipped for '%s': windows_menu_not_ready" % node_id)
         return
     var _ignored: Variant = _add_button_to_menu(menu, node_id)
 
 func _add_button_to_menu(menu: Node, node_id: String) -> bool:
     if not _data_has_window(node_id):
+        _log_debug("nodes", "Node menu add failed for '%s': missing_data_windows_entry" % node_id)
         return false
     var safe_id := _sanitize_id(node_id)
     var win_def: Dictionary = Data.windows.get(safe_id)
     if win_def == null:
+        _log_debug("nodes", "Node menu add failed for '%s': missing_data_windows_entry" % node_id)
         return false
-    if not menu.has_node("Categories"):
+    var target_info: Dictionary = _find_target_container(menu, win_def)
+    var sub_node: Node = target_info.get("node", null)
+    if sub_node == null:
+        _log_debug("nodes", "Node menu add failed for '%s': %s" % [node_id, str(target_info.get("reason", "missing_container"))])
         return false
-    var categories: Node = menu.get_node("Categories")
-    if not categories.has_node(win_def["category"]):
-        return false
-    var category_node: Node = categories.get_node(win_def["category"])
-    if not category_node.has_method("get"):
-        return false
-    var sub_categories: Dictionary = category_node.get("sub_categories")
-    if sub_categories == null or not sub_categories.has(win_def["sub_category"]):
-        return false
-    var sub_node: Node = sub_categories[win_def["sub_category"]]
     if sub_node.has_node(safe_id):
+        _log_debug("nodes", "Node menu add failed for '%s': duplicate_existing_button" % node_id)
         return false
     var instance: Control = WINDOW_BUTTON_SCENE.instantiate()
     instance.name = safe_id
-    instance.get("selected").connect(Callable(menu, "_on_window_selected"))
-    instance.get("hovered").connect(Callable(menu, "_on_window_hovered"))
+    var windows_tab: Node = _get_windows_tab_node(menu)
+    var selection_target: Node = windows_tab if windows_tab != null else menu
+    if selection_target == null:
+        _log_debug("nodes", "Node menu add failed for '%s': missing_callback_target" % node_id)
+        return false
+    var has_selected_callback: bool = selection_target.has_method("_on_window_selected")
+    var has_hovered_callback: bool = selection_target.has_method("_on_window_hovered")
+    if not has_selected_callback or not has_hovered_callback:
+        _log_debug("nodes", "Node menu add failed for '%s': missing_callback_target" % node_id)
+        return false
+    if selection_target != null and selection_target.has_method("_on_window_selected"):
+        instance.get("selected").connect(Callable(selection_target, "_on_window_selected"))
+    if selection_target != null and selection_target.has_method("_on_window_hovered"):
+        instance.get("hovered").connect(Callable(selection_target, "_on_window_hovered"))
     sub_node.add_child(instance)
-    if menu.has_signal("window_set"):
-        menu.get("window_set").connect(Callable(instance, "_on_window_set"))
+    var window_set_owner: Node = windows_tab if windows_tab != null else menu
+    if window_set_owner == null:
+        _log_debug("nodes", "Node menu add failed for '%s': failed_signal_connection" % node_id)
+        instance.queue_free()
+        return false
+    if window_set_owner.has_signal("window_set"):
+        window_set_owner.get("window_set").connect(Callable(instance, "_on_window_set"))
+    else:
+        _log_debug("nodes", "Node menu add failed for '%s': failed_signal_connection" % node_id)
+        instance.queue_free()
+        return false
+    _log_debug("nodes", "Node menu add succeeded for '%s': mode=%s container=%s" % [
+        node_id,
+        str(target_info.get("mode", "unknown")),
+        str(sub_node.get_path())
+    ])
     return true
 
 func _remove_from_menu(node_id: String) -> void:
     var menu: Variant = _find_windows_menu()
     if menu == null:
         return
-    if not menu.has_node("Categories"):
+    var safe_id := _sanitize_id(node_id)
+    if menu.has_node("Categories"):
+        var categories: Node = menu.get_node("Categories")
+        for category: Variant in categories.get_children():
+            if not category.has_method("get"):
+                continue
+            var sub_categories: Dictionary = category.get("sub_categories")
+            if sub_categories == null:
+                continue
+            for sub: Variant in sub_categories.values():
+                if sub.has_node(safe_id):
+                    sub.get_node(safe_id).queue_free()
+                    return
+    var categories_container: Node = _get_windows_categories_container(menu)
+    if categories_container == null:
         return
-    var categories: Node = menu.get_node("Categories")
-    for category: Variant in categories.get_children():
-        if not category.has_method("get"):
-            continue
-        var sub_categories: Dictionary = category.get("sub_categories")
-        if sub_categories == null:
-            continue
-        for sub: Variant in sub_categories.values():
-            var safe_id := _sanitize_id(node_id)
-            if sub.has_node(safe_id):
-                sub.get_node(safe_id).queue_free()
-                return
+    for category_panel: Variant in categories_container.get_children():
+        if category_panel != null and category_panel.has_node(safe_id):
+            category_panel.get_node(safe_id).queue_free()
+            return
 
 func _find_windows_menu() -> Variant:
     var tree: Variant = Engine.get_main_loop()
     if not (tree is SceneTree):
+        _log_debug("nodes", "WindowsMenu lookup failed: no_scene_tree")
         return null
-    return _find_node_by_script(tree.get_root(), WINDOW_MENU_SCRIPT)
+    var menu: Variant = _find_node_by_script(tree.get_root(), WINDOW_MENU_SCRIPT)
+    if menu == null:
+        _log_debug("nodes", "WindowsMenu lookup failed: script_not_found")
+    else:
+        _log_debug("nodes", "WindowsMenu lookup succeeded: %s" % str(menu.get_path()))
+    return menu
 
 func _find_node_by_script(node: Node, script_path: String) -> Variant:
     if node == null:
@@ -531,6 +567,51 @@ func _find_node_by_script(node: Node, script_path: String) -> Variant:
         if found != null:
             return found
     return null
+
+func _find_target_container(menu: Node, win_def: Dictionary) -> Dictionary:
+    if menu.has_node("Categories"):
+        var categories: Node = menu.get_node("Categories")
+        if not categories.has_node(win_def["category"]):
+            return {"node": null, "mode": "legacy", "reason": "missing_category"}
+        if categories.has_node(win_def["category"]):
+            var category_node: Node = categories.get_node(win_def["category"])
+            if category_node.has_method("get"):
+                var sub_categories: Dictionary = category_node.get("sub_categories")
+                if sub_categories != null and sub_categories.has(win_def["sub_category"]):
+                    return {"node": sub_categories[win_def["sub_category"]], "mode": "legacy", "reason": ""}
+                return {"node": null, "mode": "legacy", "reason": "missing_subcategory_container"}
+            return {"node": null, "mode": "legacy", "reason": "missing_subcategory_container"}
+    var categories_container: Node = _get_windows_categories_container(menu)
+    if categories_container == null:
+        var has_legacy: bool = menu.has_node("Categories")
+        return {"node": null, "mode": "none", "reason": "missing_categories_container" if not has_legacy else "missing_subcategory_container"}
+    var category_map := {
+        "network": "Network",
+        "cpu": "CPU",
+        "gpu": "GPU",
+        "research": "Research",
+        "ai": "AI",
+        "factory": "Factory",
+        "power": "Power",
+        "hacking": "Hacking",
+        "coding": "Coding",
+        "utility": "Utilities"
+    }
+    var category_id: String = str(win_def.get("category", ""))
+    var category_name: String = category_map.get(category_id, category_id.capitalize())
+    var container: Node = categories_container.get_node_or_null(category_name)
+    if container == null:
+        return {"node": null, "mode": "picker22", "reason": "missing_category"}
+    return {"node": container, "mode": "picker22", "reason": ""}
+
+func _get_windows_tab_node(menu: Node) -> Node:
+    return menu.get_node_or_null("VBoxContainer/WindowsPanel/MainContainer/TabContainer/Windows")
+
+func _get_windows_categories_container(menu: Node) -> Node:
+    var windows_tab: Node = _get_windows_tab_node(menu)
+    if windows_tab == null:
+        return null
+    return windows_tab.get_node_or_null("WindowsContainer/ScrollContainer/MarginContainer/CategoriesContainer")
 
 func _data_has_window(node_id: String) -> bool:
     return _autoload_ready("Data") and Data.windows.has(_sanitize_id(node_id))
@@ -633,6 +714,10 @@ func _log_warn(module_id: String, message: String) -> void:
 func _log_error(module_id: String, message: String) -> void:
     if _logger != null and _logger.has_method("error"):
         _logger.error(module_id, message)
+
+func _log_debug(module_id: String, message: String) -> void:
+    if _logger != null and _logger.has_method("debug"):
+        _logger.debug(module_id, message)
 
 func _sanitize_id(node_id: String) -> String:
     return node_id.replace(".", "_")

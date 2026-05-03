@@ -20,6 +20,7 @@ func build_cache() -> void:
         return
 
     _window_connectors_cache.clear()
+    var zero_port_nodes: Array[String] = []
 
     for window_id: Variant in Data.windows:
         var window_data: Dictionary = Data.windows[window_id]
@@ -35,9 +36,15 @@ func build_cache() -> void:
         if not connector_info.is_empty():
             @warning_ignore("unsafe_call_argument")
             _window_connectors_cache[window_id] = connector_info
+            if connector_info.get("inputs", []).is_empty() and connector_info.get("outputs", []).is_empty():
+                zero_port_nodes.append(str(window_id))
 
     _cache_built = true
     _log_info("Built node compatibility cache for %d windows" % _window_connectors_cache.size())
+    _log_debug("Compatibility cache diagnostics: zero_port_nodes=%d sample=%s" % [
+        zero_port_nodes.size(),
+        zero_port_nodes.slice(0, min(10, zero_port_nodes.size()))
+    ])
 
 
 ## Get connector info for a specific window (lazy load if needed)
@@ -49,18 +56,33 @@ func get_connector_info(window_id: String) -> Dictionary:
 
 ## Get connector info for a window by loading its scene
 func _get_window_connector_info(window_id: String, window_data: Dictionary) -> Dictionary:
-    var scene_path: String = "res://scenes/windows/" + window_data.scene + ".tscn"
+    var scene_path: String = _resolve_window_scene_path(window_data)
 
     if not ResourceLoader.exists(scene_path):
+        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s reason=missing_resource" % [
+            window_id,
+            str(window_data.get("scene", "")),
+            scene_path
+        ])
         return {}
 
     # Load scene to inspect ResourceContainers
     var scene: PackedScene = load(scene_path)
     if not scene:
+        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s reason=load_failed" % [
+            window_id,
+            str(window_data.get("scene", "")),
+            scene_path
+        ])
         return {}
 
     var instance: Node = scene.instantiate()
     if not instance:
+        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s reason=instantiate_failed" % [
+            window_id,
+            str(window_data.get("scene", "")),
+            scene_path
+        ])
         return {}
 
     var info: Dictionary = {
@@ -107,6 +129,14 @@ func _get_window_connector_info(window_id: String, window_data: Dictionary) -> D
     instance.queue_free()
 
     return info
+
+func _resolve_window_scene_path(window_data: Dictionary) -> String:
+    var scene_value: String = str(window_data.get("scene", ""))
+    if scene_value.is_empty():
+        return ""
+    if scene_value.begins_with("res://"):
+        return scene_value if scene_value.ends_with(".tscn") else (scene_value + ".tscn")
+    return "res://scenes/windows/" + scene_value + ".tscn"
 
 
 ## For pass-through nodes, dynamic outputs should inherit type from typed inputs
@@ -362,6 +392,12 @@ func _log_info(message: String) -> void:
         ModLoaderLog.info(message, LOG_NAME)
     else:
         print("%s %s" % [LOG_NAME, message])
+
+func _log_debug(message: String) -> void:
+    @warning_ignore("unsafe_method_access")
+    if _logger != null and _logger.has_method("debug"):
+        @warning_ignore("unsafe_method_access")
+        _logger.debug("core", message)
 
 
 func _has_global_class(class_name_str: String) -> bool:

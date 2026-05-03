@@ -279,6 +279,7 @@ func bootstrap() -> void:
         event_bus.emit("core.ready", {"version": CORE_VERSION, "api_level": API_LEVEL}, true)
     if logger != null:
         logger.info("core", "Taj's Core ready (%s)." % CORE_VERSION)
+    call_deferred("_run_compatibility_diagnostics")
     _init_boot_screen(base_dir)
     _init_optional_services(base_dir)
 
@@ -999,6 +1000,102 @@ func _apply_logger_settings() -> void:
     logger.set_ring_size(settings.get_int("core.log_ring_size", 200))
     var file_path: String = settings.get_string("core.log_file_path", "user://tajs_core.log")
     logger.set_file_logging(settings.get_bool("core.log_to_file", false), file_path)
+
+func _run_compatibility_diagnostics() -> void:
+    if logger == null or settings == null:
+        return
+    if not settings.get_bool("core.debug", settings.get_bool("core.debug_log", false)):
+        return
+
+    var game_version: String = str(ProjectSettings.get_setting("application/config/version", "unknown"))
+    var godot_version: String = str(Engine.get_version_info().get("string", "unknown"))
+    var windows_count: int = 0
+    var categories: Array[String] = []
+    var has_ai := false
+    var has_power := false
+    var has_lossless := false
+    var has_encompressor := false
+    if _get_autoload("Data") != null and Data != null and Data.windows != null:
+        windows_count = Data.windows.size()
+        var seen: Dictionary = {}
+        for window_id: Variant in Data.windows:
+            var category_id: String = str(Data.windows.get(window_id, {}).get("category", "")).strip_edges()
+            if not category_id.is_empty() and not seen.has(category_id):
+                seen[category_id] = true
+                categories.append(category_id)
+        categories.sort()
+        has_ai = categories.has("ai")
+        has_power = categories.has("power")
+        has_lossless = Data.windows.has("lossless_compressor")
+        has_encompressor = Data.windows.has("encompressor")
+
+    var menu_diag: Dictionary = _inspect_windows_menu_paths()
+    var signal_diag: Dictionary = _inspect_core_signals()
+
+    logger.debug("compat", "2.2 diagnostics: game=%s godot=%s windows=%d categories=%s ai=%s power=%s lossless=%s encompressor=%s" % [
+        game_version, godot_version, windows_count, categories, has_ai, has_power, has_lossless, has_encompressor
+    ])
+    logger.debug("compat", "2.2 diagnostics: menu_mode=%s legacy_path=%s picker22_path=%s has_menu=%s" % [
+        str(menu_diag.get("mode", "none")),
+        str(menu_diag.get("legacy", false)),
+        str(menu_diag.get("picker22", false)),
+        str(menu_diag.get("menu_found", false))
+    ])
+    logger.debug("compat", "2.2 diagnostics: signals=%s" % signal_diag)
+
+func _inspect_windows_menu_paths() -> Dictionary:
+    var result := {
+        "menu_found": false,
+        "legacy": false,
+        "picker22": false,
+        "mode": "none"
+    }
+    var tree: Variant = Engine.get_main_loop()
+    if not (tree is SceneTree):
+        return result
+    var menu: Variant = _find_node_by_script(tree.get_root(), "res://scripts/windows_menu.gd")
+    if menu == null:
+        return result
+    result["menu_found"] = true
+    result["legacy"] = menu.has_node("Categories")
+    result["picker22"] = menu.has_node("VBoxContainer/WindowsPanel/MainContainer/TabContainer/Windows/WindowsContainer/ScrollContainer/MarginContainer/CategoriesContainer")
+    if result["legacy"]:
+        result["mode"] = "legacy"
+    elif result["picker22"]:
+        result["mode"] = "picker22"
+    return result
+
+func _inspect_core_signals() -> Dictionary:
+    var names: Array[String] = [
+        "create_connection",
+        "connection_created",
+        "delete_connection",
+        "connection_deleted",
+        "connection_droppped",
+        "menu_set",
+        "selection_set"
+    ]
+    var result: Dictionary = {}
+    var signals_autoload: Object = _get_autoload("Signals")
+    if signals_autoload == null:
+        for signal_name: String in names:
+            result[signal_name] = false
+        return result
+    for signal_name: String in names:
+        result[signal_name] = signals_autoload.has_signal(signal_name)
+    return result
+
+func _find_node_by_script(node: Node, script_path: String) -> Variant:
+    if node == null:
+        return null
+    var script: Variant = node.get_script()
+    if script != null and script.resource_path == script_path:
+        return node
+    for child: Variant in node.get_children():
+        var found: Variant = _find_node_by_script(child, script_path)
+        if found != null:
+            return found
+    return null
 
 func _load_script(path: String) -> Variant:
     var script: Variant = load(path)
