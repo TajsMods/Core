@@ -1,6 +1,10 @@
 class_name TajsCoreEventBus
 extends RefCounted
 
+## Lightweight pub/sub event bus used by Taj's mods.
+##
+## Payloads are dictionaries by convention. Handlers should accept a single
+## [code]Dictionary[/code] argument.
 var _listeners: Dictionary = {}
 var _sticky: Dictionary = {}
 var _logger: Variant
@@ -8,6 +12,10 @@ var _logger: Variant
 func _init(logger: Variant = null) -> void:
     _logger = logger
 
+## Subscribes [param callable] to [param event].
+##
+## If [param once] is true, handler runs once then auto-unsubscribes.
+## If a sticky payload already exists, it is delivered immediately.
 func on(event: String, callable: Callable, owner: Variant = null, once: bool = false) -> void:
     if event == "":
         return
@@ -24,6 +32,7 @@ func on(event: String, callable: Callable, owner: Variant = null, once: bool = f
             return
     _listeners[event].append(entry)
 
+## Unsubscribes a specific callable from an event.
 func off(event: String, callable: Callable) -> void:
     if not _listeners.has(event):
         return
@@ -34,6 +43,10 @@ func off(event: String, callable: Callable) -> void:
             filtered.append(entry)
     _listeners[event] = filtered
 
+## Emits an event with optional dictionary payload.
+##
+## Non-dictionary payload values are ignored and replaced with an empty dictionary.
+## Set [param sticky] to cache latest payload for late subscribers.
 func emit(event: String, payload: Variant = null, sticky: bool = false) -> void:
     var safe_payload: Dictionary = {}
     if payload is Dictionary:
@@ -51,6 +64,9 @@ func emit(event: String, payload: Variant = null, sticky: bool = false) -> void:
         if entry["once"]:
             _listeners[event].erase(entry)
 
+## Emits a standardized event payload with metadata.
+##
+## Returns the emitted payload dictionary so callers can inspect cancellation flags.
 func emit_event(event: String, source: String, data: Dictionary = {}, cancellable: bool = false, sticky: bool = false) -> Dictionary:
     var payload := {
         "source": source,
@@ -67,8 +83,11 @@ func get_listener_count(event: String) -> int:
         return 0
     return _listeners[event].size()
 
-func list_events() -> Array:
-    return _listeners.keys()
+func list_events() -> Array[String]:
+    var events: Array[String] = []
+    for key: Variant in _listeners.keys():
+        events.append(str(key))
+    return events
 
 func get_sticky(event: String) -> Dictionary:
     if _sticky.has(event):

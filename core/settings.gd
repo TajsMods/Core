@@ -1,9 +1,15 @@
 class_name TajsCoreSettings
 extends RefCounted
 
+## Emitted after a setting changes.
+## [param key] changed key, [param value] new value, [param old_value] previous value.
 signal value_changed(key: String, value: Variant, old_value: Variant)
+## Emitted when settings import/sync applies at least one change.
 signal settings_synced(settings_namespace: String)
 
+## Central settings store with schema-aware validation/coercion.
+##
+## Mods should register schemas first, then read/write through typed getters/setters.
 const LEGACY_CONFIG_PATH := "user://tajs_core_settings.json"
 const META_MIGRATION_KEY := "split_module_storage"
 
@@ -112,6 +118,9 @@ func end_batch(save := true) -> void:
 #         "description": "Automatically sorts items."
 #     }
 # }
+## Registers a schema dictionary for one module.
+##
+## Use namespaced keys (for example [code]tajs_qol.some_feature.enabled[/code]) to avoid collisions.
 func register_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "") -> void:
     var changed := false
     var expected_prefix := module_id
@@ -184,6 +193,7 @@ func set_section_value(section_id: String, key: String, value: Variant) -> void:
         return
     set_value("%s.%s" % [section_id, key], value)
 
+## Returns raw value or schema default when available.
 func get_value(key: String, default_override: Variant = null) -> Variant:
     if _values.has(key):
         return _values[key]
@@ -191,6 +201,7 @@ func get_value(key: String, default_override: Variant = null) -> Variant:
         return _schemas[key]["default"]
     return default_override
 
+## Sets a setting value with schema validation/coercion.
 func set_value(key: String, value: Variant, save := true) -> void:
     var schema_entry := _get_schema_entry(key)
     var sanitized := _sanitize_value(key, value, schema_entry, "settings")
@@ -281,6 +292,7 @@ func get_all_schemas() -> Dictionary:
     #Returns all registered schemas."""
     return _schemas.duplicate(true)
 
+## Returns settings snapshot. Sensitive fields are redacted by default.
 func get_snapshot(redact_sensitive: bool = true) -> Dictionary:
     var snapshot := _values.duplicate(true)
     if not redact_sensitive:
@@ -359,6 +371,7 @@ func get_entries_for_namespace(ns_prefix: String, include_hidden := false) -> Ar
         })
     return entries
 
+## Exports values for a namespace as JSON text.
 func export_settings(settings_namespace: String) -> String:
     var values := {}
     var prefix := _normalize_prefix(settings_namespace)
@@ -367,6 +380,10 @@ func export_settings(settings_namespace: String) -> String:
             values[key] = _values[key]
     return JSON.stringify({"namespace": settings_namespace, "values": values}, "\t")
 
+## Imports settings JSON for a namespace.
+##
+## When [param dry_run] is true, returns an array of proposed changes.
+## Otherwise returns [code]true[/code]/[code]false[/code].
 func import_settings(settings_namespace: String, data: String, dry_run := false) -> Variant:
     if data == "":
         if dry_run:
@@ -409,6 +426,7 @@ func import_settings(settings_namespace: String, data: String, dry_run := false)
         var _ignored: Variant = emit_signal("settings_synced", settings_namespace)
     return true
 
+## Previews import changes without mutating current settings.
 func preview_import(settings_namespace: String, data: String) -> Array[Dictionary]:
     var result: Variant = import_settings(settings_namespace, data, true)
     if result is Array:

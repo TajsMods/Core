@@ -1,6 +1,7 @@
 class_name TajsCoreUiManager
 extends Node
 
+## Shared UI gateway for settings tabs, HUD widgets, popups, and icon picker integration.
 const LOG_NAME := "TajemnikTV-Core:UIManager"
 const IconBrowserScript := preload("res://mods-unpacked/TajemnikTV-Core/core/ui/icon_browser.gd")
 
@@ -13,6 +14,7 @@ var _popup_manager: Variant
 var _mod_tabs: Dictionary = {} # mod_id -> VBoxContainer
 var _pending_mod_tabs: Dictionary = {} # mod_id -> {name, icon}
 
+## Binds runtime services used by UI manager.
 func setup(core: Variant, workshop_sync: Variant) -> void:
     _core = core
     _workshop_sync = workshop_sync
@@ -96,6 +98,14 @@ func add_settings_tab(title: String, icon: String) -> VBoxContainer:
         return null
     return _ui.add_tab(title, icon)
 
+## Registers (or returns existing) settings tab for another mod.
+##
+## Example:
+## [codeblock]
+## var tab := core.ui_manager.register_mod_settings_tab("TajemnikTV-QoL", "QoL")
+## if tab != null:
+##     core.ui_manager.add_toggle(tab, "Enable quick craft", true, func(v: bool): _set_quick_craft(v))
+## [/codeblock]
 func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
     """
     Registers a settings tab for a mod. Returns the VBoxContainer to add settings widgets to.
@@ -258,6 +268,9 @@ func close_popup() -> void:
     _popup_manager.close_popup()
     _emit_ui_event("core.ui.popup_closed", {"owner_mod_id": "TajemnikTV-Core"})
 
+## Opens icon browser and returns [code](name, path)[/code] through callback.
+##
+## Safe to call after HUD initialization.
 func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
     var _ignored: Variant = IconBrowserScript.open({
         "initial_selected_id": initial_selection,

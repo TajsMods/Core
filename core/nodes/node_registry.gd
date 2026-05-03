@@ -1,6 +1,10 @@
 class_name TajsCoreNodeRegistry
 extends RefCounted
 
+## Public node/window/resource registry used by mods to contribute runtime content.
+##
+## Most mods should prefer [method TajsCoreRuntime.register_window_tab] and
+## [method TajsCoreRuntime.register_file_variation] wrappers when possible.
 const DEFAULT_ICON := "question_mark"
 const DEFAULT_CATEGORY := "utility"
 const DEFAULT_SUB_CATEGORY := "file"
@@ -9,7 +13,7 @@ const WINDOW_BUTTON_SCENE := preload("res://scenes/window_button.tscn")
 const WINDOW_MENU_SCRIPT := "res://scripts/windows_menu.gd"
 const NodeDefs := preload("res://mods-unpacked/TajemnikTV-Core/core/nodes/node_defs.gd")
 
-var _allowed_categories: Array = ["network", "cpu", "gpu", "research", "hacking", "factory", "coding", "utility"]
+var _allowed_categories: Array[String] = ["network", "cpu", "gpu", "research", "hacking", "factory", "coding", "utility"]
 
 var _nodes: Dictionary = {}
 var _mod_nodes: Dictionary = {}
@@ -27,6 +31,9 @@ func _init(logger: Variant = null, event_bus: Variant = null, patches: Variant =
     _event_bus = event_bus
     _patches = patches
 
+## Registers a full node definition.
+##
+## Expected id format: [code]ModId.local_id[/code].
 func register_node(def: Dictionary) -> bool:
     var normalized := _normalize_def(def)
     if normalized.is_empty():
@@ -50,18 +57,22 @@ func register_node(def: Dictionary) -> bool:
     _emit_registered(node_id, normalized.get("mod_id", ""))
     return true
 
+## Convenience wrapper for window config contribution.
 func register_window_type(id: String, config: Dictionary) -> bool:
     var def := _window_config_to_def(id, config)
     if def.is_empty():
         return false
     return register_node(def)
 
+## Unregisters previously registered node/window type.
 func unregister_window_type(id: String) -> bool:
     return unregister_node(id)
 
+## Returns registered node definition for id.
 func get_window_config(id: String) -> Dictionary:
     return get_node_def(id)
 
+## Lists all registered window type ids.
 func get_registered_window_types() -> Array[String]:
     return _nodes.keys()
 
@@ -80,6 +91,7 @@ func set_window_limit(node_id: String, limit: int) -> bool:
         Attributes.window_attributes[safe_id]["limit"] = Attribute.new(limit)
     return true
 
+## Registers a Data.resources entry and optional icon contribution.
 func register_resource_type(id: String, config: Dictionary) -> bool:
     if id == "":
         return false
@@ -90,6 +102,7 @@ func register_resource_type(id: String, config: Dictionary) -> bool:
     _try_register_resource_icon(id, config)
     return true
 
+## Registers a Data.files entry.
 func register_file_type(id: String, config: Dictionary) -> bool:
     if id == "":
         return false
@@ -99,6 +112,7 @@ func register_file_type(id: String, config: Dictionary) -> bool:
     _file_types[id] = config.duplicate(true)
     return true
 
+## Registers a custom category metadata entry.
 func register_window_category(id: String, label: String, icon: String, position: int = -1) -> bool:
     if id == "":
         return false
@@ -108,6 +122,7 @@ func register_window_category(id: String, label: String, icon: String, position:
     _log_warn("nodes", "Registered custom window category '%s'; UI injection may require custom scenes." % id)
     return true
 
+## Adds a window id to a logical category grouping.
 func add_to_window_category(category_id: String, window_id: String, position: int = -1) -> bool:
     if category_id == "" or window_id == "":
         return false
@@ -116,6 +131,7 @@ func add_to_window_category(category_id: String, window_id: String, position: in
     _category_items[category_id].append({"id": window_id, "position": position})
     return true
 
+## Unregisters node and removes related runtime/global entries when safe.
 func unregister_node(node_id: String) -> bool:
     if not _nodes.has(node_id):
         return false
@@ -132,13 +148,15 @@ func unregister_node(node_id: String) -> bool:
     _untrack_mod_node(node_id)
     return true
 
+## Returns defensive copy of node definition.
 func get_node_def(node_id: String) -> Dictionary:
     if not _nodes.has(node_id):
         return {}
     return _nodes[node_id].duplicate(true)
 
-func list_nodes(filter: Dictionary = {}) -> Array:
-    var results: Array = []
+## Lists registered nodes with optional filtering by mod/category/tag(s).
+func list_nodes(filter: Dictionary = {}) -> Array[Dictionary]:
+    var results: Array[Dictionary] = []
     for node_id: String in _nodes:
         var entry: Dictionary = _nodes[node_id]
         if filter.has("mod_id") and entry.get("mod_id", "") != filter["mod_id"]:
@@ -177,12 +195,14 @@ func refresh_node_catalog() -> bool:
         _log_info("nodes", "Refreshed WindowsMenu; added %d node(s)." % added)
     return added > 0
 
+## Returns mapping of mod_id -> node id list.
 func get_mod_nodes() -> Dictionary:
     var result := {}
     for mod_id: Variant in _mod_nodes:
         result[mod_id] = _mod_nodes[mod_id].duplicate()
     return result
 
+## Returns total number of tracked mod node registrations.
 func get_mod_node_count() -> int:
     var count := 0
     for mod_id: Variant in _mod_nodes:

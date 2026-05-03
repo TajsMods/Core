@@ -1,9 +1,13 @@
 class_name TajsCoreCommandRegistry
 extends RefCounted
 
+## Emitted when a command is registered or replaced.
 signal command_registered(command_id: String, command: Dictionary)
+## Emitted after successful unregister.
 signal command_unregistered(command_id: String)
+## Emitted for every execute attempt, including failures.
 signal command_executed(command_id: String, context: Variant, success: bool)
+## Emitted whenever command list/category structure changes.
 signal commands_changed
 
 const LOG_NAME: String = "TajemnikTV-Core:CommandRegistry"
@@ -22,6 +26,10 @@ func _init(logger: Variant = null, event_bus: Variant = null) -> void:
     _categories[""] = []
 
 
+## Registers a command dictionary.
+##
+## Required fields: [code]id[/code], [code]title[/code].
+## Optional callables: [code]run(context?)[/code], [code]is_visible(context?)[/code], [code]is_enabled(context?)[/code].
 func register(data: Dictionary) -> bool:
     var id: String = str(data.get("id", "")).strip_edges()
     if id == "":
@@ -46,6 +54,16 @@ func register(data: Dictionary) -> bool:
     return true
 
 
+## Convenience wrapper for registering a command id + callback.
+##
+## Example:
+## [codeblock]
+## core.register_action(
+##     "TajemnikTV-QoL.toggle_overlay",
+##     {"title": "Toggle Overlay", "category_path": ["QoL"]},
+##     func(_ctx = null): _toggle_overlay()
+## )
+## [/codeblock]
 func register_command(command_id: String, meta: Dictionary = {}, callback: Callable = Callable()) -> bool:
     var data: Dictionary = meta.duplicate(true)
     data["id"] = command_id
@@ -57,6 +75,7 @@ func register_command(command_id: String, meta: Dictionary = {}, callback: Calla
     return register(data)
 
 
+## Registers all dictionary entries from [param commands].
 func register_many(commands: Array) -> void:
     for cmd: Variant in commands:
         if cmd is Dictionary:
@@ -64,6 +83,7 @@ func register_many(commands: Array) -> void:
             var _ignored: bool = register(cmd_dict)
 
 
+## Removes a command by id.
 func unregister(command_id: String) -> bool:
     if not _commands.has(command_id):
         return false
@@ -170,6 +190,9 @@ func is_enabled(command: Variant, context: Variant = null) -> bool:
     return true
 
 
+## Executes a command if found, visible, enabled, and runnable.
+##
+## Returns [code]true[/code] on successful execution.
 func execute(command_id: String, context: Variant = null) -> bool:
     if not _commands.has(command_id):
         _log_error("Command not found: %s" % command_id)
@@ -206,6 +229,7 @@ func execute(command_id: String, context: Variant = null) -> bool:
     return success
 
 
+## Alias for [method execute].
 func run(command_id: String, context: Variant = null) -> bool:
     return execute(command_id, context)
 

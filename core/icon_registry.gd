@@ -1,6 +1,9 @@
 class_name TajsCoreIconRegistry
 extends Node
 
+## Aggregates icon entries from base game, Core, and installed mods.
+##
+## Used by icon browser/picker and by mods that need stable icon ids.
 const Util = preload("util.gd")
 
 const DEFAULT_ICON_PATH := "res://textures/icons/puzzle.png"
@@ -11,7 +14,7 @@ const GROUP_CORE := "core"
 const GROUP_MODS := "mods"
 
 var _assets: Variant
-var _icons: Array = []
+var _icons: Array[Dictionary] = []
 var _icons_by_id: Dictionary = {}
 var _custom_sources: Dictionary = {}
 var _source_labels: Dictionary = {}
@@ -21,20 +24,23 @@ func _init(assets: Variant = null) -> void:
     _assets = assets
     _register_builtin_sources()
 
-func get_all_icons() -> Array:
+## Returns all indexed icon entries.
+func get_all_icons() -> Array[Dictionary]:
     _ensure_index()
     return _icons.duplicate()
 
-func get_all_icons_by_group(group_filter: String = "") -> Array:
+## Returns icons filtered by source group ([code]base[/code], [code]core[/code], [code]mods[/code]).
+func get_all_icons_by_group(group_filter: String = "") -> Array[Dictionary]:
     _ensure_index()
     if group_filter == "":
         return _icons.duplicate()
-    var results := []
+    var results: Array[Dictionary] = []
     for entry: Variant in _icons:
         if _get_source_group(entry.get("source_id", "")) == group_filter:
             results.append(entry)
     return results
 
+## Returns a user-facing label for source id/group.
 func get_source_label(source_id: String) -> String:
     if source_id == "":
         return ""
@@ -49,6 +55,7 @@ func get_source_label(source_id: String) -> String:
         return "Base Game"
     return source_id
 
+## Returns icon counts per group.
 func get_group_counts(allowed_groups: Array = []) -> Dictionary:
     _ensure_index()
     var counts := {GROUP_BASE: 0, GROUP_CORE: 0, GROUP_MODS: 0}
@@ -59,6 +66,9 @@ func get_group_counts(allowed_groups: Array = []) -> Dictionary:
                 counts[group] += 1
     return counts
 
+## Resolves an icon id to a texture + metadata bundle.
+##
+## Result keys: [code]texture[/code], [code]entry[/code], [code]path[/code], [code]missing[/code].
 func resolve_icon(icon_id: String) -> Dictionary:
     _ensure_index()
     var entry: Variant = _icons_by_id.get(icon_id, null)
@@ -80,6 +90,10 @@ func resolve_icon(icon_id: String) -> Dictionary:
     result.texture = _load_texture(result.path)
     return result
 
+## Registers a custom icon source.
+##
+## [param lister] should return [code]Array[Dictionary][/code] entries in the same format
+## as built-in sources.
 func register_source(source_id: String, label: String, lister: Callable) -> bool:
     if source_id == "" or label == "" or lister == null:
         return false

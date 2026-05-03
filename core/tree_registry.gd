@@ -1,24 +1,32 @@
 class_name TajsCoreTreeRegistry
 extends RefCounted
 
+## Deferred tree contribution registry for research and ascension screens.
+##
+## Mods enqueue operations during init; Core applies them once target screens exist.
 const RESEARCH_BUTTON_SCENE := preload("res://scenes/research_button.tscn")
 const ASCENSION_BUTTON_SCENE := preload("res://scenes/ascension_button.tscn")
 
-var _research_ops: Array = []
-var _ascension_ops: Array = []
+var _research_ops: Array[Dictionary] = []
+var _ascension_ops: Array[Dictionary] = []
 
+## Queues adding a research node.
 func add_research_node(def: Dictionary) -> void:
     _research_ops.append({"type": "add", "def": def.duplicate(true)})
 
+## Queues moving an existing research node.
 func move_research_node(def: Dictionary) -> void:
     _research_ops.append({"type": "move", "def": def.duplicate(true)})
 
+## Queues adding an ascension node.
 func add_ascension_node(def: Dictionary) -> void:
     _ascension_ops.append({"type": "add", "def": def.duplicate(true)})
 
+## Queues moving an existing ascension node.
 func move_ascension_node(def: Dictionary) -> void:
     _ascension_ops.append({"type": "move", "def": def.duplicate(true)})
 
+## Applies queued research operations to a research tree instance.
 func apply_research_tree(screen: Node, tree: Node) -> void:
     if screen == null or tree == null:
         return
@@ -37,6 +45,7 @@ func apply_research_tree(screen: Node, tree: Node) -> void:
             if target != null:
                 _configure_node_position(tree, target, def)
 
+## Applies queued ascension operations to an ascension tree instance.
 func apply_ascension_tree(screen: Node, tree: Node) -> void:
     if screen == null or tree == null:
         return
@@ -55,6 +64,7 @@ func apply_ascension_tree(screen: Node, tree: Node) -> void:
             if target != null:
                 _configure_ascension_node(tree, target, def)
 
+## Clears all queued operations.
 func clear() -> void:
     _research_ops.clear()
     _ascension_ops.clear()

@@ -1,6 +1,9 @@
 class_name TajsCoreDiagnostics
 extends RefCounted
 
+## Collects runtime diagnostics for support/debug bundles.
+##
+## Intended for mod support workflows and cross-mod troubleshooting.
 const DEFAULT_EXPORT_PATH := "user://tajs_core_diagnostics.json"
 const DUMP_FORMAT_VERSION := 1
 const DEFAULT_DUMP_PREFIX := "tajs_core_diagnostics_dump_"
@@ -20,6 +23,9 @@ func _init(core: Variant, logger: Variant = null) -> void:
     _core = core
     _logger = logger
 
+## Collects full diagnostics snapshot.
+##
+## [param options] can limit list/log sizes (for example [code]log_limit[/code], [code]command_limit[/code]).
 func collect(options: Dictionary = {}) -> Dictionary:
     var data := {}
     data["dump_format_version"] = DUMP_FORMAT_VERSION
@@ -75,10 +81,12 @@ func collect(options: Dictionary = {}) -> Dictionary:
     data["limits"] = _collect_limits(options)
     return data
 
+## Builds a text diagnostics dump from [method collect].
 func generate_dump(options: Dictionary = {}) -> String:
     var data := collect(options)
     return format(data, options)
 
+## Formats pre-collected data into a readable text report.
 func format(data: Dictionary, options: Dictionary = {}) -> String:
     var lines: Array[String] = []
     lines.append("Taj's Core Diagnostics Dump")
@@ -114,6 +122,7 @@ func format(data: Dictionary, options: Dictionary = {}) -> String:
         _append_json_section(lines, "Mod Loader Logs", data.get("mod_loader_logs", {}))
     return "\n".join(lines)
 
+## Copies diagnostics dump to system clipboard.
 func copy_dump_to_clipboard(options: Dictionary = {}) -> Dictionary:
     var dump: String = str(options.get("dump", ""))
     if dump == "":
@@ -124,6 +133,7 @@ func copy_dump_to_clipboard(options: Dictionary = {}) -> Dictionary:
         return {"ok": false, "error": "clipboard_unavailable"}
     return {"ok": true, "bytes": dump.length()}
 
+## Saves diagnostics dump to a file path (or generated default path).
 func save_dump_to_file(path: String = "", options: Dictionary = {}) -> Dictionary:
     var dump: String = str(options.get("dump", ""))
     if dump == "":
@@ -138,6 +148,7 @@ func save_dump_to_file(path: String = "", options: Dictionary = {}) -> Dictionar
     file.close()
     return {"ok": true, "path": output_path, "bytes": dump.length()}
 
+## Opens the folder that contains diagnostics output.
 func open_dump_folder(path: String = "") -> bool:
     var target := path
     if target == "":
@@ -149,6 +160,7 @@ func open_dump_folder(path: String = "") -> bool:
         return false
     return OS.shell_open(global_path)
 
+## Exports raw diagnostics as JSON.
 func export_json(path: String = "", options: Dictionary = {}) -> Dictionary:
     var json_string := JSON.stringify(collect(options), "\t")
     var output_path := path
@@ -160,6 +172,7 @@ func export_json(path: String = "", options: Dictionary = {}) -> Dictionary:
         file.close()
     return {"path": output_path, "json": json_string}
 
+## Runs internal smoke tests for selected Core APIs.
 func self_test() -> Dictionary:
     var checks: Array = []
     var ok: bool = true

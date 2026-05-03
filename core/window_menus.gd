@@ -1,10 +1,13 @@
 class_name TajsCoreWindowMenus
 extends RefCounted
 
+## Registry for mod-contributed tabs/buttons in Windows menu UI.
+##
+## Runtime wrapper: [method TajsCoreRuntime.register_window_tab].
 const CUSTOM_TAB_START := 50
 const CATEGORY_TAB_SCRIPT := "res://scripts/window_category_tab.gd"
 
-var _tabs: Array = []
+var _tabs: Array[Dictionary] = []
 var _tabs_by_key: Dictionary = {}
 var _event_bus: Variant = null
 
@@ -16,6 +19,9 @@ var _event_bus: Variant = null
 func set_event_bus(event_bus: Variant) -> void:
     _event_bus = event_bus
 
+## Registers one menu tab definition and returns tab index.
+##
+## Returns [code]-1[/code] on invalid input.
 func register_tab(mod_id: String, tab_id: String, config: Dictionary = {}) -> int:
     if tab_id == "":
         return -1
@@ -55,12 +61,14 @@ func get_tab_index(mod_id: String, tab_id: String) -> int:
         return int(_tabs_by_key[key]["index"])
     return -1
 
+## Returns tab definition by index or empty dictionary.
 func get_tab_by_index(index: int) -> Dictionary:
     for tab: Variant in _tabs:
         if int(tab["index"]) == index:
             return tab
     return {}
 
+## Ensures tab panels exist under the categories node.
 func ensure_tabs(categories_node: Node) -> void:
     if categories_node == null:
         return
@@ -72,6 +80,7 @@ func ensure_tabs(categories_node: Node) -> void:
         if panel != null:
             categories_node.add_child(panel)
 
+## Ensures menu buttons exist for every registered tab.
 func build_buttons(menu_buttons: Node) -> void:
     if menu_buttons == null:
         return
@@ -94,6 +103,7 @@ func build_buttons(menu_buttons: Node) -> void:
             "owner_mod_id": str(tab["mod_id"])
         })
 
+## Resolves panel control for a menu tab index.
 func get_panel_for_tab(index: int, categories_node: Node) -> Control:
     if categories_node == null:
         return null
@@ -105,6 +115,7 @@ func get_panel_for_tab(index: int, categories_node: Node) -> Control:
         return categories_node.get_node(tab_name)
     return null
 
+## Syncs toggle state of category buttons based on current menu state.
 func update_button_states(menu_buttons: Node, windows_menu: Node) -> void:
     if menu_buttons == null or windows_menu == null:
         return
@@ -115,6 +126,7 @@ func update_button_states(menu_buttons: Node, windows_menu: Node) -> void:
         var button: Button = menu_buttons.get_node(button_name)
         button.button_pressed = windows_menu.get("open") and windows_menu.get("cur_tab") == int(tab["index"])
 
+## Applies unlock visibility/disabled flags to contributed buttons.
 func update_unlocks(menu_buttons: Node) -> void:
     if menu_buttons == null:
         return
@@ -130,6 +142,7 @@ func update_unlocks(menu_buttons: Node) -> void:
         if disable_key != "":
             button.disabled = not Globals.unlocks[disable_key]
 
+## Returns notice text for a category id.
 func get_notice_for_category(category_id: String) -> String:
     for tab: Variant in _tabs:
         if tab["tab_id"] == category_id:

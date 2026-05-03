@@ -1,6 +1,7 @@
 class_name TajsCoreModuleRegistry
 extends RefCounted
 
+## Tracks mod modules that integrate with Core and validates min Core version.
 var _modules: Dictionary = {}
 var _core: Variant
 var _logger: Variant
@@ -11,6 +12,11 @@ func _init(core: Variant, logger: Variant = null, event_bus: Variant = null) -> 
     _logger = logger
     _event_bus = event_bus
 
+## Registers a module metadata dictionary.
+##
+## Required: [code]id[/code]
+## Optional: [code]min_core_version[/code]
+## Returns whether module is enabled under current Core version.
 func register_module(meta: Dictionary) -> bool:
     if not meta.has("id"):
         _log_warn("registry", "Module registration missing id.")
@@ -40,8 +46,13 @@ func register_module(meta: Dictionary) -> bool:
 func get_module(module_id: String) -> Dictionary:
     return _modules.get(module_id, {})
 
-func list_modules() -> Array:
-    return _modules.values()
+## Returns all module entries as dictionaries.
+func list_modules() -> Array[Dictionary]:
+    var entries: Array[Dictionary] = []
+    for value: Variant in _modules.values():
+        if value is Dictionary:
+            entries.append((value as Dictionary).duplicate(true))
+    return entries
 
 func _log_info(module_id: String, message: String) -> void:
     if _logger != null and _logger.has_method("info"):

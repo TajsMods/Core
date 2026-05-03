@@ -1,6 +1,9 @@
 class_name TajsCoreFileVariations
 extends RefCounted
 
+## Registry for custom file variation bits and symbol overlays.
+##
+## Persists bit assignments in Core settings to keep variation masks stable.
 const CUSTOM_START := 60
 const MIN_CUSTOM_BIT := 32
 const MAP_SETTING_KEY := "core.file_variations.map"
@@ -16,6 +19,7 @@ func _init(settings: Variant = null, logger: Variant = null) -> void:
     _logger = logger
     _load_map()
 
+## Registers variation definitions for one mod and returns local_id -> mask.
 func register_variations(mod_id: String, defs: Dictionary, symbols: Dictionary = {}, symbol_type: String = "file") -> Dictionary:
     var masks: Dictionary = {}
     if defs.is_empty():
@@ -40,6 +44,7 @@ func register_variations(mod_id: String, defs: Dictionary, symbols: Dictionary =
         register_symbols(symbol_type, symbols, mod_id)
     return masks
 
+## Registers symbol table entries used by [method get_symbols].
 func register_symbols(symbol_type: String, symbols: Dictionary, mod_id: String = "") -> void:
     if symbol_type == "" or symbols.is_empty():
         return
@@ -49,14 +54,17 @@ func register_symbols(symbol_type: String, symbols: Dictionary, mod_id: String =
         var full_id := _make_id(mod_id, str(local_id))
         _symbols[symbol_type][full_id] = symbols[local_id]
 
+## Returns variation mask for [param mod_id].[param local_id].
 func get_mask(mod_id: String, local_id: String) -> int:
     return get_mask_by_id(_make_id(mod_id, local_id))
 
+## Returns variation mask for a fully-qualified variation id.
 func get_mask_by_id(variation_id: String) -> int:
     if not _entries.has(variation_id):
         return 0
     return int(_entries[variation_id]["mask"])
 
+## Computes multiplicative effect for [param key] across active variation bits.
 func get_multiplier(variation: int, key: String) -> float:
     if key == "":
         return 1.0
@@ -69,6 +77,7 @@ func get_multiplier(variation: int, key: String) -> float:
                 multiplier *= float(config[key])
     return multiplier
 
+## Returns concatenated symbols for active variation bits.
 func get_symbols(symbol_type: String, variation: int) -> String:
     if symbol_type == "":
         return ""
@@ -82,8 +91,12 @@ func get_symbols(symbol_type: String, variation: int) -> String:
             output += str(table[full_id])
     return output
 
-func list_variations() -> Array:
-    return _entries.keys()
+## Lists all fully-qualified variation ids.
+func list_variations() -> Array[String]:
+    var ids: Array[String] = []
+    for key: Variant in _entries.keys():
+        ids.append(str(key))
+    return ids
 
 func _make_id(mod_id: String, local_id: String) -> String:
     if mod_id == "":

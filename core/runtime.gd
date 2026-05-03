@@ -1,17 +1,30 @@
 class_name TajsCoreRuntime
 extends Node
 
+const ApiResult := preload("res://mods-unpacked/TajemnikTV-Core/core/api_result.gd")
+
+## Main runtime entrypoint for Taj's Core services.
+##
+## Other mods should access this through [code]Engine.get_meta("TajsCore")[/code]
+## or [code]TajsCoreRuntime.instance()[/code], then call the documented service helpers
+## on this class instead of depending on internal implementation details.
 var CORE_VERSION: String = "0.0.0"
 const API_LEVEL := 1
 const META_KEY := "TajsCore"
 
+## Core logging service.
 var logger: Variant
+## Core storage service used by settings and diagnostics.
 var storage: Variant
-var settings: Variant
-var migrations: Variant
-var event_bus: Variant
-var command_registry: Variant
-var commands: Variant
+## Settings service shared across Taj's mods.
+var settings: TajsCoreSettings
+var migrations: TajsCoreMigrations
+## Global event bus for cross-mod coordination.
+var event_bus: TajsCoreEventBus
+## Command registry used by command palette and integrations.
+var command_registry: TajsCoreCommandRegistry
+## Backward-compatible alias for [member command_registry].
+var commands: TajsCoreCommandRegistry
 var context_menu: Variant
 var context_menus: Variant
 var command_palette: Variant
@@ -19,9 +32,12 @@ var command_palette_controller: Variant
 var command_palette_overlay: Variant
 var keybinds: Variant
 var patches: Variant
-var diagnostics: Variant
-var module_registry: Variant
-var modules: Variant
+## Diagnostics/support bundle service.
+var diagnostics: TajsCoreDiagnostics
+## Registry of dependent modules/mod integrations.
+var module_registry: TajsCoreModuleRegistry
+## Backward-compatible alias for [member module_registry].
+var modules: TajsCoreModuleRegistry
 var workshop_sync: Variant
 var ui_manager: Variant
 var node_registry: Variant
@@ -29,13 +45,14 @@ var nodes: Variant
 var util: Variant
 
 var features: Variant
-var assets: Variant
+var assets: TajsCoreAssets
 var localization: Variant
 var theme_manager: Variant
 var font_registry: Variant
 var fonts: Variant
 var theme_editor: Variant
-var icon_registry: Variant
+## Registry for base/core/mod icon discovery and icon picker sources.
+var icon_registry: TajsCoreIconRegistry
 var window_scenes: Variant
 var file_variations: Variant
 var window_menus: Variant
@@ -265,37 +282,54 @@ func bootstrap() -> void:
     _init_boot_screen(base_dir)
     _init_optional_services(base_dir)
 
+## Returns Core semantic version string loaded from [code]manifest.json[/code].
+##
+## Safe to call after Core bootstrap starts.
 func get_version() -> String:
     return CORE_VERSION
 
+## Returns Core API level for compatibility checks.
 func get_api_level() -> int:
     return API_LEVEL
 
+## Compares two semantic versions.
+## Returns [code]-1[/code], [code]0[/code], or [code]1[/code].
 func compare_versions(a: String, b: String) -> int:
     if _version_util != null:
         return _version_util.compare_versions(a, b)
     return 0
 
+## Checks whether current Core version satisfies [param min_version].
+##
+## Use this from feature mods before calling newer APIs.
 func require(min_version: String) -> bool:
     if min_version == "":
         return true
     return compare_versions(CORE_VERSION, min_version) >= 0
 
+## Registers a dependent module in Core's module registry.
+##
+## Expected [param meta] fields include at least [code]id[/code], optional
+## [code]min_core_version[/code], and any custom metadata.
 func register_module(meta: Dictionary) -> bool:
     if module_registry == null:
         return false
     return module_registry.register_module(meta)
 
+## Extends shared runtime metadata for temporary cross-service state.
+## Internal-to-ecosystem helper; values are not persisted.
 func extend_globals(property: String, value: Variant) -> void:
     if property == "":
         return
     _extended_globals[property] = value
 
+## Reads metadata previously stored via [method extend_globals].
 func get_extended_global(property: String, default_value: Variant = null) -> Variant:
     if _extended_globals.has(property):
         return _extended_globals[property]
     return default_value
 
+## Returns effective upgrade cap including Core cap extensions.
 func get_upgrade_cap(upgrade_id: String) -> int:
     if upgrade_caps != null:
         return upgrade_caps.get_effective_cap(upgrade_id)
@@ -304,6 +338,7 @@ func get_upgrade_cap(upgrade_id: String) -> int:
         return -1 if limit == 0 else limit
     return -1
 
+## Registers a custom cap rule for an upgrade id.
 func register_extended_cap(upgrade_id: String, config: Dictionary) -> void:
     if upgrade_caps != null:
         upgrade_caps.register_extended_cap(upgrade_id, config)
@@ -324,6 +359,9 @@ func loge(module_id: String, message: String) -> void:
     if logger != null:
         logger.error(module_id, message)
 
+## Shows a notification in-game.
+##
+## Falls back to Signals autoload if UI manager is not initialized yet.
 func notify(icon: String, message: String) -> void:
     if ui_manager != null and ui_manager.has_method("show_notification"):
         ui_manager.show_notification(icon, message)
@@ -340,18 +378,30 @@ func play_sound(sound_id: String) -> void:
 func copy_to_clipboard(text: String) -> void:
     DisplayServer.clipboard_set(text)
 
+## Registers a settings tab container for a mod.
+##
+## Example:
+## [codeblock]
+## var tab := core.register_settings_tab("TajemnikTV-QoL", "QoL", "res://mods-unpacked/TajemnikTV-QoL/icon.png")
+## if tab != null:
+##     core.ui_manager.add_toggle(tab, "Enable feature", true, func(v: bool): pass)
+## [/codeblock]
+##
+## Returns [code]null[/code] when the HUD UI has not been initialized yet.
 func register_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
     """Registers a settings tab for a mod. Returns null if UI not ready yet."""
     if ui_manager == null:
         return null
     return ui_manager.register_mod_settings_tab(mod_id, display_name, icon_path)
 
+## Returns an existing settings tab for [param mod_id] or [code]null[/code].
 func get_settings_tab(mod_id: String) -> VBoxContainer:
     """Returns an existing settings tab container for a mod."""
     if ui_manager == null:
         return null
     return ui_manager.get_mod_settings_tab(mod_id)
 
+## Returns the active game theme (or fallback main theme).
 func get_game_theme() -> Theme:
     """Returns the game's main.tres theme for consistent font and styling."""
     if theme_manager != null:
@@ -361,14 +411,18 @@ func get_game_theme() -> Theme:
         return load("res://themes/main.tres")
     return null
 
+## Returns Core icon registry service.
 func get_icon_registry() -> Variant: # Returns TajsCoreIconRegistry (Variant to avoid parse errors)
     return icon_registry
 
+## Registers a new top-level Windows tab contribution.
+##
+## [param data] must include a namespaced [code]id[/code] in [code]mod_id.local_id[/code] form.
 func register_window_tab(data: Dictionary) -> Dictionary:
     if window_menus == null:
-        return {"ok": false, "error": "window_menus_unavailable"}
+        return ApiResult.fail("window_menus_unavailable")
     if data.is_empty():
-        return {"ok": false, "error": "tab_data_empty"}
+        return ApiResult.fail("tab_data_empty")
     var id_info: Dictionary = _split_namespaced_id(str(data.get("id", "")))
     if not id_info.get("ok", false):
         logw("core", "register_window_tab failed: %s" % id_info.get("error", "invalid_id"))
@@ -395,19 +449,28 @@ func register_window_tab(data: Dictionary) -> Dictionary:
     if not config.has("button_name") and not config.has("button_id"):
         config["button_name"] = str(data.get("button_name", tab_id))
     var index: int = window_menus.register_tab(mod_id, tab_id, config)
-    return {
-        "ok": index >= 0,
+    if index < 0:
+        return ApiResult.fail("register_failed", {
+            "id": str(data.get("id", "")),
+            "mod_id": mod_id,
+            "tab_id": tab_id,
+            "index": index
+        })
+    return ApiResult.ok({
         "id": str(data.get("id", "")),
         "mod_id": mod_id,
         "tab_id": tab_id,
         "index": index
-    }
+    })
 
+## Registers a new file variation and optional symbol.
+##
+## Use this when your mod contributes Data.file_variations-compatible entries.
 func register_file_variation(id: String, variation_data: Dictionary, symbol: String = "", symbol_type: String = "file") -> Dictionary:
     if file_variations == null:
-        return {"ok": false, "error": "file_variations_unavailable"}
+        return ApiResult.fail("file_variations_unavailable")
     if variation_data.is_empty():
-        return {"ok": false, "error": "variation_data_empty", "id": id}
+        return ApiResult.fail("variation_data_empty", {"id": id})
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
         logw("core", "register_file_variation failed: %s" % id_info.get("error", "invalid_id"))
@@ -428,20 +491,29 @@ func register_file_variation(id: String, variation_data: Dictionary, symbol: Str
         symbols[id_info["local_id"]] = symbol
     var masks: Dictionary = file_variations.register_variations(id_info["mod_id"], {id_info["local_id"]: variation_data}, symbols, symbol_type)
     var mask: int = int(masks.get(id_info["local_id"], 0))
-    return {
-        "ok": mask != 0,
+    if mask == 0:
+        return ApiResult.fail("register_failed", {
+            "id": id,
+            "mod_id": id_info["mod_id"],
+            "local_id": id_info["local_id"],
+            "mask": mask
+        })
+    return ApiResult.ok({
         "id": id,
         "mod_id": id_info["mod_id"],
         "local_id": id_info["local_id"],
         "mask": mask
-    }
+    })
 
+## Adds or moves a research tree entry.
+##
+## [param mode] supports [code]"add"[/code] and [code]"move"[/code].
 func register_research_entry(id: String, entry_data: Dictionary, mode: String = "add") -> Dictionary:
     if tree_registry == null:
-        return {"ok": false, "error": "tree_registry_unavailable"}
+        return ApiResult.fail("tree_registry_unavailable")
     var normalized_mode := mode.strip_edges().to_lower()
     if normalized_mode != "add" and normalized_mode != "move":
-        return {"ok": false, "error": "invalid_mode", "id": id, "mode": mode}
+        return ApiResult.fail("invalid_mode", {"id": id, "mode": mode})
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
         logw("core", "register_research_entry failed: %s" % id_info.get("error", "invalid_id"))
@@ -453,14 +525,17 @@ func register_research_entry(id: String, entry_data: Dictionary, mode: String = 
         tree_registry.move_research_node(payload)
     else:
         tree_registry.add_research_node(payload)
-    return {"ok": true, "id": id_info["id"], "mode": normalized_mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]}
+    return ApiResult.ok({"id": id_info["id"], "mode": normalized_mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]})
 
+## Adds or moves an ascension tree entry.
+##
+## [param mode] supports [code]"add"[/code] and [code]"move"[/code].
 func register_ascension_entry(id: String, entry_data: Dictionary, mode: String = "add") -> Dictionary:
     if tree_registry == null:
-        return {"ok": false, "error": "tree_registry_unavailable"}
+        return ApiResult.fail("tree_registry_unavailable")
     var normalized_mode := mode.strip_edges().to_lower()
     if normalized_mode != "add" and normalized_mode != "move":
-        return {"ok": false, "error": "invalid_mode", "id": id, "mode": mode}
+        return ApiResult.fail("invalid_mode", {"id": id, "mode": mode})
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
         logw("core", "register_ascension_entry failed: %s" % id_info.get("error", "invalid_id"))
@@ -472,8 +547,14 @@ func register_ascension_entry(id: String, entry_data: Dictionary, mode: String =
         tree_registry.move_ascension_node(payload)
     else:
         tree_registry.add_ascension_node(payload)
-    return {"ok": true, "id": id_info["id"], "mode": normalized_mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]}
+    return ApiResult.ok({"id": id_info["id"], "mode": normalized_mode, "mod_id": id_info["mod_id"], "local_id": id_info["local_id"]})
 
+## Registers an icon id that appears in Core icon browser sources.
+##
+## Example:
+## [codeblock]
+## core.register_icon("TajemnikTV-QoL.spark", "res://mods-unpacked/TajemnikTV-QoL/textures/icons/spark.png")
+## [/codeblock]
 func register_icon(id: String, icon_path: String) -> Dictionary:
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
@@ -481,22 +562,24 @@ func register_icon(id: String, icon_path: String) -> Dictionary:
         return id_info
     if _manual_icons.has(id):
         logw("core", "register_icon duplicate id: %s" % id)
-        return {"ok": false, "error": "duplicate_id", "id": id, "path": str(_manual_icons[id])}
+        return ApiResult.fail("duplicate_id", {"id": id, "path": str(_manual_icons[id])})
     if icon_path == "" or not ResourceLoader.exists(icon_path):
-        return {"ok": false, "error": "icon_not_found", "id": id, "path": icon_path}
+        return ApiResult.fail("icon_not_found", {"id": id, "path": icon_path})
     _manual_icons[id] = icon_path
     _ensure_manual_icon_source()
     if icon_registry != null and icon_registry.has_method("refresh_index"):
         icon_registry.refresh_index()
-    return {"ok": true, "id": id, "path": icon_path}
+    return ApiResult.ok({"id": id, "path": icon_path})
 
 func register_translation_path(path: String) -> Dictionary:
     if localization == null:
-        return {"ok": false, "error": "localization_unavailable"}
+        return ApiResult.fail("localization_unavailable")
     if path.strip_edges() == "":
-        return {"ok": false, "error": "path_empty"}
+        return ApiResult.fail("path_empty")
     var ok: bool = bool(localization.register_translation(path))
-    return {"ok": ok, "path": path, "error": "" if ok else "register_failed"}
+    if not ok:
+        return ApiResult.fail("register_failed", {"path": path})
+    return ApiResult.ok({"path": path})
 
 func register_translation(mod_id: String, path: String) -> Dictionary:
     var id_info: Dictionary = _validate_mod_id(mod_id)
@@ -509,11 +592,13 @@ func register_translation(mod_id: String, path: String) -> Dictionary:
 
 func register_translations_dir(dir_path: String) -> Dictionary:
     if localization == null:
-        return {"ok": false, "error": "localization_unavailable"}
+        return ApiResult.fail("localization_unavailable")
     if dir_path.strip_edges() == "":
-        return {"ok": false, "error": "dir_path_empty"}
+        return ApiResult.fail("dir_path_empty")
     var count: int = int(localization.register_translations_dir(dir_path))
-    return {"ok": count > 0, "dir_path": dir_path, "count": count, "error": "" if count > 0 else "register_failed"}
+    if count <= 0:
+        return ApiResult.fail("register_failed", {"dir_path": dir_path, "count": count})
+    return ApiResult.ok({"dir_path": dir_path, "count": count})
 
 func register_translation_dir(mod_id: String, dir_path: String) -> Dictionary:
     var id_info: Dictionary = _validate_mod_id(mod_id)
@@ -526,31 +611,35 @@ func register_translation_dir(mod_id: String, dir_path: String) -> Dictionary:
 
 func register_window_directory(dir_path: String) -> Dictionary:
     if window_scenes == null:
-        return {"ok": false, "error": "window_scenes_unavailable"}
+        return ApiResult.fail("window_scenes_unavailable")
     if dir_path.strip_edges() == "":
-        return {"ok": false, "error": "dir_path_empty"}
+        return ApiResult.fail("dir_path_empty")
     var ok: bool = bool(window_scenes.register_dir(dir_path))
-    return {"ok": ok, "dir_path": dir_path, "error": "" if ok else "register_failed"}
+    if not ok:
+        return ApiResult.fail("register_failed", {"dir_path": dir_path})
+    return ApiResult.ok({"dir_path": dir_path})
 
 func register_settings_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "") -> Dictionary:
     if settings == null:
-        return {"ok": false, "error": "settings_unavailable"}
+        return ApiResult.fail("settings_unavailable")
     if module_id.strip_edges() == "":
-        return {"ok": false, "error": "module_id_empty"}
+        return ApiResult.fail("module_id_empty")
     if schema.is_empty():
-        return {"ok": false, "error": "schema_empty", "module_id": module_id}
+        return ApiResult.fail("schema_empty", {"module_id": module_id})
     settings.register_schema(module_id, schema, namespace_prefix)
-    return {"ok": true, "module_id": module_id, "keys": schema.keys().size()}
+    return ApiResult.ok({"module_id": module_id, "keys": schema.keys().size()})
 
 func register_action(command_id: String, meta: Dictionary = {}, callback: Callable = Callable()) -> Dictionary:
     if command_registry == null:
-        return {"ok": false, "error": "command_registry_unavailable"}
+        return ApiResult.fail("command_registry_unavailable")
     var id_info: Dictionary = _split_namespaced_id(command_id)
     if not id_info.get("ok", false):
         logw("core", "register_action failed: %s" % id_info.get("error", "invalid_id"))
         return id_info
     var ok: bool = command_registry.register_command(command_id, meta, callback)
-    return {"ok": ok, "id": command_id, "error": "" if ok else "register_failed"}
+    if not ok:
+        return ApiResult.fail("register_failed", {"id": command_id})
+    return ApiResult.ok({"id": command_id})
 
 func run_command(command_id: String, context: Variant = null) -> bool:
     if command_registry != null and command_registry.has_method("execute"):
@@ -734,23 +823,25 @@ func _register_core_schema() -> void:
     settings.register_schema("core", schema)
 
 func _split_namespaced_id(full_id: String) -> Dictionary:
+    # Internal helper. Not intended for direct use by other mods.
     var normalized := full_id.strip_edges()
     if normalized == "":
-        return {"ok": false, "error": "id_empty"}
+        return ApiResult.fail("id_empty")
     var idx := normalized.find(".")
     if idx <= 0 or idx >= normalized.length() - 1:
-        return {"ok": false, "error": "id_must_be_namespaced_modid.localid", "id": full_id}
+        return ApiResult.fail("id_must_be_namespaced_modid.localid", {"id": full_id})
     var mod_id := normalized.substr(0, idx).strip_edges()
     var local_id := normalized.substr(idx + 1).strip_edges()
     if mod_id == "" or local_id == "":
-        return {"ok": false, "error": "id_must_be_namespaced_modid.localid", "id": full_id}
-    return {"ok": true, "id": normalized, "mod_id": mod_id, "local_id": local_id}
+        return ApiResult.fail("id_must_be_namespaced_modid.localid", {"id": full_id})
+    return ApiResult.ok({"id": normalized, "mod_id": mod_id, "local_id": local_id})
 
 func _validate_mod_id(mod_id: String) -> Dictionary:
+    # Internal helper. Not intended for direct use by other mods.
     var normalized := mod_id.strip_edges()
     if normalized == "":
-        return {"ok": false, "error": "mod_id_empty"}
-    return {"ok": true, "mod_id": normalized}
+        return ApiResult.fail("mod_id_empty")
+    return ApiResult.ok({"mod_id": normalized})
 
 func _ensure_manual_icon_source() -> void:
     if _manual_icon_source_registered:
