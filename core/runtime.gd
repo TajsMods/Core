@@ -17,14 +17,14 @@ var logger: Variant
 ## Core storage service used by settings and diagnostics.
 var storage: Variant
 ## Settings service shared across Taj's mods.
-var settings: TajsCoreSettings
-var migrations: TajsCoreMigrations
+var settings: Variant # TajsCoreSettings
+var migrations: Variant # TajsCoreMigrations
 ## Global event bus for cross-mod coordination.
-var event_bus: TajsCoreEventBus
+var event_bus: Variant # TajsCoreEventBus
 ## Command registry used by command palette and integrations.
-var command_registry: TajsCoreCommandRegistry
+var command_registry: Variant # TajsCoreCommandRegistry
 ## Backward-compatible alias for [member command_registry].
-var commands: TajsCoreCommandRegistry
+var commands: Variant # TajsCoreCommandRegistry
 var context_menu: Variant
 var context_menus: Variant
 var command_palette: Variant
@@ -33,31 +33,31 @@ var command_palette_overlay: Variant
 var keybinds: Variant
 var patches: Variant
 ## Diagnostics/support bundle service.
-var diagnostics: TajsCoreDiagnostics
+var diagnostics: Variant # TajsCoreDiagnostics
 ## Registry of dependent modules/mod integrations.
-var module_registry: TajsCoreModuleRegistry
+var module_registry: Variant # TajsCoreModuleRegistry
 ## Backward-compatible alias for [member module_registry].
-var modules: TajsCoreModuleRegistry
+var modules: Variant # TajsCoreModuleRegistry
 var workshop_sync: Variant
-var ui_manager: Variant
-var node_registry: Variant
-var nodes: Variant
+var ui_manager: Variant # TajsCoreUiManager
+var node_registry: Variant # TajsCoreNodeRegistry
+var nodes: Variant # TajsCoreNodeRegistry
 var util: Variant
 
 var features: Variant
-var assets: TajsCoreAssets
+var assets: Variant # TajsCoreAssets
 var localization: Variant
 var theme_manager: Variant
 var font_registry: Variant
 var fonts: Variant
 var theme_editor: Variant
 ## Registry for base/core/mod icon discovery and icon picker sources.
-var icon_registry: TajsCoreIconRegistry
+var icon_registry: Variant # TajsCoreIconRegistry
 var window_scenes: Variant
-var file_variations: Variant
-var window_menus: Variant
-var tree_registry: Variant
-var trees: Variant
+var file_variations: Variant # TajsCoreFileVariations
+var window_menus: Variant # TajsCoreWindowMenus
+var tree_registry: Variant # TajsCoreTreeRegistry
+var trees: Variant # TajsCoreTreeRegistry
 var hook_manager: Variant
 var upgrade_caps: Variant
 var undo_manager: Variant
@@ -389,21 +389,18 @@ func copy_to_clipboard(text: String) -> void:
 ##
 ## Returns [code]null[/code] when the HUD UI has not been initialized yet.
 func register_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
-    """Registers a settings tab for a mod. Returns null if UI not ready yet."""
     if ui_manager == null:
         return null
     return ui_manager.register_mod_settings_tab(mod_id, display_name, icon_path)
 
 ## Returns an existing settings tab for [param mod_id] or [code]null[/code].
 func get_settings_tab(mod_id: String) -> VBoxContainer:
-    """Returns an existing settings tab container for a mod."""
     if ui_manager == null:
         return null
     return ui_manager.get_mod_settings_tab(mod_id)
 
 ## Returns the active game theme (or fallback main theme).
 func get_game_theme() -> Theme:
-    """Returns the game's main.tres theme for consistent font and styling."""
     if theme_manager != null:
         return theme_manager.get_game_theme()
     # Fallback if theme_manager not ready
@@ -418,6 +415,26 @@ func get_icon_registry() -> Variant: # Returns TajsCoreIconRegistry (Variant to 
 ## Registers a new top-level Windows tab contribution.
 ##
 ## [param data] must include a namespaced [code]id[/code] in [code]mod_id.local_id[/code] form.
+## Required keys:
+## - [code]id[/code] String, namespaced ([code]MyMod.my_tab[/code])
+## Optional keys:
+## - [code]title[/code] String (default: local id)
+## - [code]rows[/code] Array|Dictionary (default: single row using title)
+## - [code]categories[/code] Array|Dictionary alias for rows
+## - [code]button_name[/code] String (default: local id)
+## - [code]button_id[/code] String fallback if button_name omitted
+## Example:
+## [codeblock]
+## core.register_window_tab({
+##     "id": "TajemnikTV-QoL.tools",
+##     "title": "Tools",
+##     "rows": [{"default": "Utilities"}],
+##     "button_name": "tools"
+## })
+## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", id, mod_id, tab_id, index}[/code]
+## - failure: [code]{ok=false, error, ...context}[/code]
 func register_window_tab(data: Dictionary) -> Dictionary:
     if window_menus == null:
         return ApiResult.fail("window_menus_unavailable")
@@ -432,14 +449,12 @@ func register_window_tab(data: Dictionary) -> Dictionary:
     var existing_index: int = int(window_menus.get_tab_index(mod_id, tab_id))
     if existing_index >= 0:
         logw("core", "register_window_tab duplicate id: %s" % str(data.get("id", "")))
-        return {
-            "ok": false,
-            "error": "duplicate_id",
+        return ApiResult.fail("duplicate_id", {
             "id": str(data.get("id", "")),
             "mod_id": mod_id,
             "tab_id": tab_id,
             "index": existing_index
-        }
+        })
     var title: String = str(data.get("title", tab_id)).strip_edges()
     var rows: Variant = data.get("rows", data.get("categories", []))
     if rows == null or (rows is Array and rows.is_empty()) or (rows is Dictionary and rows.is_empty()):
@@ -466,6 +481,25 @@ func register_window_tab(data: Dictionary) -> Dictionary:
 ## Registers a new file variation and optional symbol.
 ##
 ## Use this when your mod contributes Data.file_variations-compatible entries.
+## [param id] format: [code]ModId.local_variation[/code].
+## [param variation_data] required dictionary describing multipliers/flags consumed by gameplay.
+## Core forwards this payload to [code]file_variations.register_variations()[/code] unchanged.
+## Required keys: none (payload shape is mod-defined), but it must be non-empty.
+## Optional keys: any keys consumed by your gameplay hooks/UI.
+## [param symbol] optional marker used in UI glyph aggregation.
+## [param symbol_type] defaults to [code]"file"[/code].
+## Example:
+## [codeblock]
+## core.register_file_variation(
+##     "TajemnikTV-QoL.rare",
+##     {"size_mult": 1.2, "value_mult": 1.1},
+##     "★",
+##     "file"
+## )
+## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", id, mod_id, local_id, mask}[/code]
+## - failure: [code]{ok=false, error, ...context}[/code]
 func register_file_variation(id: String, variation_data: Dictionary, symbol: String = "", symbol_type: String = "file") -> Dictionary:
     if file_variations == null:
         return ApiResult.fail("file_variations_unavailable")
@@ -478,14 +512,12 @@ func register_file_variation(id: String, variation_data: Dictionary, symbol: Str
     var existing_mask: int = file_variations.get_mask(id_info["mod_id"], id_info["local_id"])
     if existing_mask != 0:
         logw("core", "register_file_variation duplicate id: %s" % id)
-        return {
-            "ok": false,
-            "error": "duplicate_id",
+        return ApiResult.fail("duplicate_id", {
             "id": id,
             "mod_id": id_info["mod_id"],
             "local_id": id_info["local_id"],
             "mask": existing_mask
-        }
+        })
     var symbols := {}
     if symbol != "":
         symbols[id_info["local_id"]] = symbol
@@ -508,6 +540,12 @@ func register_file_variation(id: String, variation_data: Dictionary, symbol: Str
 ## Adds or moves a research tree entry.
 ##
 ## [param mode] supports [code]"add"[/code] and [code]"move"[/code].
+## [param entry_data] typically includes:
+## - add: [code]x[/code], [code]y[/code], optional [code]ref[/code]
+## - move: same shape to relocate existing entry
+## Return shape:
+## - success: [code]{ok=true, error="", id, mode, mod_id, local_id}[/code]
+## - failure: [code]{ok=false, error, ...context}[/code]
 func register_research_entry(id: String, entry_data: Dictionary, mode: String = "add") -> Dictionary:
     if tree_registry == null:
         return ApiResult.fail("tree_registry_unavailable")
@@ -530,6 +568,11 @@ func register_research_entry(id: String, entry_data: Dictionary, mode: String = 
 ## Adds or moves an ascension tree entry.
 ##
 ## [param mode] supports [code]"add"[/code] and [code]"move"[/code].
+## [param entry_data] supports cartesian ([code]x[/code]/[code]y[/code]) or radial
+## ([code]angle[/code]/[code]radius[/code], optional [code]ref[/code]) formats.
+## Return shape:
+## - success: [code]{ok=true, error="", id, mode, mod_id, local_id}[/code]
+## - failure: [code]{ok=false, error, ...context}[/code]
 func register_ascension_entry(id: String, entry_data: Dictionary, mode: String = "add") -> Dictionary:
     if tree_registry == null:
         return ApiResult.fail("tree_registry_unavailable")
@@ -551,10 +594,18 @@ func register_ascension_entry(id: String, entry_data: Dictionary, mode: String =
 
 ## Registers an icon id that appears in Core icon browser sources.
 ##
+## Required:
+## - [param id] namespaced id in [code]ModId.local_id[/code] format
+## - [param icon_path] existing [code]res://[/code] texture path
+## Optional:
+## - none
 ## Example:
 ## [codeblock]
 ## core.register_icon("TajemnikTV-QoL.spark", "res://mods-unpacked/TajemnikTV-QoL/textures/icons/spark.png")
 ## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", id, path}[/code]
+## - failure: [code]{ok=false, error, id?, path?}[/code]
 func register_icon(id: String, icon_path: String) -> Dictionary:
     var id_info: Dictionary = _split_namespaced_id(id)
     if not id_info.get("ok", false):
@@ -571,6 +622,10 @@ func register_icon(id: String, icon_path: String) -> Dictionary:
         icon_registry.refresh_index()
     return ApiResult.ok({"id": id, "path": icon_path})
 
+## Registers a single translation file path.
+## Return shape:
+## - success: [code]{ok=true, error="", path}[/code]
+## - failure: [code]{ok=false, error, path?}[/code]
 func register_translation_path(path: String) -> Dictionary:
     if localization == null:
         return ApiResult.fail("localization_unavailable")
@@ -581,6 +636,8 @@ func register_translation_path(path: String) -> Dictionary:
         return ApiResult.fail("register_failed", {"path": path})
     return ApiResult.ok({"path": path})
 
+## Registers translations for a specific mod id via a translation file path.
+## Return shape from [method register_translation_path] plus [code]mod_id[/code].
 func register_translation(mod_id: String, path: String) -> Dictionary:
     var id_info: Dictionary = _validate_mod_id(mod_id)
     if not id_info.get("ok", false):
@@ -590,6 +647,10 @@ func register_translation(mod_id: String, path: String) -> Dictionary:
     result["mod_id"] = mod_id
     return result
 
+## Registers a translations directory.
+## Return shape:
+## - success: [code]{ok=true, error="", dir_path, count}[/code]
+## - failure: [code]{ok=false, error, dir_path?, count?}[/code]
 func register_translations_dir(dir_path: String) -> Dictionary:
     if localization == null:
         return ApiResult.fail("localization_unavailable")
@@ -600,6 +661,8 @@ func register_translations_dir(dir_path: String) -> Dictionary:
         return ApiResult.fail("register_failed", {"dir_path": dir_path, "count": count})
     return ApiResult.ok({"dir_path": dir_path, "count": count})
 
+## Registers translations directory for one mod id.
+## Return shape from [method register_translations_dir] plus [code]mod_id[/code].
 func register_translation_dir(mod_id: String, dir_path: String) -> Dictionary:
     var id_info: Dictionary = _validate_mod_id(mod_id)
     if not id_info.get("ok", false):
@@ -609,6 +672,10 @@ func register_translation_dir(mod_id: String, dir_path: String) -> Dictionary:
     result["mod_id"] = mod_id
     return result
 
+## Registers a window scenes directory for dynamic window resolution.
+## Return shape:
+## - success: [code]{ok=true, error="", dir_path}[/code]
+## - failure: [code]{ok=false, error, dir_path?}[/code]
 func register_window_directory(dir_path: String) -> Dictionary:
     if window_scenes == null:
         return ApiResult.fail("window_scenes_unavailable")
@@ -619,6 +686,31 @@ func register_window_directory(dir_path: String) -> Dictionary:
         return ApiResult.fail("register_failed", {"dir_path": dir_path})
     return ApiResult.ok({"dir_path": dir_path})
 
+## Registers settings schema entries for a module namespace.
+## Required:
+## - [param module_id] non-empty module id
+## - [param schema] non-empty dictionary, where each key is a setting key and each value is a schema entry
+## Optional:
+## - [param namespace_prefix] enforces preferred key prefix checks
+## Schema entry keys:
+## - required per entry: [code]default[/code]
+## - optional common keys: [code]type[/code], [code]label[/code], [code]description[/code], [code]category[/code]
+## - optional numeric keys: [code]min[/code], [code]max[/code], [code]step[/code]
+## - optional behavior keys: [code]requires_restart[/code], [code]hidden[/code], [code]experimental[/code], [code]sensitive[/code]
+## - optional dependency key: [code]depends_on[/code]
+## Example:
+## [codeblock]
+## core.register_settings_schema("TajemnikTV-QoL", {
+##     "tajs_qol.fast_mode.enabled": {
+##         "type": "bool",
+##         "default": true,
+##         "description": "Enable fast mode."
+##     }
+## }, "tajs_qol")
+## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", module_id, keys}[/code]
+## - failure: [code]{ok=false, error, module_id?}[/code]
 func register_settings_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "") -> Dictionary:
     if settings == null:
         return ApiResult.fail("settings_unavailable")
@@ -629,6 +721,31 @@ func register_settings_schema(module_id: String, schema: Dictionary, namespace_p
     settings.register_schema(module_id, schema, namespace_prefix)
     return ApiResult.ok({"module_id": module_id, "keys": schema.keys().size()})
 
+## Registers one command action in command registry.
+## Required:
+## - [param command_id] namespaced command id
+## Optional [param meta] keys:
+## - [code]title[/code] String (default: command_id)
+## - [code]category_path[/code] Array[String]
+## - [code]category[/code] String (default: first [code]category_path[/code] item, else "")
+## - [code]keywords[/code] Array[String] (default: [])
+## - [code]tags[/code] Array[String] (default: [])
+## - [code]hidden[/code] bool (default: false)
+## - [code]is_category[/code] bool (default: false)
+## - [code]priority[/code] int (default: 0)
+## - [code]is_visible[/code] Callable, [code]is_enabled[/code] Callable
+## [param callback] mapped to command [code]run[/code].
+## Example:
+## [codeblock]
+## core.register_action(
+##     "TajemnikTV-QoL.toggle_grid",
+##     {"title": "Toggle Grid", "category_path": ["QoL", "View"]},
+##     func(_ctx = null): _toggle_grid()
+## )
+## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", id}[/code]
+## - failure: [code]{ok=false, error, id?}[/code]
 func register_action(command_id: String, meta: Dictionary = {}, callback: Callable = Callable()) -> Dictionary:
     if command_registry == null:
         return ApiResult.fail("command_registry_unavailable")
@@ -646,6 +763,8 @@ func run_command(command_id: String, context: Variant = null) -> bool:
         return command_registry.execute(command_id, context)
     return false
 
+## Font APIs intentionally pass through raw [code]TajsCoreFontRegistry[/code] result dictionaries.
+## These preserve registry-specific keys beyond [code]ok/error[/code] for compatibility.
 func register_font(font_id: String, font_path: String) -> Dictionary:
     if font_registry == null:
         return {"ok": false, "error": "font_registry_unavailable"}
@@ -687,6 +806,8 @@ func apply_font_to_window_menu_panel(panel: Node, font_id: String) -> Dictionary
         return {"ok": false, "error": "panel_null"}
     return font_registry.apply_font_to_tree(panel, font_id, "Control")
 
+## Theme APIs intentionally pass through raw [code]theme_manager[/code] result dictionaries.
+## This keeps extended payload fields unchanged for existing integrations.
 func theme_create_profile(profile_id: String, base_theme_id: String = "default") -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
