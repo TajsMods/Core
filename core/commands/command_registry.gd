@@ -30,6 +30,28 @@ func _init(logger: Variant = null, event_bus: Variant = null) -> void:
 ##
 ## Required fields: [code]id[/code], [code]title[/code].
 ## Optional callables: [code]run(context?)[/code], [code]is_visible(context?)[/code], [code]is_enabled(context?)[/code].
+## Optional metadata fields:
+## - [code]category_path[/code] Array[String] (default: [])
+## - [code]category[/code] String (default: first category_path item)
+## - [code]keywords[/code] Array[String] (default: [])
+## - [code]tags[/code] Array[String] (default: [])
+## - [code]hidden[/code] bool (default: false)
+## - [code]is_category[/code] bool (default: false)
+## - [code]priority[/code] int (default: 0)
+## - [code]can_run[/code] Callable fallback alias for is_enabled
+## Example payload:
+## [codeblock]
+## {
+##     "id": "TajemnikTV-QoL.toggle_overlay",
+##     "title": "Toggle Overlay",
+##     "category_path": ["QoL", "UI"],
+##     "keywords": ["overlay", "ui"],
+##     "run": func(_ctx = null): _toggle_overlay()
+## }
+## [/codeblock]
+## Return value:
+## - [code]true[/code] when command is accepted/registered (or replaced)
+## - [code]false[/code] when required fields are invalid
 func register(data: Dictionary) -> bool:
     var id: String = str(data.get("id", "")).strip_edges()
     if id == "":
@@ -64,6 +86,8 @@ func register(data: Dictionary) -> bool:
 ##     func(_ctx = null): _toggle_overlay()
 ## )
 ## [/codeblock]
+## [param meta] accepts the same dictionary keys as [method register] except [code]id[/code].
+## Return value mirrors [method register].
 func register_command(command_id: String, meta: Dictionary = {}, callback: Callable = Callable()) -> bool:
     var data: Dictionary = meta.duplicate(true)
     data["id"] = command_id

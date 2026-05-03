@@ -34,6 +34,35 @@ func _init(logger: Variant = null, event_bus: Variant = null, patches: Variant =
 ## Registers a full node definition.
 ##
 ## Expected id format: [code]ModId.local_id[/code].
+## Required keys:
+## - [code]id[/code] String (namespaced)
+## - [code]display_name[/code] String
+## - one of:
+##   - [code]packed_scene_path[/code] String ([code]res://...[/code], [code].tscn[/code] inferred)
+##   - [code]factory[/code] Callable
+## Optional keys (with defaults):
+## - [code]description[/code] String (default: "")
+## - [code]category[/code] String (default: [constant DEFAULT_CATEGORY])
+## - [code]sub_category[/code] String (default: [constant DEFAULT_SUB_CATEGORY])
+## - [code]icon[/code] String (default: [constant DEFAULT_ICON])
+## - [code]icon_path[/code] String ([code].png[/code] inferred)
+## - [code]attributes[/code] Dictionary (default: [code]{"limit": -1}[/code])
+## - [code]data[/code] Dictionary (default: {})
+## - [code]group[/code], [code]level[/code], [code]requirement[/code], [code]hidden[/code], [code]guide[/code], [code]tags[/code]
+## Example:
+## [codeblock]
+## core.nodes.register_node({
+##     "id": "TajemnikTV-QoL.quick_tool",
+##     "display_name": "Quick Tool",
+##     "packed_scene_path": "res://mods-unpacked/TajemnikTV-QoL/scenes/quick_tool.tscn",
+##     "category": "utility",
+##     "sub_category": "file",
+##     "attributes": {"limit": 1}
+## })
+## [/codeblock]
+## Return value:
+## - [code]true[/code] on successful registration
+## - [code]false[/code] when validation fails or id conflicts
 func register_node(def: Dictionary) -> bool:
     var normalized := _normalize_def(def)
     if normalized.is_empty():

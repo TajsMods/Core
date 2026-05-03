@@ -26,6 +26,29 @@ func _init(core: Variant, logger: Variant = null) -> void:
 ## Collects full diagnostics snapshot.
 ##
 ## [param options] can limit list/log sizes (for example [code]log_limit[/code], [code]command_limit[/code]).
+## Supported option keys (all optional):
+## - [code]log_limit[/code] int (default: [constant DEFAULT_LOG_ENTRY_LIMIT])
+## - [code]mod_loader_log_limit[/code] int (default: [constant DEFAULT_MOD_LOADER_LOG_LIMIT])
+## - [code]keybind_limit[/code] int (default: [constant DEFAULT_KEYBIND_LIMIT])
+## - [code]command_limit[/code] int (default: [constant DEFAULT_COMMAND_LIMIT])
+## - [code]list_limit[/code] int (default: [constant DEFAULT_LIST_LIMIT])
+## - [code]mod_message_limit[/code] int (default: [constant DEFAULT_MOD_MESSAGE_LIMIT])
+## - [code]node_preview_limit[/code] int (default: [constant DEFAULT_NODE_PREVIEW_LIMIT])
+## Example options:
+## [codeblock]
+## {
+##     "log_limit": 40,
+##     "command_limit": 100,
+##     "node_preview_limit": 10
+## }
+## [/codeblock]
+## Core top-level output keys:
+## - [code]dump_format_version[/code], [code]timestamp[/code], [code]timestamp_unix[/code]
+## - [code]core_version[/code], [code]api_level[/code], [code]godot_version[/code]
+## - [code]project[/code], [code]environment[/code], [code]mod_loader_version[/code]
+## - [code]mods[/code], [code]modules[/code], [code]settings[/code], [code]settings_meta[/code]
+## - [code]keybinds[/code], [code]keybind_conflicts[/code], [code]logs[/code], [code]limits[/code]
+## - optional sections such as [code]event_bus[/code], [code]commands[/code], [code]nodes[/code], [code]fonts[/code]
 func collect(options: Dictionary = {}) -> Dictionary:
     var data := {}
     data["dump_format_version"] = DUMP_FORMAT_VERSION
@@ -123,6 +146,9 @@ func format(data: Dictionary, options: Dictionary = {}) -> String:
     return "\n".join(lines)
 
 ## Copies diagnostics dump to system clipboard.
+## Return shape:
+## - success: [code]{ok=true, bytes}[/code]
+## - failure: [code]{ok=false, error}[/code]
 func copy_dump_to_clipboard(options: Dictionary = {}) -> Dictionary:
     var dump: String = str(options.get("dump", ""))
     if dump == "":
@@ -134,6 +160,9 @@ func copy_dump_to_clipboard(options: Dictionary = {}) -> Dictionary:
     return {"ok": true, "bytes": dump.length()}
 
 ## Saves diagnostics dump to a file path (or generated default path).
+## Return shape:
+## - success: [code]{ok=true, path, bytes}[/code]
+## - failure: [code]{ok=false, path, error}[/code]
 func save_dump_to_file(path: String = "", options: Dictionary = {}) -> Dictionary:
     var dump: String = str(options.get("dump", ""))
     if dump == "":
@@ -161,6 +190,16 @@ func open_dump_folder(path: String = "") -> bool:
     return OS.shell_open(global_path)
 
 ## Exports raw diagnostics as JSON.
+## Return shape:
+## - [code]{path, json}[/code]
+## Example return:
+## [codeblock]
+## {
+##     "path": "user://tajs_core_diagnostics.json",
+##     "json": "{...serialized diagnostics...}"
+## }
+## [/codeblock]
+## This method intentionally returns raw export payload (no [code]ok/error[/code]) for backward compatibility.
 func export_json(path: String = "", options: Dictionary = {}) -> Dictionary:
     var json_string := JSON.stringify(collect(options), "\t")
     var output_path := path

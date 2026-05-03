@@ -107,16 +107,6 @@ func add_settings_tab(title: String, icon: String) -> VBoxContainer:
 ##     core.ui_manager.add_toggle(tab, "Enable quick craft", true, func(v: bool): _set_quick_craft(v))
 ## [/codeblock]
 func register_mod_settings_tab(mod_id: String, display_name: String, icon_path: String = "") -> VBoxContainer:
-    """
-    Registers a settings tab for a mod. Returns the VBoxContainer to add settings widgets to.
-
-    Parameters:
-    - mod_id: The unique mod identifier (e.g., "TajemnikTV-CommandPalette")
-    - display_name: Human-readable name shown in the tab (e.g., "Command Palette")
-    - icon_path: Optional path to tab icon. Defaults to puzzle icon if empty.
-
-    Returns: VBoxContainer to add settings widgets, or null if UI not ready.
-    """
     if _mod_tabs.has(mod_id):
         var cached_tab: Variant = _mod_tabs[mod_id]
         if is_instance_valid(cached_tab):

@@ -289,7 +289,7 @@ func get_schemas_for_module(module_id: String) -> Dictionary:
     return result
 
 func get_all_schemas() -> Dictionary:
-    #Returns all registered schemas."""
+    # Returns all registered schemas.
     return _schemas.duplicate(true)
 
 ## Returns settings snapshot. Sensitive fields are redacted by default.
