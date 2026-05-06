@@ -609,9 +609,13 @@ func _sanitize_value(key: String, value: Variant, schema_entry: Dictionary, log_
                 if typeof(value) == TYPE_INT:
                     pass
                 elif typeof(value) == TYPE_FLOAT:
-                    result.value = int(value)
-                    result.coerced = true
-                    result.reason = "coerced float to int"
+                    var rounded_value: float = round(value)
+                    result.value = int(rounded_value)
+                    # JSON-backed settings often deserialize integers as floats (e.g. 20.0).
+                    # Treat whole-number floats as normal to avoid noisy startup warnings.
+                    if not is_equal_approx(value, rounded_value):
+                        result.coerced = true
+                        result.reason = "coerced float to int"
                 else:
                     _mark_invalid_with_default(result, schema_entry, "expected int")
             "float":
