@@ -282,6 +282,16 @@ func close_popup() -> void:
     _popup_manager.close_popup()
     _emit_ui_event("core.ui.popup_closed", {"owner_mod_id": "TajemnikTV-Core"})
 
+func show_custom_modal(config: Dictionary, content: Control, actions: Array[Dictionary] = []) -> Control:
+    if _popup_manager == null:
+        return null
+    return _popup_manager.show_custom_modal(config, content, actions)
+
+func close_custom_modal(modal_overlay: Control = null) -> void:
+    if _popup_manager == null:
+        return
+    _popup_manager.close_custom_modal(modal_overlay)
+
 ## Opens icon browser and returns [code](name, path)[/code] through callback.
 ##
 ## Safe to call after HUD initialization.

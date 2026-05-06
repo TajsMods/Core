@@ -3,7 +3,8 @@
 ## How to use
 
 Source of truth:
-- In-code `##` docs under `core/`
+
+- Inline code documentation (`##`)
 - This README
 - Website docs can lag and may include generated placeholder sections: <https://tajsmods.github.io/docs/core/main/>
 - Deepwiki: <https://deepwiki.com/TajsMods/Core> (can be stale by up to ~7 days)
@@ -11,6 +12,7 @@ Source of truth:
 ## Result dictionaries
 
 Most runtime/service wrappers return:
+
 - success: `{ "ok": true, "error": "", ...payload }`
 - failure: `{ "ok": false, "error": "<code>", ...context }`
 
@@ -19,11 +21,13 @@ Most runtime/service wrappers return:
 Use `ModId.local_id` for cross-mod identifiers.
 
 Examples:
+
 - `TajemnikTV-QoL.toggle_overlay`
 - `TajemnikTV-QoL.tools_tab`
 - `TajemnikTV-QoL.body_font`
 
 Why it matters:
+
 - Prevents collisions across mods
 - Allows Core ownership/routing and diagnostics grouping
 
@@ -109,6 +113,7 @@ var research_result: Dictionary = core.register_research_entry(
 ```
 
 Available wrappers:
+
 - `register_window_tab(data: Dictionary)`
 - `register_file_variation(id: String, variation_data: Dictionary, symbol: String = "", symbol_type: String = "file")`
 - `register_research_entry(id: String, entry_data: Dictionary, mode: String = "add")`
@@ -146,11 +151,13 @@ All wrappers enforce namespaced IDs (`mod_id.local_id`) where applicable and ret
 Core tracks hook/extension health and exposes diagnostics in the Core Diagnostics tab and support bundle dump.
 
 Status values:
+
 - `healthy`
 - `warning`
 - `failed`
 
 `report_hook_status()` details can include human-readable context like:
+
 - `reason`
 - `method` / `property`
 - `missing_methods` / `missing_properties`
@@ -163,6 +170,7 @@ Status values:
 Core now provides a metadata service for mod-owned persistent data with strict namespaced keys (`mod_id.key`).
 
 Scopes:
+
 - `save`
 - `board`
 - `workspace`
@@ -172,6 +180,7 @@ Scopes:
 - `global`
 
 Notes:
+
 - Save scopes are persisted into save payload (`desktop_data.tajs_core_metadata`) with `user://` fallback.
 - Global scope is persisted under Core storage in `user://mods/...`.
 - Values are JSON-compatible only (null/bool/int/float/string/array/dictionary with string keys).
@@ -180,6 +189,7 @@ Notes:
 ## Settings Schema v2
 
 `register_settings_schema()` now supports both:
+
 - legacy format: `{ "my.key": { ...entry... } }`
 - v2 payload format:
 
@@ -205,6 +215,7 @@ Notes:
 ```
 
 Supported v2 entry fields include:
+
 - `type`: `bool|int|float|string|enum|color|keybind`
 - `default`
 - `min|max|step` (numeric)
@@ -220,16 +231,19 @@ Invalid schema entries now fail gracefully with structured `ok/error` results an
 ## Core Events
 
 Readiness/lifecycle events:
+
 - `core.ready`: Core runtime services initialized.
 - `core.ui.ready`: UI hooks node initialized and baseline UI state detected.
 - `core.ui.manager_ready`: Core UI manager/services initialized.
 
 Window menu events:
+
 - `core.window_menu.tab_registered`: tab definition registered.
 - `core.window_menu.button_created`: menu button instance created.
 - `core.window_menu.tab_opened`: user opened/switched window menu tab.
 
 Desktop/window events:
+
 - `core.desktop.window_create_requested` (cancellable)
 - `core.desktop.window_created`
 - `core.desktop.window_initialized`
@@ -277,6 +291,7 @@ core.apply_font_to_guide_panel($GuidePanel, "TajemnikTV-QoL.body")
 ```
 
 Service methods (via `_core.fonts`):
+
 - `register_font(font_id, path)`
 - `apply_font_to_class(class_name, font_id, property_name := "font")`
 - `apply_font_to_node(node, font_id, opts := {})`
@@ -327,6 +342,7 @@ core.theme_save_profile("TajemnikTV-QoL.dark_alt", "user://themes/qol_dark_alt.t
 ```
 
 Available theme editor wrappers:
+
 - `theme_create_profile(profile_id, base_theme_id := "default")`
 - `theme_set_color(profile_id, color_name, class_name, color)`
 - `theme_set_constant(profile_id, constant_name, class_name, value)`
@@ -337,7 +353,6 @@ Available theme editor wrappers:
 - `theme_load_profile(profile_id, input_path)`
 
 Theme profile IDs must be namespaced (`mod_id.local_id`).
-
 
 ## Credits
 

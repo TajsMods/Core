@@ -4,6 +4,7 @@ extends Node
 var _hud: Node
 var _root: Control
 var _current_popup: Control
+var _current_custom_modal: Control
 
 func setup(hud: Node) -> void:
     _hud = hud
@@ -110,6 +111,105 @@ func show_checkbox_confirmation(
 func close_popup() -> void:
     _close_current()
 
+func show_custom_modal(config: Dictionary, content: Control, actions: Array[Dictionary] = []) -> Control:
+    _close_current_custom_modal()
+    if _root == null or content == null:
+        return null
+
+    var overlay := _build_overlay()
+    var close_on_backdrop := bool(config.get("close_on_backdrop", false))
+    var close_on_escape := bool(config.get("close_on_escape", true))
+    var on_closed: Callable = config.get("on_closed", Callable())
+    overlay.set_meta("config", config)
+    overlay.set_meta("close_on_backdrop", close_on_backdrop)
+    overlay.set_meta("close_on_escape", close_on_escape)
+    overlay.set_meta("on_closed", on_closed)
+    overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+    var panel := PanelContainer.new()
+    panel.name = "CustomModalPanel"
+    panel.theme_type_variation = str(config.get("theme", "ShadowPanelContainer"))
+    panel.mouse_filter = Control.MOUSE_FILTER_STOP
+    overlay.add_child(panel)
+
+    var margin := MarginContainer.new()
+    margin.name = "ContentMargin"
+    margin.add_theme_constant_override("margin_left", int(config.get("content_margin_x", 12)))
+    margin.add_theme_constant_override("margin_top", int(config.get("content_margin_y", 12)))
+    margin.add_theme_constant_override("margin_right", int(config.get("content_margin_x", 12)))
+    margin.add_theme_constant_override("margin_bottom", int(config.get("content_margin_y", 12)))
+    margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    panel.add_child(margin)
+    margin.add_child(content)
+
+    if not actions.is_empty():
+        var layout := VBoxContainer.new()
+        layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        panel.remove_child(margin)
+        panel.add_child(layout)
+        margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+        layout.add_child(margin)
+
+        var button_row := HBoxContainer.new()
+        button_row.name = "Actions"
+        button_row.add_theme_constant_override("separation", 8)
+        layout.add_child(button_row)
+
+        for action in actions:
+            var btn := Button.new()
+            btn.text = str(action.get("text", "OK"))
+            btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            btn.custom_minimum_size = Vector2(0, int(action.get("min_height", 42)))
+            if action.has("theme"):
+                btn.theme_type_variation = str(action.get("theme", ""))
+            var cb: Callable = action.get("callback", Callable())
+            var should_close := bool(action.get("close", true))
+            btn.pressed.connect(func() -> void:
+                if cb != null and cb.is_valid():
+                    cb.call()
+                if should_close:
+                    close_custom_modal(overlay)
+            )
+            button_row.add_child(btn)
+
+    overlay.gui_input.connect(func(event: InputEvent) -> void:
+        if not is_instance_valid(overlay) or not is_instance_valid(panel):
+            return
+        if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE and bool(overlay.get_meta("close_on_escape", true)):
+            close_custom_modal(overlay)
+            overlay.accept_event()
+            return
+        if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and bool(overlay.get_meta("close_on_backdrop", false)):
+            var mouse_pos := overlay.get_local_mouse_position()
+            var panel_rect := Rect2(panel.position, panel.size)
+            if not panel_rect.has_point(mouse_pos):
+                close_custom_modal(overlay)
+                overlay.accept_event()
+    )
+
+    var viewport := get_viewport()
+    if viewport != null:
+        var resize_cb := Callable(self, "_on_custom_modal_resize").bind(overlay)
+        overlay.set_meta("resize_cb", resize_cb)
+        if not viewport.size_changed.is_connected(resize_cb):
+            viewport.size_changed.connect(resize_cb)
+
+    _root.add_child(overlay)
+    _layout_custom_modal(overlay)
+    _current_custom_modal = overlay
+    return overlay
+
+func close_custom_modal(modal_overlay: Control = null) -> void:
+    var target := modal_overlay
+    if target == null:
+        target = _current_custom_modal
+    if target == null or not is_instance_valid(target):
+        return
+    _teardown_custom_modal(target)
+    if _current_custom_modal == target:
+        _current_custom_modal = null
+
 func _create_root() -> void:
     if _hud == null:
         return
@@ -129,11 +229,19 @@ func _build_overlay() -> Control:
     var overlay := Control.new()
     overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
     overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-    var dim := ColorRect.new()
-    dim.color = Color(0, 0, 0, 0.364)
-    dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-    dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    overlay.add_child(dim)
+    var backdrop_panel := PanelContainer.new()
+    backdrop_panel.name = "BackdropPanel"
+    backdrop_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+    backdrop_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    backdrop_panel.theme_type_variation = "MenuPanel"
+    var backdrop_style := StyleBoxFlat.new()
+    backdrop_style.bg_color = Color(0.05, 0.08, 0.13, 0.64)
+    backdrop_style.border_width_left = 0
+    backdrop_style.border_width_top = 0
+    backdrop_style.border_width_right = 0
+    backdrop_style.border_width_bottom = 0
+    backdrop_panel.add_theme_stylebox_override("panel", backdrop_style)
+    overlay.add_child(backdrop_panel)
     return overlay
 
 func _build_panel(title: String, content: Control, buttons: Array[Dictionary]) -> Control:
@@ -214,3 +322,59 @@ func _close_current() -> void:
     if _current_popup and is_instance_valid(_current_popup):
         _current_popup.queue_free()
     _current_popup = null
+
+func _close_current_custom_modal() -> void:
+    if _current_custom_modal and is_instance_valid(_current_custom_modal):
+        _teardown_custom_modal(_current_custom_modal)
+    _current_custom_modal = null
+
+func _on_custom_modal_resize(overlay: Control) -> void:
+    _layout_custom_modal(overlay)
+
+func _layout_custom_modal(overlay: Control) -> void:
+    if overlay == null or not is_instance_valid(overlay):
+        return
+    var panel := overlay.get_node_or_null("CustomModalPanel") as Control
+    if panel == null:
+        return
+
+    var viewport := get_viewport()
+    if viewport == null:
+        return
+    var viewport_size := viewport.get_visible_rect().size
+    if _root != null and _root.size.x > 1.0 and _root.size.y > 1.0:
+        viewport_size = _root.size
+    var config: Dictionary = {}
+    if overlay.has_meta("config"):
+        config = overlay.get_meta("config")
+    var margin := float(config.get("margin", 20.0))
+    var ratio: Vector2 = config.get("preferred_size_ratio", Vector2(0.88, 0.84))
+    var min_size: Vector2 = config.get("min_size", Vector2(960, 620))
+    var max_size: Vector2 = config.get("max_size", viewport_size - Vector2(margin * 2.0, margin * 2.0))
+
+    var target_size := Vector2(viewport_size.x * ratio.x, viewport_size.y * ratio.y)
+    var limit := viewport_size - Vector2(margin * 2.0, margin * 2.0)
+    limit.x = max(limit.x, 320.0)
+    limit.y = max(limit.y, 240.0)
+    max_size.x = min(max_size.x, limit.x)
+    max_size.y = min(max_size.y, limit.y)
+    min_size.x = min(min_size.x, max_size.x)
+    min_size.y = min(min_size.y, max_size.y)
+    target_size.x = clamp(target_size.x, min_size.x, max_size.x)
+    target_size.y = clamp(target_size.y, min_size.y, max_size.y)
+
+    panel.position = (viewport_size - target_size) * 0.5
+    panel.size = target_size
+
+func _teardown_custom_modal(overlay: Control) -> void:
+    if overlay == null or not is_instance_valid(overlay):
+        return
+    var viewport := get_viewport()
+    if viewport != null and overlay.has_meta("resize_cb"):
+        var resize_cb: Callable = overlay.get_meta("resize_cb")
+        if resize_cb != null and resize_cb.is_valid() and viewport.size_changed.is_connected(resize_cb):
+            viewport.size_changed.disconnect(resize_cb)
+    var on_closed: Callable = overlay.get_meta("on_closed", Callable())
+    overlay.queue_free()
+    if on_closed != null and on_closed.is_valid():
+        on_closed.call()
