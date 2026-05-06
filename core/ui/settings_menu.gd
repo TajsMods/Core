@@ -748,9 +748,12 @@ func _populate_mod_list(container: VBoxContainer) -> void:
         var display_name: Variant = _get_mod_display_name(manifest, mod_id)
         var name_label: Variant = Label.new()
         var version_number: Variant = _get_mod_version(manifest)
-        name_label.text = "%s v%s" % [display_name, version_number] if version_number != "" else display_name
+        var row_text := "%s v%s" % [display_name, version_number] if version_number != "" else display_name
+        name_label.text = row_text
         name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         name_label.clip_text = true
+        name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+        name_label.tooltip_text = row_text
         row.add_child(name_label)
 
     var desired_selection := ""
