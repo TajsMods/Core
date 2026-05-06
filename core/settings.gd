@@ -18,6 +18,7 @@ var _meta: Dictionary = {}
 var _schemas: Dictionary = {}
 var _module_values: Dictionary = {}
 var _restart_baseline: Dictionary = {}
+var _validation_state: Dictionary = {}
 var _batch_depth: int = 0
 var _pending_save := false
 var _logger: Variant
@@ -31,7 +32,7 @@ func _init(logger: Variant = null, storage: Variant = null) -> void:
 func load_settings() -> void:
     _values = {}
     _module_values = {}
-    _meta = {"migrations": {}}
+    _meta = {"migrations": {}, "schema_versions": {}}
     if _storage == null:
         _load_legacy_flat_settings()
         return
@@ -52,6 +53,8 @@ func load_settings() -> void:
                 _meta["migrations"] = module_meta["migrations"]
     if not _meta.has("migrations"):
         _meta["migrations"] = {}
+    if not _meta.has("schema_versions"):
+        _meta["schema_versions"] = {}
     _log_info("settings", "Settings loaded from module configs.")
 
 func save_settings() -> void:
@@ -121,35 +124,81 @@ func end_batch(save := true) -> void:
 ## Registers a schema dictionary for one module.
 ##
 ## Use namespaced keys (for example [code]tajs_qol.some_feature.enabled[/code]) to avoid collisions.
-func register_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "") -> void:
+## Supported [param schema] formats:
+## - v1 legacy: [code]{ "mod.key": {entry...} }[/code]
+## - v2 payload: [code]{ "schema_version": 2, "entries": {...}, "migrations": [...] }[/code]
+## Entry required keys:
+## - [code]default[/code]
+## Optional entry keys:
+## - [code]type[/code], [code]label[/code]/[code]display_name[/code], [code]description[/code], [code]category[/code]
+## - [code]min[/code], [code]max[/code], [code]step[/code], [code]options[/code]
+## - [code]requires_restart[/code], [code]experimental[/code], [code]hidden[/code], [code]sensitive[/code]
+## - [code]depends_on[/code], [code]validator[/code], [code]live_apply[/code]
+## Return shape:
+## - success: [code]{ok=true, error="", data={module_id, keys, schema_version, warnings}}[/code]
+## - failure: [code]{ok=false, error, data={...}, errors=[...]}[/code]
+func register_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "") -> Dictionary:
+    var parsed := _parse_schema_payload(schema)
+    if not parsed.ok:
+        return parsed
+    var entries: Dictionary = parsed.entries
+    var schema_version: int = int(parsed.schema_version)
+    var migrations: Array = parsed.migrations
+    var errors: Array[Dictionary] = []
+    var warnings: Array[Dictionary] = []
     var changed := false
     var expected_prefix := module_id
     if namespace_prefix != "":
         expected_prefix = namespace_prefix
-    for key: Variant in schema.keys():
-        var entry: Variant = schema[key]
-        if entry is Dictionary:
-            var stored: Dictionary = entry.duplicate(true)
-            if module_id != "" and not stored.has("module_id"):
-                stored["module_id"] = module_id
-            _schemas[key] = stored
-            if not key.contains("."):
-                _log_warn(module_id, "Settings key '%s' is not namespaced." % key)
-            if expected_prefix != "" and not str(key).begins_with(expected_prefix + "."):
-                _log_warn(module_id, "Settings key '%s' does not start with '%s.'." % [key, expected_prefix])
-            if not _values.has(key) and stored.has("default"):
-                if _apply_value(str(key), stored["default"], false, false):
-                    changed = true
-            elif _values.has(key):
-                var sanitized := _sanitize_value(str(key), _values[key], stored, module_id)
-                if sanitized.ok or sanitized.used_default:
-                    if _apply_value(str(key), sanitized.value, false, false):
-                        changed = true
-            _register_restart_baseline(str(key), stored)
-        else:
+    _run_schema_migrations(module_id, schema_version, migrations)
+    for key: Variant in entries.keys():
+        var entry: Variant = entries[key]
+        if not (entry is Dictionary):
+            errors.append({"key": str(key), "error": "entry_not_dictionary"})
             _log_warn(module_id, "Settings schema entry for '%s' must be a dictionary." % key)
+            continue
+        var key_str := str(key)
+        var entry_validation := _validate_schema_entry(key_str, entry)
+        if not entry_validation.ok:
+            errors.append({"key": key_str, "error": str(entry_validation.error), "details": entry_validation.get("details", {})})
+            _log_warn(module_id, "Invalid schema entry '%s': %s" % [key_str, str(entry_validation.error)])
+            continue
+        var stored: Dictionary = entry.duplicate(true)
+        if stored.has("display_name") and not stored.has("label"):
+            stored["label"] = str(stored["display_name"])
+        if stored.get("advanced", false) and not stored.has("experimental"):
+            stored["experimental"] = true
+        if module_id != "" and not stored.has("module_id"):
+            stored["module_id"] = module_id
+        _schemas[key_str] = stored
+        if not key_str.contains("."):
+            warnings.append({"key": key_str, "warning": "key_not_namespaced"})
+            _log_warn(module_id, "Settings key '%s' is not namespaced." % key_str)
+        if expected_prefix != "" and not key_str.begins_with(expected_prefix + "."):
+            warnings.append({"key": key_str, "warning": "key_prefix_mismatch", "expected_prefix": expected_prefix})
+            _log_warn(module_id, "Settings key '%s' does not start with '%s.'." % [key_str, expected_prefix])
+        if not _values.has(key_str) and stored.has("default"):
+            if _apply_value(key_str, stored["default"], false, false):
+                changed = true
+        elif _values.has(key_str):
+            var sanitized := _sanitize_value(key_str, _values[key_str], stored, module_id)
+            _validation_state[key_str] = _build_validation_state(sanitized)
+            if sanitized.ok or sanitized.used_default:
+                if _apply_value(key_str, sanitized.value, false, false):
+                    changed = true
+        _register_restart_baseline(key_str, stored)
+    _set_module_schema_version(module_id, schema_version)
     if changed:
         _flush_pending_if_ready(true)
+    var ok_result: Dictionary = {
+        "module_id": module_id,
+        "keys": entries.keys().size(),
+        "schema_version": schema_version,
+        "warnings": warnings
+    }
+    if errors.is_empty():
+        return {"ok": true, "error": "", "data": ok_result}
+    return {"ok": false, "error": "invalid_schema_entries", "data": ok_result, "errors": errors}
 
 func is_restart_pending(key: String) -> bool:
     if not _restart_baseline.has(key):
@@ -205,9 +254,11 @@ func get_value(key: String, default_override: Variant = null) -> Variant:
 func set_value(key: String, value: Variant, save := true) -> void:
     var schema_entry := _get_schema_entry(key)
     var sanitized := _sanitize_value(key, value, schema_entry, "settings")
+    _validation_state[key] = _build_validation_state(sanitized)
     if not sanitized.ok and not sanitized.used_default:
         return
     var _ignored: Variant = _apply_value(key, sanitized.value, save, true)
+    _run_live_apply(key, sanitized.value, schema_entry)
 
 func get_bool(key: String, default_value: bool = false) -> bool:
     var value: Variant = get_value(key, default_value)
@@ -348,6 +399,27 @@ func get_changed_keys(ns_prefix: String = "") -> Array[String]:
             keys.append(schema_key)
     return keys
 
+func get_pending_restart_settings() -> Array[String]:
+    var keys: Array[String] = []
+    for key: Variant in _restart_baseline.keys():
+        var key_str := str(key)
+        if is_restart_pending(key_str):
+            keys.append(key_str)
+    return keys
+
+func get_validation_state(key: String) -> Dictionary:
+    if _validation_state.has(key):
+        return (_validation_state[key] as Dictionary).duplicate(true)
+    return {"ok": true, "coerced": false, "used_default": false, "reason": ""}
+
+## Returns normalized settings entries for one namespace.
+##
+## Each entry shape:
+## - [code]key[/code] String
+## - [code]schema[/code] Dictionary
+## - [code]value[/code] Variant
+## - [code]is_default[/code] bool
+## - [code]is_changed[/code] bool
 func get_entries_for_namespace(ns_prefix: String, include_hidden := false) -> Array[Dictionary]:
     var entries: Array[Dictionary] = []
     var prefix := _normalize_prefix(ns_prefix)
@@ -372,6 +444,10 @@ func get_entries_for_namespace(ns_prefix: String, include_hidden := false) -> Ar
     return entries
 
 ## Exports values for a namespace as JSON text.
+## Output JSON shape:
+## [codeblock]
+## {"namespace":"tajs_qol","values":{"tajs_qol.some_key":true}}
+## [/codeblock]
 func export_settings(settings_namespace: String) -> String:
     var values := {}
     var prefix := _normalize_prefix(settings_namespace)
@@ -384,6 +460,19 @@ func export_settings(settings_namespace: String) -> String:
 ##
 ## When [param dry_run] is true, returns an array of proposed changes.
 ## Otherwise returns [code]true[/code]/[code]false[/code].
+## Expected JSON payload shape:
+## [codeblock]
+## {
+##     "namespace": "tajs_qol",
+##     "values": {
+##         "tajs_qol.some_key": true
+##     }
+## }
+## [/codeblock]
+## Dry-run entry shape:
+## - [code]key[/code], [code]ok[/code], [code]would_change[/code]
+## - [code]old_value[/code], [code]new_value[/code]
+## - [code]error[/code] when invalid
 func import_settings(settings_namespace: String, data: String, dry_run := false) -> Variant:
     if data == "":
         if dry_run:
@@ -427,6 +516,7 @@ func import_settings(settings_namespace: String, data: String, dry_run := false)
     return true
 
 ## Previews import changes without mutating current settings.
+## Return value is the same dry-run entry array produced by [method import_settings].
 func preview_import(settings_namespace: String, data: String) -> Array[Dictionary]:
     var result: Variant = import_settings(settings_namespace, data, true)
     if result is Array:
@@ -597,6 +687,19 @@ func _sanitize_value(key: String, value: Variant, schema_entry: Dictionary, log_
         _log_warn(log_context, "Invalid settings value for '%s' (%s), using default." % [key, result.reason])
     elif not result.ok:
         _log_warn(log_context, "Rejected settings value for '%s' (%s)." % [key, result.reason])
+    var validator_value: Variant = schema_entry.get("validator", Callable())
+    if result.ok and validator_value is Callable and validator_value.is_valid():
+        var validator_result: Variant = validator_value.call(key, result.value, schema_entry)
+        if validator_result is Dictionary:
+            if not bool(validator_result.get("ok", true)):
+                _mark_invalid_with_default(result, schema_entry, str(validator_result.get("reason", "validator_failed")))
+            elif validator_result.has("value"):
+                if validator_result["value"] != result.value:
+                    result.coerced = true
+                result.value = validator_result["value"]
+        elif validator_result is bool:
+            if not validator_result:
+                _mark_invalid_with_default(result, schema_entry, "validator_failed")
     return result
 
 func _mark_invalid_with_default(result: Dictionary, schema_entry: Dictionary, reason: String) -> void:
@@ -616,6 +719,8 @@ func _get_schema_entry(key: String) -> Dictionary:
             var inferred := _infer_type_from_default(normalized["default"])
             if inferred != "":
                 normalized["type"] = inferred
+        if normalized.has("display_name") and not normalized.has("label"):
+            normalized["label"] = str(normalized["display_name"])
         return normalized
     return {}
 
@@ -679,7 +784,7 @@ func _flush_pending_if_ready(save: bool) -> void:
 func _load_legacy_flat_settings() -> void:
     if not FileAccess.file_exists(LEGACY_CONFIG_PATH):
         _values = {}
-        _meta = {"migrations": {}}
+        _meta = {"migrations": {}, "schema_versions": {}}
         save_settings()
         return
     var file := FileAccess.open(LEGACY_CONFIG_PATH, FileAccess.READ)
@@ -697,9 +802,11 @@ func _load_legacy_flat_settings() -> void:
             _meta = data.get("meta", {})
         else:
             _values = data
-            _meta = {"migrations": {}}
+            _meta = {"migrations": {}, "schema_versions": {}}
     if not _meta.has("migrations"):
         _meta["migrations"] = {}
+    if not _meta.has("schema_versions"):
+        _meta["schema_versions"] = {}
 
 func _migrate_legacy_if_needed() -> void:
     if not FileAccess.file_exists(LEGACY_CONFIG_PATH):
@@ -752,6 +859,10 @@ func _resolve_owner_module(key: String) -> String:
         return "TajemnikTV-Core"
     if key.begins_with("tajs_qol."):
         return "TajemnikTV-QoL"
+    if key.begins_with("tajs_command_palette."):
+        return "TajemnikTV-CommandPalette"
+    if key.begins_with("tajs_cheats."):
+        return "TajemnikTV-Cheats"
     if key.begins_with("TajemnikTV-CommandPalette."):
         return "TajemnikTV-CommandPalette"
     if key.begins_with("TajemnikTV-Cheats."):
@@ -765,3 +876,104 @@ func _log_info(module_id: String, message: String) -> void:
 func _log_warn(module_id: String, message: String) -> void:
     if _logger != null and _logger.has_method("warn"):
         _logger.warn(module_id, message)
+
+func _build_validation_state(sanitized: Dictionary) -> Dictionary:
+    return {
+        "ok": bool(sanitized.get("ok", true)) or bool(sanitized.get("used_default", false)),
+        "coerced": bool(sanitized.get("coerced", false)),
+        "used_default": bool(sanitized.get("used_default", false)),
+        "reason": str(sanitized.get("reason", "")),
+        "raw_ok": bool(sanitized.get("ok", true))
+    }
+
+func _validate_schema_entry(key: String, entry: Dictionary) -> Dictionary:
+    if not entry.has("default") and str(entry.get("type", "")) != "action":
+        return {"ok": false, "error": "missing_default"}
+    var entry_type := str(entry.get("type", ""))
+    var valid_types := ["", "bool", "int", "float", "string", "enum", "color", "keybind", "dict", "array", "action"]
+    if not valid_types.has(entry_type):
+        return {"ok": false, "error": "unsupported_type", "details": {"type": entry_type}}
+    if entry_type == "enum" and not (entry.get("options", []) is Array):
+        return {"ok": false, "error": "enum_options_missing"}
+    if (entry_type == "int" or entry_type == "float") and entry.has("min") and entry.has("max"):
+        if float(entry["min"]) > float(entry["max"]):
+            return {"ok": false, "error": "invalid_range"}
+    if entry.has("validator"):
+        var validator_value: Variant = entry["validator"]
+        if not (validator_value is Callable):
+            return {"ok": false, "error": "validator_not_callable"}
+    if entry.has("live_apply"):
+        var live_apply_value: Variant = entry["live_apply"]
+        if not (live_apply_value is Callable or typeof(live_apply_value) == TYPE_STRING):
+            return {"ok": false, "error": "live_apply_invalid"}
+    if key.strip_edges() == "":
+        return {"ok": false, "error": "key_empty"}
+    return {"ok": true}
+
+func _parse_schema_payload(schema: Dictionary) -> Dictionary:
+    var has_entries := schema.has("entries") and (schema.has("schema_version") or schema.has("migrations"))
+    if has_entries:
+        var entries_value: Variant = schema.get("entries", {})
+        if not (entries_value is Dictionary):
+            return {"ok": false, "error": "entries_not_dictionary"}
+        var migration_entries: Variant = schema.get("migrations", [])
+        var migrations: Array = migration_entries if migration_entries is Array else []
+        return {
+            "ok": true,
+            "entries": entries_value,
+            "schema_version": int(schema.get("schema_version", 1)),
+            "migrations": migrations
+        }
+    return {"ok": true, "entries": schema, "schema_version": 1, "migrations": []}
+
+func _get_module_schema_version(module_id: String) -> int:
+    if not _meta.has("schema_versions"):
+        _meta["schema_versions"] = {}
+    var versions: Dictionary = _meta.get("schema_versions", {})
+    return int(versions.get(module_id, 0))
+
+func _set_module_schema_version(module_id: String, version: int) -> void:
+    if module_id == "":
+        return
+    if not _meta.has("schema_versions"):
+        _meta["schema_versions"] = {}
+    _meta["schema_versions"][module_id] = version
+
+func _run_schema_migrations(module_id: String, target_version: int, migrations: Array) -> void:
+    if module_id == "" or target_version <= 0 or migrations.is_empty():
+        return
+    var current_version := _get_module_schema_version(module_id)
+    if current_version <= 0 or current_version >= target_version:
+        return
+    begin_batch()
+    for migration_value: Variant in migrations:
+        if not (migration_value is Dictionary):
+            continue
+        var migration: Dictionary = migration_value
+        var from_version := int(migration.get("from", -1))
+        var to_version := int(migration.get("to", -1))
+        if current_version != from_version:
+            continue
+        var rename_map: Variant = migration.get("rename", {})
+        if rename_map is Dictionary:
+            apply_key_migration(rename_map, "", false)
+        var transform_value: Variant = migration.get("transform", Callable())
+        if transform_value is Callable and transform_value.is_valid():
+            transform_value.call(self)
+        current_version = to_version
+    end_batch(true)
+
+func _run_live_apply(key: String, value: Variant, schema_entry: Dictionary) -> void:
+    if schema_entry.is_empty():
+        return
+    var live_apply: Variant = schema_entry.get("live_apply", null)
+    if live_apply is Callable and live_apply.is_valid():
+        live_apply.call(key, value, schema_entry)
+        return
+    if typeof(live_apply) == TYPE_STRING:
+        var action_id := str(live_apply)
+        if action_id == "":
+            return
+        var core: Variant = Engine.get_meta("TajsCore", null)
+        if core != null and core.has_method("run_command"):
+            core.run_command(action_id, {"key": key, "value": value})

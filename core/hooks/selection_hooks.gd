@@ -9,11 +9,9 @@ func setup(event_bus: Variant) -> void:
 func _ready() -> void:
     set_process_input(true)
     if _autoload_ready("Signals"):
-        Signals.selection_set.connect(_on_selection_set)
-        if Signals.has_signal("move_selection"):
-            Signals.get("move_selection").connect(_on_move_selection)
-        elif Signals.has_signal("drag_selection"):
-            Signals.drag_selection.connect(_on_drag_selection)
+        _connect_signal_if_present("selection_set", Callable(self, "_on_selection_set"))
+        if not _connect_signal_if_present("move_selection", Callable(self, "_on_move_selection")):
+            _connect_signal_if_present("drag_selection", Callable(self, "_on_drag_selection"))
 
 func _input(event: InputEvent) -> void:
     if not (event is InputEventKey) or event.get("echo"):
@@ -60,3 +58,12 @@ func _autoload_ready(autoload_name: String) -> bool:
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(autoload_name)
+
+func _connect_signal_if_present(signal_name: String, callback: Callable) -> bool:
+    if not Signals.has_signal(signal_name):
+        return false
+    var sig: Signal = Signals.get(signal_name)
+    if sig.is_connected(callback):
+        return true
+    sig.connect(callback)
+    return true

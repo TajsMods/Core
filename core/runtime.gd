@@ -34,6 +34,7 @@ var keybinds: Variant
 var patches: Variant
 ## Diagnostics/support bundle service.
 var diagnostics: Variant # TajsCoreDiagnostics
+var metadata: Variant # TajsCoreMetadataService
 ## Registry of dependent modules/mod integrations.
 var module_registry: Variant # TajsCoreModuleRegistry
 ## Backward-compatible alias for [member module_registry].
@@ -59,6 +60,7 @@ var window_menus: Variant # TajsCoreWindowMenus
 var tree_registry: Variant # TajsCoreTreeRegistry
 var trees: Variant # TajsCoreTreeRegistry
 var hook_manager: Variant
+var hook_health: Variant
 var upgrade_caps: Variant
 var undo_manager: Variant
 var node_finder: Variant
@@ -68,8 +70,10 @@ var economy_helpers: Variant
 var node_limit_helpers: Variant
 var resource_helpers: Variant
 var connectivity_helpers: Variant
+var scene_path_resolver: Variant
 var boot_screen: Variant
 var desktop_layers: Variant
+var board_geometry: Variant # TajsCoreBoardGeometry
 
 var _version_util: Variant
 var _extended_globals: Dictionary = {}
@@ -232,6 +236,10 @@ func bootstrap() -> void:
     if connectivity_script != null:
         connectivity_helpers = connectivity_script.new()
 
+    var scene_path_resolver_script: Variant = _load_script(base_dir.path_join("util/scene_path_resolver.gd"))
+    if scene_path_resolver_script != null:
+        scene_path_resolver = scene_path_resolver_script.new()
+
     var safe_ops_script: Variant = _load_script(base_dir.path_join("util/safe_ops.gd"))
     if safe_ops_script != null:
         safe_ops = safe_ops_script.new()
@@ -256,10 +264,18 @@ func bootstrap() -> void:
     if diagnostics_script != null:
         diagnostics = diagnostics_script.new(self , logger)
 
+    var metadata_script: Variant = _load_script(base_dir.path_join("metadata_service.gd"))
+    if metadata_script != null:
+        metadata = metadata_script.new(self , logger, storage, event_bus)
+
     var registry_script: Variant = _load_script(base_dir.path_join("module_registry.gd"))
     if registry_script != null:
         module_registry = registry_script.new(self , logger, event_bus)
         modules = module_registry
+
+    var hook_health_script: Variant = _load_script(base_dir.path_join("hook_health.gd"))
+    if hook_health_script != null:
+        hook_health = hook_health_script.new(logger)
 
     var hooks_script: Variant = _load_script(base_dir.path_join("hooks/hook_manager.gd"))
     if hooks_script != null:
@@ -272,6 +288,13 @@ func bootstrap() -> void:
     if desktop_layers_script != null:
         desktop_layers = desktop_layers_script.new(logger, event_bus)
         desktop_layers.setup()
+
+    var board_geometry_script: Variant = _load_script(base_dir.path_join("board_geometry.gd"))
+    if board_geometry_script != null:
+        board_geometry = board_geometry_script.new()
+        add_child(board_geometry)
+        if board_geometry.has_method("setup"):
+            board_geometry.setup(self, logger, event_bus)
 
     _install_modloader_extensions(base_dir)
 
@@ -316,6 +339,32 @@ func register_module(meta: Dictionary) -> bool:
     if module_registry == null:
         return false
     return module_registry.register_module(meta)
+
+func report_hook_status(mod_id: String, target: String, status: String, details: Dictionary = {}) -> Dictionary:
+    if hook_health == null:
+        return {
+            "mod_id": mod_id,
+            "target": target,
+            "status": status,
+            "reason": str(details.get("reason", "Hook health service unavailable.")),
+            "details": details.duplicate(true)
+        }
+    return hook_health.report_hook_status(mod_id, target, status, details)
+
+func get_hook_health() -> Dictionary:
+    if hook_health == null:
+        return {
+            "counts": {"healthy": 0, "warning": 0, "failed": 0, "total": 0},
+            "failed_hooks": [],
+            "warnings": [],
+            "entries": []
+        }
+    return hook_health.get_hook_health()
+
+func has_failed_hooks(mod_id: String = "") -> bool:
+    if hook_health == null:
+        return false
+    return hook_health.has_failed_hooks(mod_id)
 
 ## Extends shared runtime metadata for temporary cross-service state.
 ## Internal-to-ecosystem helper; values are not persisted.
@@ -379,6 +428,31 @@ func play_sound(sound_id: String) -> void:
 func copy_to_clipboard(text: String) -> void:
     DisplayServer.clipboard_set(text)
 
+func board_get_bounds(opts: Dictionary = {}) -> Rect2:
+    if board_geometry == null or not board_geometry.has_method("get_board_bounds"):
+        return Rect2()
+    return board_geometry.get_board_bounds(opts)
+
+func board_get_viewport_rect() -> Rect2:
+    if board_geometry == null or not board_geometry.has_method("get_viewport_world_rect"):
+        return Rect2()
+    return board_geometry.get_viewport_world_rect()
+
+func board_query_rect(rect: Rect2, opts: Dictionary = {}) -> Array:
+    if board_geometry == null or not board_geometry.has_method("query_in_rect"):
+        return []
+    return board_geometry.query_in_rect(rect, opts)
+
+func board_get_item_bounds(item_id: String) -> Rect2:
+    if board_geometry == null or not board_geometry.has_method("get_item_bounds"):
+        return Rect2()
+    return board_geometry.get_item_bounds(item_id)
+
+func board_focus_item(item_id: String, opts: Dictionary = {}) -> bool:
+    if board_geometry == null or not board_geometry.has_method("focus_item"):
+        return false
+    return board_geometry.focus_item(item_id, opts)
+
 ## Registers a settings tab container for a mod.
 ##
 ## Example:
@@ -412,6 +486,52 @@ func get_game_theme() -> Theme:
 ## Returns Core icon registry service.
 func get_icon_registry() -> Variant: # Returns TajsCoreIconRegistry (Variant to avoid parse errors)
     return icon_registry
+
+## Returns settings service.
+## Expected runtime type: [code]TajsCoreSettings[/code].
+## Variant return is intentional to avoid Workshop parse-order issues with custom class types.
+func get_settings_service() -> Variant:
+    return settings
+
+## Returns event bus service ([code]TajsCoreEventBus[/code]).
+func get_event_bus() -> Variant:
+    return event_bus
+
+## Returns command registry service ([code]TajsCoreCommandRegistry[/code]).
+func get_command_registry() -> Variant:
+    return command_registry
+
+## Returns font registry service ([code]TajsCoreFontRegistry[/code]).
+func get_font_registry() -> Variant:
+    return font_registry
+
+## Returns theme manager service ([code]TajsCoreThemeManager[/code]).
+func get_theme_manager() -> Variant:
+    return theme_manager
+
+## Returns UI manager service ([code]TajsCoreUiManager[/code]).
+func get_ui_manager() -> Variant:
+    return ui_manager
+
+## Returns node registry service ([code]TajsCoreNodeRegistry[/code]).
+func get_node_registry() -> Variant:
+    return node_registry
+
+## Returns module registry service ([code]TajsCoreModuleRegistry[/code]).
+func get_module_registry() -> Variant:
+    return module_registry
+
+## Returns window menus service ([code]TajsCoreWindowMenus[/code]).
+func get_window_menus() -> Variant:
+    return window_menus
+
+## Returns file variation service ([code]TajsCoreFileVariations[/code]).
+func get_file_variations() -> Variant:
+    return file_variations
+
+## Returns tree registry service ([code]TajsCoreTreeRegistry[/code]).
+func get_tree_registry() -> Variant:
+    return tree_registry
 
 ## Registers a new top-level Windows tab contribution.
 ##
@@ -459,7 +579,7 @@ func register_window_tab(data: Dictionary) -> Dictionary:
     var title: String = str(data.get("title", tab_id)).strip_edges()
     var rows: Variant = data.get("rows", data.get("categories", []))
     if rows == null or (rows is Array and rows.is_empty()) or (rows is Dictionary and rows.is_empty()):
-        rows = [{"default": title}]
+        rows = [ {"default": title}]
     var config := data.duplicate(true)
     config["rows"] = rows
     if not config.has("button_name") and not config.has("button_id"):
@@ -719,8 +839,91 @@ func register_settings_schema(module_id: String, schema: Dictionary, namespace_p
         return ApiResult.fail("module_id_empty")
     if schema.is_empty():
         return ApiResult.fail("schema_empty", {"module_id": module_id})
-    settings.register_schema(module_id, schema, namespace_prefix)
-    return ApiResult.ok({"module_id": module_id, "keys": schema.keys().size()})
+    var result: Dictionary = settings.register_schema(module_id, schema, namespace_prefix)
+    if bool(result.get("ok", false)):
+        return ApiResult.ok(result.get("data", {"module_id": module_id, "keys": schema.keys().size()}))
+    return ApiResult.fail(str(result.get("error", "register_schema_failed")), {
+        "module_id": module_id,
+        "details": result.get("data", {}),
+        "errors": result.get("errors", [])
+    })
+
+func get_setting(module_id: String, setting_id: String, fallback: Variant = null) -> Variant:
+    if settings == null:
+        return fallback
+    var key := _resolve_setting_key(module_id, setting_id)
+    return settings.get_value(key, fallback)
+
+func set_setting(module_id: String, setting_id: String, value: Variant) -> Dictionary:
+    if settings == null:
+        return ApiResult.fail("settings_unavailable")
+    var key := _resolve_setting_key(module_id, setting_id)
+    var before: Variant = settings.get_value(key, null)
+    settings.set_value(key, value, true)
+    var after: Variant = settings.get_value(key, null)
+    return ApiResult.ok({"module_id": module_id, "setting_id": setting_id, "key": key, "changed": before != after, "value": after})
+
+func reset_setting(module_id: String, setting_id: String) -> Dictionary:
+    if settings == null:
+        return ApiResult.fail("settings_unavailable")
+    var key := _resolve_setting_key(module_id, setting_id)
+    if settings.has_method("reset_key"):
+        settings.reset_key(key, true)
+    return ApiResult.ok({"module_id": module_id, "setting_id": setting_id, "key": key, "value": settings.get_value(key, null)})
+
+func get_pending_restart_settings() -> Array[String]:
+    if settings == null or not settings.has_method("get_pending_restart_settings"):
+        return []
+    return settings.get_pending_restart_settings()
+
+## Reads metadata value from a scope.
+## [param key] must be namespaced: [code]mod_id.key[/code].
+func metadata_get(scope: String, owner_id: String, key: String, fallback: Variant = null) -> Variant:
+    if metadata == null or not metadata.has_method("metadata_get"):
+        return fallback
+    return metadata.metadata_get(scope, owner_id, key, fallback)
+
+## Stores metadata value in a scope.
+## [param key] must be namespaced: [code]mod_id.key[/code].
+## MVP only supports JSON-compatible values.
+func metadata_set(scope: String, owner_id: String, key: String, value: Variant) -> Dictionary:
+    if metadata == null or not metadata.has_method("metadata_set"):
+        return ApiResult.fail("metadata_unavailable")
+    var result: Dictionary = metadata.metadata_set(scope, owner_id, key, value)
+    if bool(result.get("ok", false)):
+        return ApiResult.ok(result)
+    return ApiResult.fail(str(result.get("error", "metadata_set_failed")), result)
+
+## Deletes metadata value from a scope.
+## [param key] must be namespaced: [code]mod_id.key[/code].
+func metadata_delete(scope: String, owner_id: String, key: String) -> Dictionary:
+    if metadata == null or not metadata.has_method("metadata_delete"):
+        return ApiResult.fail("metadata_unavailable")
+    var result: Dictionary = metadata.metadata_delete(scope, owner_id, key)
+    if bool(result.get("ok", false)):
+        return ApiResult.ok(result)
+    return ApiResult.fail(str(result.get("error", "metadata_delete_failed")), result)
+
+## Lists metadata entries in a scope.
+## Empty [param owner_id] returns all owners for that scope.
+func metadata_list(scope: String, owner_id: String = "") -> Dictionary:
+    if metadata == null or not metadata.has_method("metadata_list"):
+        return {}
+    return metadata.metadata_list(scope, owner_id)
+
+## Migrates all metadata entries in [param mod_id] namespace.
+## Callable signature: [code](scope, owner_id, key, value, from_version, to_version) -> Dictionary[/code]
+## Return dictionary supports:
+## - [code]delete[/code] bool
+## - [code]key[/code] String (optional replacement key)
+## - [code]value[/code] Variant (optional replacement value)
+func metadata_migrate(mod_id: String, from_version: String, to_version: String, callable: Callable) -> Dictionary:
+    if metadata == null or not metadata.has_method("metadata_migrate"):
+        return ApiResult.fail("metadata_unavailable")
+    var result: Dictionary = metadata.metadata_migrate(mod_id, from_version, to_version, callable)
+    if bool(result.get("ok", false)):
+        return ApiResult.ok(result)
+    return ApiResult.fail(str(result.get("error", "metadata_migrate_failed")), result)
 
 ## Registers one command action in command registry.
 ## Required:
@@ -764,8 +967,10 @@ func run_command(command_id: String, context: Variant = null) -> bool:
         return command_registry.execute(command_id, context)
     return false
 
-## Font APIs intentionally pass through raw [code]TajsCoreFontRegistry[/code] result dictionaries.
-## These preserve registry-specific keys beyond [code]ok/error[/code] for compatibility.
+## Font APIs return standardized result dictionaries:
+## - success: [code]{ok=true, error="", ...payload}[/code]
+## - failure: [code]{ok=false, error, ...context}[/code]
+## Payload fields are preserved from [code]TajsCoreFontRegistry[/code].
 func register_font(font_id: String, font_path: String) -> Dictionary:
     if font_registry == null:
         return {"ok": false, "error": "font_registry_unavailable"}
@@ -807,8 +1012,7 @@ func apply_font_to_window_menu_panel(panel: Node, font_id: String) -> Dictionary
         return {"ok": false, "error": "panel_null"}
     return font_registry.apply_font_to_tree(panel, font_id, "Control")
 
-## Theme APIs intentionally pass through raw [code]theme_manager[/code] result dictionaries.
-## This keeps extended payload fields unchanged for existing integrations.
+## Theme APIs return standardized result dictionaries while preserving existing payload fields.
 func theme_create_profile(profile_id: String, base_theme_id: String = "default") -> Dictionary:
     if theme_editor == null:
         return {"ok": false, "error": "theme_editor_unavailable"}
@@ -958,6 +1162,15 @@ func _split_namespaced_id(full_id: String) -> Dictionary:
         return ApiResult.fail("id_must_be_namespaced_modid.localid", {"id": full_id})
     return ApiResult.ok({"id": normalized, "mod_id": mod_id, "local_id": local_id})
 
+func _resolve_setting_key(module_id: String, setting_id: String) -> String:
+    var clean_setting := setting_id.strip_edges()
+    if clean_setting.contains("."):
+        return clean_setting
+    var clean_module := module_id.strip_edges()
+    if clean_module == "":
+        return clean_setting
+    return "%s.%s" % [clean_module, clean_setting]
+
 func _validate_mod_id(mod_id: String) -> Dictionary:
     # Internal helper. Not intended for direct use by other mods.
     var normalized := mod_id.strip_edges()
@@ -970,7 +1183,7 @@ func _ensure_manual_icon_source() -> void:
         return
     if icon_registry == null or not icon_registry.has_method("register_source"):
         return
-    var ok: bool = icon_registry.register_source("core.manual_icons", "Core Manual Icons", Callable(self, "_list_manual_icons"))
+    var ok: bool = icon_registry.register_source("core.manual_icons", "Core Manual Icons", Callable(self , "_list_manual_icons"))
     _manual_icon_source_registered = ok
 
 func _list_manual_icons() -> Array:
@@ -1043,6 +1256,34 @@ func _run_compatibility_diagnostics() -> void:
     ])
     logger.debug("compat", "2.2 diagnostics: signals=%s" % signal_diag)
 
+func get_compatibility_snapshot() -> Dictionary:
+    var categories: Array[String] = []
+    if Data != null and Data.windows != null:
+        var seen: Dictionary = {}
+        for window_id: Variant in Data.windows:
+            var category_id: String = str(Data.windows[window_id].get("category", "")).strip_edges()
+            if category_id.is_empty() or seen.has(category_id):
+                continue
+            seen[category_id] = true
+            categories.append(category_id)
+        categories.sort()
+    var connector_resources: int = 0
+    if Data != null and Data.resources != null:
+        for resource_id: Variant in Data.resources:
+            var resource_data: Dictionary = Data.resources.get(resource_id, {})
+            if str(resource_data.get("connection", "")).strip_edges() != "":
+                connector_resources += 1
+    var menu_diag: Dictionary = _inspect_windows_menu_paths()
+    return {
+        "godot": Engine.get_version_info().get("string", ""),
+        "game": str(_safe_data_info("version")),
+        "menu_mode": str(menu_diag.get("mode", "none")),
+        "windows_count": Data.windows.size() if Data != null and Data.windows != null else 0,
+        "categories": categories,
+        "connector_resource_count": connector_resources,
+        "signals": _inspect_core_signals()
+    }
+
 func _inspect_windows_menu_paths() -> Dictionary:
     var result := {
         "menu_found": false,
@@ -1096,6 +1337,29 @@ func _find_node_by_script(node: Node, script_path: String) -> Variant:
         if found != null:
             return found
     return null
+
+func _safe_data_info(key: String, default_value: Variant = "") -> Variant:
+    # Safely read a value from the Data autoload if available, otherwise return default
+    var data_obj: Object = _get_autoload("Data")
+    if data_obj == null:
+        return default_value
+    if data_obj == null:
+        return default_value
+    if typeof(data_obj) == TYPE_DICTIONARY:
+        if data_obj.has(key):
+            return data_obj[key]
+        else:
+            return default_value
+    # fallback: try property access
+    if data_obj.has_method("get"):
+        var val: Variant = data_obj.get(key)
+        if typeof(val) != TYPE_NIL:
+            return val
+        else:
+            return default_value
+    if data_obj.has_method("has") and data_obj.has(key):
+        return data_obj[key]
+    return default_value
 
 func _load_script(path: String) -> Variant:
     var script: Variant = load(path)
@@ -1289,4 +1553,43 @@ func _install_modloader_extensions(base_dir: String) -> void:
         base_dir.path_join("extensions/utils.gd")
     ]
     for path: Variant in paths:
+        var extension_path := str(path)
+        var target_script_path := _extract_extension_target_script(extension_path)
+        if target_script_path == "":
+            report_hook_status("TajemnikTV-Core", extension_path, "warning", {
+                "phase": "extension_install",
+                "reason": "Could not determine extension target script from extends clause."
+            })
+        elif not ResourceLoader.exists(target_script_path):
+            report_hook_status("TajemnikTV-Core", target_script_path, "failed", {
+                "phase": "extension_install",
+                "extension_path": extension_path,
+                "missing_target_script": true,
+                "reason": "Extension target script does not exist."
+            })
+        else:
+            report_hook_status("TajemnikTV-Core", target_script_path, "healthy", {
+                "phase": "extension_install",
+                "extension_path": extension_path,
+                "method": "_init"
+            })
         ModLoaderMod.install_script_extension(path)
+
+func _extract_extension_target_script(extension_path: String) -> String:
+    if extension_path.strip_edges() == "":
+        return ""
+    if not FileAccess.file_exists(extension_path):
+        return ""
+    var file := FileAccess.open(extension_path, FileAccess.READ)
+    if file == null:
+        return ""
+    while not file.eof_reached():
+        var line: String = file.get_line().strip_edges()
+        if line.begins_with("extends \"") and line.ends_with("\""):
+            var start := line.find("\"")
+            var end := line.rfind("\"")
+            if start >= 0 and end > start:
+                return line.substr(start + 1, end - start - 1).strip_edges()
+        if line != "" and not line.begins_with("#"):
+            break
+    return ""

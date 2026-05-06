@@ -102,6 +102,15 @@ func navigate_to_group(group: Variant) -> void:
         _notify("exclamation", "Group no longer exists")
         return
 
+    var group_item_id := "group:%s" % str(group.name)
+    if _core != null and _core.has_method("board_focus_item"):
+        var focused: bool = bool(_core.board_focus_item(group_item_id, {"fit": true, "padding": 0.15}))
+        if focused:
+            var group_name_fast: Variant = get_group_name(group)
+            _notify("check", "Navigated to: " + group_name_fast)
+            _play_sound("click2")
+            return
+
     var bounds: Variant = get_group_bounds(group)
     if bounds.size == Vector2.ZERO or bounds.size.x < 1 or bounds.size.y < 1:
         _notify("exclamation", "Group is empty")

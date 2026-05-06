@@ -244,15 +244,20 @@ func _trigger_download(steam: Variant, file_id: int) -> void:
     _pending_downloads[file_id] = true
     _total_triggered += 1
 
-func _on_item_downloaded(download_result: Variant) -> void:
+func _on_item_downloaded(arg1: Variant = null, arg2: Variant = null, arg3: Variant = null) -> void:
     var file_id: int = 0
     var result: int = 0
-    if download_result is Dictionary:
-        file_id = download_result.get("file_id", 0)
-        result = download_result.get("result", 0)
+    if arg1 is Dictionary:
+        file_id = int(arg1.get("file_id", 0))
+        result = int(arg1.get("result", 0))
         _log("Download callback (dict): file_id=" + str(file_id) + ", result=" + str(result))
+    elif arg1 is int and arg2 is int:
+        # GodotSteam signal format: (app_id: int, file_id: int, result: int)
+        file_id = int(arg2)
+        result = int(arg3) if arg3 is int else 0
+        _log("Download callback (args): file_id=" + str(file_id) + ", result=" + str(result))
     else:
-        _log("Download callback (old format): " + str(download_result))
+        _log("Download callback (unknown format): %s | %s | %s" % [str(arg1), str(arg2), str(arg3)])
         return
     if not _pending_downloads.has(file_id):
         return

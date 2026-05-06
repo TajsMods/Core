@@ -89,6 +89,9 @@ func collect(options: Dictionary = {}) -> Dictionary:
     var commands: Variant = _collect_commands()
     if not commands.is_empty():
         data["commands"] = commands
+    var metadata: Variant = _collect_metadata()
+    if not metadata.is_empty():
+        data["metadata"] = metadata
     var fonts: Variant = _collect_fonts()
     if not fonts.is_empty():
         data["fonts"] = fonts
@@ -592,10 +595,13 @@ func _collect_hooks() -> Dictionary:
         if child != null:
             hook_list.append(child.name)
     hook_list.sort()
-    return {
+    var payload := {
         "count": hook_list.size(),
         "hooks": hook_list
     }
+    if _core != null and _core.has_method("get_hook_health"):
+        payload["health"] = _core.get_hook_health()
+    return payload
 
 func _collect_commands() -> Dictionary:
     if _core == null:
@@ -625,6 +631,13 @@ func _collect_commands() -> Dictionary:
         "categories": categories,
         "commands": command_ids
     }
+
+func _collect_metadata() -> Dictionary:
+    if _core == null or _core.metadata == null:
+        return {}
+    if not _core.metadata.has_method("get_diagnostics_summary"):
+        return {}
+    return _sorted_recursive(_core.metadata.get_diagnostics_summary())
 
 func _collect_fonts() -> Dictionary:
     if _core == null or _core.font_registry == null:
@@ -695,7 +708,7 @@ func _summarize_log_entries(entries: Array) -> Dictionary:
 func _build_summary(data: Dictionary) -> Dictionary:
     var project: Dictionary = data.get("project", {})
     var mods: Dictionary = data.get("mods", {})
-    return {
+    var summary := {
         "core_version": data.get("core_version", "unknown"),
         "api_level": data.get("api_level", 0),
         "game": project.get("name", ""),
@@ -706,9 +719,14 @@ func _build_summary(data: Dictionary) -> Dictionary:
             "enabled": mods.get("enabled", 0),
             "disabled": mods.get("disabled", 0)
         },
+        "metadata": data.get("metadata", {}),
         "keybind_conflicts": data.get("keybind_conflicts_summary", {}),
         "logs": data.get("logs_summary", {})
     }
+    var hook_health: Dictionary = data.get("hooks", {}).get("health", {})
+    if not hook_health.is_empty():
+        summary["hook_health"] = hook_health.get("counts", {})
+    return summary
 
 func _build_mod_loader_section(data: Dictionary) -> Dictionary:
     var mod_loader: Dictionary = data.get("mod_loader", {}).duplicate(true)
@@ -760,6 +778,8 @@ func _build_registries_section(data: Dictionary, options: Dictionary) -> Diction
         "categories": commands.get("categories", 0),
         "items": _limit_array(command_ids, command_limit)
     }
+    if data.has("metadata"):
+        registries["metadata"] = data.get("metadata", {})
     if data.has("fonts"):
         registries["fonts"] = data.get("fonts", {})
     if data.has("theme_editor"):

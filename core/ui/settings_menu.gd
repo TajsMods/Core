@@ -321,9 +321,46 @@ func _build_diagnostics_tab() -> void:
     output.size_flags_vertical = Control.SIZE_EXPAND_FILL
     output.custom_minimum_size = Vector2(0, 300)
 
+    var hook_status_label := Label.new()
+    hook_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+    hook_status_label.add_theme_font_size_override("font_size", 20)
+    hook_status_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.9, 0.9))
+    diag_vbox.add_child(hook_status_label)
+
+    var failed_hooks_list := ItemList.new()
+    failed_hooks_list.custom_minimum_size = Vector2(0, 180)
+    failed_hooks_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    failed_hooks_list.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    failed_hooks_list.select_mode = ItemList.SELECT_SINGLE
+    diag_vbox.add_child(failed_hooks_list)
+
+    var update_hook_panel := func() -> void:
+        if _core == null or not _core.has_method("get_hook_health"):
+            hook_status_label.text = "Hook Health: unavailable"
+            failed_hooks_list.clear()
+            return
+        var health: Dictionary = _core.get_hook_health()
+        var counts: Dictionary = health.get("counts", {})
+        hook_status_label.text = "Hook Health: Healthy %d | Warning %d | Failed %d" % [
+            int(counts.get("healthy", 0)),
+            int(counts.get("warning", 0)),
+            int(counts.get("failed", 0))
+        ]
+        failed_hooks_list.clear()
+        var failed_hooks: Array = health.get("failed_hooks", [])
+        if failed_hooks.is_empty():
+            failed_hooks_list.add_item("No failed hooks reported.")
+            return
+        for entry: Variant in failed_hooks:
+            var mod_id := str(entry.get("mod_id", "unknown_mod"))
+            var target := str(entry.get("target", "unknown_target"))
+            var reason := str(entry.get("reason", "Unknown failure"))
+            failed_hooks_list.add_item("%s | %s | %s" % [mod_id, target, reason])
+
     var refresh: Variant = func() -> String:
         var dump: String = _core.diagnostics.generate_dump()
         output.text = dump
+        update_hook_panel.call()
         return dump
 
     _ui.add_button(diag_vbox, "Refresh Diagnostics Dump", func():
@@ -346,6 +383,29 @@ func _build_diagnostics_tab() -> void:
             _notify("check", "Diagnostics dump saved to: %s" % result.get("path", ""))
         else:
             _notify("cross", "Failed to save diagnostics dump.")
+    )
+
+    _ui.add_button(diag_vbox, "Copy Hook Health JSON", func():
+        if _core == null or not _core.has_method("get_hook_health"):
+            _notify("cross", "Hook health not available.")
+            return
+        var payload := JSON.stringify(_core.get_hook_health(), "\t")
+        _core.copy_to_clipboard(payload)
+        _notify("check", "Hook health copied to clipboard.")
+    )
+
+    _ui.add_button(diag_vbox, "Save Hook Health JSON", func():
+        if _core == null or not _core.has_method("get_hook_health"):
+            _notify("cross", "Hook health not available.")
+            return
+        var output_path := "user://tajs_core_hook_health.json"
+        var file := FileAccess.open(output_path, FileAccess.WRITE)
+        if file == null:
+            _notify("cross", "Failed to save hook health JSON.")
+            return
+        file.store_string(JSON.stringify(_core.get_hook_health(), "\t"))
+        file.close()
+        _notify("check", "Hook health saved to: %s" % output_path)
     )
 
     diag_vbox.add_child(output)

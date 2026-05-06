@@ -1,5 +1,16 @@
 extends "res://scenes/windows/window_container.gd"
 
+func _enter_tree() -> void:
+    rid = RenderingServer.canvas_item_create()
+    RenderingServer.canvas_item_set_parent(rid, get_canvas_item())
+    if not item_rect_changed.is_connected(_on_item_rect_changed):
+        item_rect_changed.connect(_on_item_rect_changed)
+
+func _exit_tree() -> void:
+    if item_rect_changed.is_connected(_on_item_rect_changed):
+        item_rect_changed.disconnect(_on_item_rect_changed)
+    super._exit_tree()
+
 func export() -> Dictionary:
     var data := super ()
     data["filename"] = _get_save_filename()

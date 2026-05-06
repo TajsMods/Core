@@ -50,6 +50,11 @@ func save() -> Dictionary:
     for connector: Connector in connectors.get_children():
         desktop_data.connectors[connector.input_id] = connector.save()
 
+    var core: Variant = Engine.get_meta("TajsCore", null)
+    @warning_ignore("unsafe_method_access")
+    if core != null and core.metadata != null and core.metadata.has_method("attach_save_blob"):
+        core.metadata.attach_save_blob(desktop_data)
+
     return desktop_data
 
 
@@ -366,6 +371,16 @@ func update_lod() -> void:
     if not _ensure_runtime_canvas_refs():
         return
     super.update_lod()
+
+func _on_distance_level_set(distance: int) -> void:
+    if lines == null:
+        lines = get_node_or_null("Lines")
+    if windows_lod == null:
+        windows_lod = get_node_or_null("WindowsLOD")
+    if lines == null or windows_lod == null:
+        return
+    lines.visible = distance < 1
+    windows_lod.visible = distance >= 2
 
 
 func _ensure_runtime_canvas_refs() -> bool:

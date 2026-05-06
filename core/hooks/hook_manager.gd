@@ -30,28 +30,48 @@ func _install_hooks() -> void:
     if window_hooks:
         window_hooks.setup(_event_bus, _logger)
         add_child(window_hooks)
+        _report_status("window_hooks", "healthy", {"phase": "hook_manager", "method": "_ready", "reason": "Window hooks installed."})
     if connection_hooks:
         connection_hooks.setup(_event_bus)
         add_child(connection_hooks)
+        _report_status("connection_hooks", "healthy", {"phase": "hook_manager", "method": "_ready", "reason": "Connection hooks installed."})
     if selection_hooks:
         selection_hooks.setup(_event_bus)
         add_child(selection_hooks)
+        _report_status("selection_hooks", "healthy", {"phase": "hook_manager", "method": "_ready", "reason": "Selection hooks installed."})
     if save_load_hooks:
         save_load_hooks.setup(_event_bus)
         add_child(save_load_hooks)
+        _report_status("save_load_hooks", "healthy", {"phase": "hook_manager", "method": "_ready", "reason": "Save/load hooks installed."})
     if ui_hooks:
         ui_hooks.setup(_event_bus)
         add_child(ui_hooks)
+        _report_status("ui_hooks", "healthy", {"phase": "hook_manager", "method": "_ready", "reason": "UI hooks installed."})
 
 func _load_hook(path: String, hook_name: String) -> Variant:
     var script: Variant = load(path)
     if script == null:
         _log_warn("Failed to load hook: %s" % path)
+        _report_status(path, "failed", {
+            "phase": "hook_manager",
+            "missing_target_script": true,
+            "reason": "Hook script could not be loaded."
+        })
         return null
     var instance: Variant = script.new()
     if instance != null:
         instance.name = hook_name
+    else:
+        _report_status(path, "failed", {
+            "phase": "hook_manager",
+            "reason": "Hook script loaded but instance creation failed."
+        })
     return instance
+
+func _report_status(target: String, status: String, details: Dictionary = {}) -> void:
+    if _core == null or not _core.has_method("report_hook_status"):
+        return
+    _core.report_hook_status("TajemnikTV-Core", target, status, details)
 
 func _log_warn(message: String) -> void:
     if _logger != null and _logger.has_method("warn"):

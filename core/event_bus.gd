@@ -66,6 +66,18 @@ func emit(event: String, payload: Variant = null, sticky: bool = false) -> void:
 
 ## Emits a standardized event payload with metadata.
 ##
+## Payload shape:
+## - [code]source[/code] String (required)
+## - [code]timestamp[/code] int unix seconds
+## - [code]data[/code] Dictionary (default: {})
+## - [code]cancellable[/code] bool (default: false)
+## - [code]cancelled[/code] bool (default: false; listeners may set true when cancellable)
+## Example:
+## [codeblock]
+## var payload := core.event_bus.emit_event("core.demo", "TajemnikTV-QoL", {"foo": 1}, true)
+## if payload.get("cancelled", false):
+##     return
+## [/codeblock]
 ## Returns the emitted payload dictionary so callers can inspect cancellation flags.
 func emit_event(event: String, source: String, data: Dictionary = {}, cancellable: bool = false, sticky: bool = false) -> Dictionary:
     var payload := {

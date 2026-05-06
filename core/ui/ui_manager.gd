@@ -100,6 +100,9 @@ func add_settings_tab(title: String, icon: String) -> VBoxContainer:
 
 ## Registers (or returns existing) settings tab for another mod.
 ##
+## Returns:
+## - [code]VBoxContainer[/code] when tab exists/created
+## - [code]null[/code] when UI is not ready yet (registration is queued)
 ## Example:
 ## [codeblock]
 ## var tab := core.ui_manager.register_mod_settings_tab("TajemnikTV-QoL", "QoL")
@@ -155,26 +158,31 @@ func add_toggle(container: Control, label: String, value: bool, callback: Callab
         return null
     return _ui.add_toggle(container, label, value, callback, tooltip)
 
+## Adds a slider row to a settings container.
 func add_slider(container: Control, label: String, value: float, min_val: float, max_val: float, step: float, suffix: String, callback: Callable) -> HSlider:
     if _ui == null:
         return null
     return _ui.add_slider(container, label, value, min_val, max_val, step, suffix, callback)
 
+## Adds a dropdown row to a settings container.
 func add_dropdown(container: Control, label: String, options: Array, selected: int, callback: Callable) -> OptionButton:
     if _ui == null:
         return null
     return _ui.add_dropdown(container, label, options, selected, callback)
 
+## Adds a push button row to a settings container.
 func add_button(container: Control, label: String, callback: Callable) -> Button:
     if _ui == null:
         return null
     return _ui.add_button(container, label, callback)
 
+## Adds a text input row to a settings container.
 func add_text_input(container: Control, label: String, value: String, callback: Callable) -> LineEdit:
     if _ui == null:
         return null
     return _ui.add_text_input(container, label, value, callback)
 
+## Adds a color picker row to a settings container.
 func add_color_picker(container: Control, label: String, value: Color, callback: Callable) -> ColorPickerButton:
     if _ui == null:
         return null
@@ -195,6 +203,7 @@ func add_collapsible_section(container: Control, title: String, expanded: bool =
         return null
     return _ui.add_collapsible_section(container, title, expanded)
 
+## Injects a HUD widget into a Core HUD zone with optional priority ordering.
 func inject_hud_widget(zone: int, widget: Control, priority: int = 0) -> void:
     if _hud_injector == null:
         return
@@ -210,6 +219,19 @@ func get_hud_zone(zone: int) -> Control:
         return null
     return _hud_injector.get_zone_container(zone)
 
+## Shows a popup dialog.
+##
+## [param buttons] item shape:
+## - required [code]text[/code] String
+## - optional [code]action[/code] Callable
+## - optional [code]close[/code] bool (default: true)
+## Example:
+## [codeblock]
+## core.ui_manager.show_popup("Confirm", content, [
+##     {"text": "OK", "action": func(): _apply_changes(), "close": true},
+##     {"text": "Cancel", "close": true}
+## ])
+## [/codeblock]
 func show_popup(title: String, content: Control, buttons: Array[Dictionary]) -> void:
     if _popup_manager == null:
         return
@@ -219,11 +241,13 @@ func show_popup(title: String, content: Control, buttons: Array[Dictionary]) -> 
     })
     _popup_manager.show_popup(title, content, buttons)
 
+## Shows a yes/no confirmation popup.
 func show_confirmation(title: String, message: String, on_confirm: Callable, on_cancel: Callable = Callable()) -> void:
     if _popup_manager == null:
         return
     _popup_manager.show_confirmation(title, message, on_confirm, on_cancel)
 
+## Shows a text input popup and calls [param on_submit] with entered value.
 func show_input_dialog(title: String, prompt: String, default_text: String, on_submit: Callable) -> void:
     if _popup_manager == null:
         return
@@ -261,6 +285,9 @@ func close_popup() -> void:
 ## Opens icon browser and returns [code](name, path)[/code] through callback.
 ##
 ## Safe to call after HUD initialization.
+## Callback receives:
+## - [code]name[/code] String: preferred id/display label
+## - [code]path[/code] String: resolved icon path
 func open_icon_browser(callback: Callable, initial_selection: String = "") -> void:
     var _ignored: Variant = IconBrowserScript.open({
         "initial_selected_id": initial_selection,

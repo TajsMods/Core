@@ -2,6 +2,7 @@ class_name TajsCoreFontRegistry
 extends RefCounted
 
 const DEFAULT_PERSIST_PATH := "user://tajs_core_font_theme.tres"
+const ApiResult := preload("res://mods-unpacked/TajemnikTV-Core/core/api_result.gd")
 
 var _logger: Variant
 var _settings: Variant
@@ -19,6 +20,14 @@ func _init(logger: Variant = null, settings: Variant = null, theme_manager: Vari
     _settings = settings
     _theme_manager = theme_manager
 
+## Registers a font resource for future runtime/theme usage.
+##
+## Required:
+## - [param font_id] namespaced id ([code]ModId.local_id[/code])
+## - [param resource_path] existing [code]res://[/code] font resource path
+## Return shape:
+## - success: [code]{ok=true, error="", id, path}[/code]
+## - failure: [code]{ok=false, error, id?, path?}[/code]
 func register_font(font_id: String, resource_path: String) -> Dictionary:
     var id := font_id.strip_edges()
     if id == "":
@@ -36,7 +45,7 @@ func register_font(font_id: String, resource_path: String) -> Dictionary:
 
     _fonts[id] = font_res
     _font_paths[id] = resource_path
-    return {"ok": true, "id": id, "path": resource_path}
+    return ApiResult.ok({"id": id, "path": resource_path})
 
 func has_font(font_id: String) -> bool:
     return _fonts.has(font_id)
@@ -47,6 +56,15 @@ func get_font(font_id: String) -> Font:
 func list_fonts() -> Dictionary:
     return _font_paths.duplicate(true)
 
+## Applies a registered font to a theme class/property pair.
+##
+## Example:
+## [codeblock]
+## core.fonts.apply_font_to_class("Label", "TajemnikTV-QoL.body", "font")
+## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", class_name, font_id, property, fallback_used?}[/code]
+## - failure: [code]{ok=false, error, class_name?, font_id?}[/code]
 func apply_font_to_class(control_class_name: String, font_id: String, property_name: String = "font") -> Dictionary:
     var id := font_id.strip_edges()
     var target_class := control_class_name.strip_edges()
@@ -66,15 +84,28 @@ func apply_font_to_class(control_class_name: String, font_id: String, property_n
             return _fail("theme_unavailable", {"class_name": target_class, "font_id": id})
         fallback_theme.set_font(property_key, target_class, fallback_font)
         _set_class_binding(target_class, property_key, id)
-        return {"ok": true, "class_name": target_class, "font_id": id, "property": property_key, "fallback_used": true}
+        return ApiResult.ok({"class_name": target_class, "font_id": id, "property": property_key, "fallback_used": true})
     _set_class_binding(target_class, property_key, id)
 
     var theme := _get_game_theme()
     if theme == null:
         return _fail("theme_unavailable", {"class_name": target_class, "font_id": id})
     theme.set_font(property_key, target_class, _fonts[id])
-    return {"ok": true, "class_name": target_class, "font_id": id, "property": property_key}
+    return ApiResult.ok({"class_name": target_class, "font_id": id, "property": property_key})
 
+## Applies a font to one Control node.
+##
+## [param opts] dictionary keys:
+## - optional [code]property[/code] String (default: [code]"font"[/code])
+## - optional [code]class_name[/code] String (default: [code]"Control"[/code])
+## - optional [code]rich_text_props[/code] Array[String] for RichTextLabel targets
+## Example:
+## [codeblock]
+## core.fonts.apply_font_to_node($Panel/Label, "TajemnikTV-QoL.body", {"property": "font"})
+## [/codeblock]
+## Return shape:
+## - success: [code]{ok=true, error="", node, font_id, property|properties, fallback_used, target?}[/code]
+## - failure: [code]{ok=false, error, font_id?, node?}[/code]
 func apply_font_to_node(node: Node, font_id: String, opts: Dictionary = {}) -> Dictionary:
     if node == null:
         return _fail("node_null", {"font_id": font_id})
@@ -94,6 +125,15 @@ func apply_font_to_node(node: Node, font_id: String, opts: Dictionary = {}) -> D
         return _apply_font_to_rich_text_with_font(node, _fonts[id], id, opts, false)
     return _apply_font_to_node_with_font(node, _fonts[id], id, opts, false)
 
+## Applies a font to a node subtree.
+##
+## [param class_filter] values:
+## - [code]"Control"[/code] (default)
+## - [code]"Label"[/code]
+## - [code]"RichTextLabel"[/code]
+## Return shape:
+## - success: [code]{ok=true, error="", font_id, applied_count, class_filter, fallback_used}[/code]
+## - failure: [code]{ok=false, error, font_id?}[/code]
 func apply_font_to_tree(root: Node, font_id: String, class_filter: String = "Control") -> Dictionary:
     if root == null:
         return _fail("root_null", {"font_id": font_id})
@@ -109,8 +149,16 @@ func apply_font_to_tree(root: Node, font_id: String, class_filter: String = "Con
         _warn("font_not_registered_using_fallback", {"font_id": id, "target": "tree"})
     var count := 0
     count = _apply_font_tree_recursive(root, font_to_use, id, class_filter, count)
-    return {"ok": true, "font_id": id, "applied_count": count, "class_filter": class_filter, "fallback_used": used_fallback}
+    return ApiResult.ok({"font_id": id, "applied_count": count, "class_filter": class_filter, "fallback_used": used_fallback})
 
+## Builds a new Theme using class-to-font mappings.
+##
+## [param class_map] supports:
+## - simple mapping: [code]{"Label": "Mod.font_id"}[/code]
+## - extended mapping: [code]{"RichTextLabel": {"font_id":"Mod.font_id","properties":["normal_font"]}}[/code]
+## Return shape:
+## - success: [code]{ok=true, error="", theme, saved, path, fallback_count}[/code]
+## - failure: [code]{ok=false, error, path?, error_code?}[/code]
 func build_theme(class_map: Dictionary, save_to_user: bool = false, output_path: String = "") -> Dictionary:
     var theme := Theme.new()
     var fallback_count := 0
@@ -145,15 +193,20 @@ func build_theme(class_map: Dictionary, save_to_user: bool = false, output_path:
         var err: Error = ResourceSaver.save(theme, path)
         if err != OK:
             return _fail("theme_save_failed", {"path": path, "error_code": int(err)})
-        return {"ok": true, "theme": theme, "saved": true, "path": path, "fallback_count": fallback_count}
-    return {"ok": true, "theme": theme, "saved": false, "path": "", "fallback_count": fallback_count}
+        return ApiResult.ok({"theme": theme, "saved": true, "path": path, "fallback_count": fallback_count})
+    return ApiResult.ok({"theme": theme, "saved": false, "path": "", "fallback_count": fallback_count})
 
+## Persists a generated theme when enabled by Core settings.
+##
+## Return shape:
+## - success: [code]{ok=true, error="", saved, reason?|path?|theme?}[/code]
+## - failure: [code]{ok=false, error}[/code]
 func maybe_persist_theme(class_map: Dictionary) -> Dictionary:
     if _settings == null:
-        return {"ok": false, "error": "settings_unavailable"}
+        return ApiResult.fail("settings_unavailable")
     var enabled: bool = bool(_settings.get_bool("core.fonts.persist_generated_theme", false))
     if not enabled:
-        return {"ok": true, "saved": false, "reason": "disabled"}
+        return ApiResult.ok({"saved": false, "reason": "disabled"})
     var path: String = str(_settings.get_string("core.fonts.persist_path", DEFAULT_PERSIST_PATH))
     return build_theme(class_map, true, path)
 
@@ -172,7 +225,7 @@ func _apply_font_to_rich_text_with_font(node: RichTextLabel, font_res: Font, fon
     var props: Array = opts.get("rich_text_props", _default_rich_text_properties())
     for prop: Variant in props:
         node.add_theme_font_override(str(prop), font_res)
-    return {"ok": true, "node": str(node.name), "font_id": font_id, "target": "RichTextLabel", "properties": props, "fallback_used": fallback_used}
+    return ApiResult.ok({"node": str(node.name), "font_id": font_id, "target": "RichTextLabel", "properties": props, "fallback_used": fallback_used})
 
 func _apply_font_tree_recursive(node: Node, font_res: Font, font_id: String, class_filter: String, count: int) -> int:
     if class_filter == "RichTextLabel" and node is RichTextLabel:
@@ -198,7 +251,7 @@ func _apply_font_to_node_with_font(node: Node, font_res: Font, font_id: String, 
     if control_class_name == "":
         control_class_name = "Control"
     (node as Control).add_theme_font_override(prop, font_res)
-    return {"ok": true, "node": str(node.name), "class_name": control_class_name, "font_id": font_id, "property": prop, "fallback_used": fallback_used}
+    return ApiResult.ok({"node": str(node.name), "class_name": control_class_name, "font_id": font_id, "property": prop, "fallback_used": fallback_used})
 
 func _default_properties_for_class(control_class_name: String) -> Array[String]:
     if control_class_name == "RichTextLabel":
@@ -258,4 +311,4 @@ func _fail(code: String, data: Dictionary = {}) -> Dictionary:
     _errors.append(entry)
     if _logger != null and _logger.has_method("warn"):
         _logger.warn("fonts", "%s %s" % [code, JSON.stringify(data)])
-    return {"ok": false, "error": code}.merged(data, true)
+    return ApiResult.fail(code, data)

@@ -12,8 +12,9 @@ const DEFAULT_ATTRIBUTES := {"limit": - 1}
 const WINDOW_BUTTON_SCENE := preload("res://scenes/window_button.tscn")
 const WINDOW_MENU_SCRIPT := "res://scripts/windows_menu.gd"
 const NodeDefs := preload("res://mods-unpacked/TajemnikTV-Core/core/nodes/node_defs.gd")
+const LEGACY_CATEGORY_ORDER: Array[String] = ["network", "cpu", "gpu", "research", "ai", "hacking", "factory", "power", "coding", "utility"]
 
-var _allowed_categories: Array[String] = ["network", "cpu", "gpu", "research", "ai", "hacking", "factory", "power", "coding", "utility"]
+var _allowed_categories: Array[String] = LEGACY_CATEGORY_ORDER.duplicate()
 
 var _nodes: Dictionary = {}
 var _mod_nodes: Dictionary = {}
@@ -287,6 +288,7 @@ func _normalize_def(def: Dictionary) -> Dictionary:
 
     var category := str(def.get("category", DEFAULT_CATEGORY))
     var sub_category := str(def.get("sub_category", DEFAULT_SUB_CATEGORY))
+    _refresh_allowed_categories_from_data()
     if not _allowed_categories.has(category):
         _log_warn("nodes", "Node '%s' category '%s' is not supported; menu entry may be skipped." % [node_id, category])
     var attributes: Dictionary = def.get("attributes", DEFAULT_ATTRIBUTES).duplicate(true)
@@ -585,21 +587,8 @@ func _find_target_container(menu: Node, win_def: Dictionary) -> Dictionary:
     if categories_container == null:
         var has_legacy: bool = menu.has_node("Categories")
         return {"node": null, "mode": "none", "reason": "missing_categories_container" if not has_legacy else "missing_subcategory_container"}
-    var category_map := {
-        "network": "Network",
-        "cpu": "CPU",
-        "gpu": "GPU",
-        "research": "Research",
-        "ai": "AI",
-        "factory": "Factory",
-        "power": "Power",
-        "hacking": "Hacking",
-        "coding": "Coding",
-        "utility": "Utilities"
-    }
     var category_id: String = str(win_def.get("category", ""))
-    var category_name: String = category_map.get(category_id, category_id.capitalize())
-    var container: Node = categories_container.get_node_or_null(category_name)
+    var container: Node = _find_picker_category_container(categories_container, category_id)
     if container == null:
         return {"node": null, "mode": "picker22", "reason": "missing_category"}
     return {"node": container, "mode": "picker22", "reason": ""}
@@ -612,6 +601,47 @@ func _get_windows_categories_container(menu: Node) -> Node:
     if windows_tab == null:
         return null
     return windows_tab.get_node_or_null("WindowsContainer/ScrollContainer/MarginContainer/CategoriesContainer")
+
+func _find_picker_category_container(categories_container: Node, category_id: String) -> Node:
+    if categories_container == null or category_id.is_empty():
+        return null
+    var candidates: Array[String] = _build_picker_category_candidates(category_id)
+    for candidate: String in candidates:
+        var node: Node = categories_container.get_node_or_null(candidate)
+        if node != null:
+            return node
+    for child: Variant in categories_container.get_children():
+        if child == null:
+            continue
+        if str(child.name).to_lower() == category_id.to_lower():
+            return child
+    return null
+
+func _build_picker_category_candidates(category_id: String) -> Array[String]:
+    var normalized: String = category_id.strip_edges().to_lower()
+    var candidates: Array[String] = []
+    var alias_map := {
+        "cpu": "CPU",
+        "gpu": "GPU",
+        "ai": "AI",
+        "utility": "Utilities"
+    }
+    var explicit: String = str(alias_map.get(normalized, ""))
+    if not explicit.is_empty():
+        candidates.append(explicit)
+    candidates.append(category_id.capitalize())
+    candidates.append(normalized.capitalize())
+    candidates.append(normalized)
+    return candidates
+
+func _refresh_allowed_categories_from_data() -> void:
+    if not _autoload_ready("Data") or Data.windows == null:
+        return
+    for window_id: Variant in Data.windows:
+        var category_id: String = str(Data.windows[window_id].get("category", "")).strip_edges()
+        if category_id.is_empty() or _allowed_categories.has(category_id):
+            continue
+        _allowed_categories.append(category_id)
 
 func _data_has_window(node_id: String) -> bool:
     return _autoload_ready("Data") and Data.windows.has(_sanitize_id(node_id))

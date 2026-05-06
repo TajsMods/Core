@@ -2,9 +2,73 @@
 
 ## How to use
 
-Currently available docs are outdated and possibly will stay that way, until all the Core features are added and complete (which is never lol?)
-Website Docs: <https://tajsmods.github.io/docs/core/main/> (Possibly worst source of information, these are there mostly as a placeholder)
-Deepwiki: <https://deepwiki.com/TajsMods/Core> (Can be updated every 7 days)
+Source of truth:
+- In-code `##` docs under `core/`
+- This README
+- Website docs can lag and may include generated placeholder sections: <https://tajsmods.github.io/docs/core/main/>
+- Deepwiki: <https://deepwiki.com/TajsMods/Core> (can be stale by up to ~7 days)
+
+## Result dictionaries
+
+Most runtime/service wrappers return:
+- success: `{ "ok": true, "error": "", ...payload }`
+- failure: `{ "ok": false, "error": "<code>", ...context }`
+
+## Namespaced IDs
+
+Use `ModId.local_id` for cross-mod identifiers.
+
+Examples:
+- `TajemnikTV-QoL.toggle_overlay`
+- `TajemnikTV-QoL.tools_tab`
+- `TajemnikTV-QoL.body_font`
+
+Why it matters:
+- Prevents collisions across mods
+- Allows Core ownership/routing and diagnostics grouping
+
+## Common mod flows
+
+```gdscript
+var core: Variant = Engine.has_meta("TajsCore") ? Engine.get_meta("TajsCore") : null
+if core == null:
+    return
+
+# 1) Register module
+core.register_module({
+    "id": "TajemnikTV-QoL",
+    "name": "QoL",
+    "version": "2.1.5",
+    "min_core_version": "3.2.0"
+})
+
+# 2) Listen for readiness
+core.event_bus.on("core.ready", func(_payload: Dictionary): _on_core_ready())
+
+# 3) Register settings schema
+core.register_settings_schema("TajemnikTV-QoL", {
+    "tajs_qol.quick_mode.enabled": {"type": "bool", "default": true}
+}, "tajs_qol")
+
+# 4) Register command/action
+core.register_action("TajemnikTV-QoL.toggle_overlay", {"title": "Toggle Overlay"}, func(_ctx = null): _toggle_overlay())
+
+# 5) Register font + apply to UI
+core.register_font("TajemnikTV-QoL.body", "res://mods-unpacked/TajemnikTV-QoL/fonts/MyFont.ttf")
+core.apply_font_to_node($Panel/Label, "TajemnikTV-QoL.body", {"property": "font"})
+
+# 6) Create/apply theme profile
+core.theme_create_profile("TajemnikTV-QoL.dark_alt")
+core.theme_set_color("TajemnikTV-QoL.dark_alt", "font_color", "Label", Color(0.9, 0.95, 1.0))
+core.theme_apply_profile_to_node("TajemnikTV-QoL.dark_alt", $PanelContainer)
+
+# 7) Register window tab + icon
+core.register_window_tab({"id": "TajemnikTV-QoL.tools", "title": "Tools"})
+core.register_icon("TajemnikTV-QoL.tools_icon", "res://mods-unpacked/TajemnikTV-QoL/textures/icons/tools.png")
+
+# 8) Diagnostics smoke check
+var diag: Dictionary = core.diagnostics.self_test()
+```
 
 ## Convenience API
 
@@ -56,9 +120,102 @@ Available wrappers:
 - `register_translations_dir(dir_path: String)`
 - `register_window_directory(dir_path: String)`
 - `register_settings_schema(module_id: String, schema: Dictionary, namespace_prefix: String = "")`
+- `get_setting(module_id: String, setting_id: String, fallback := null)`
+- `set_setting(module_id: String, setting_id: String, value)`
+- `reset_setting(module_id: String, setting_id: String)`
+- `get_pending_restart_settings()`
 - `register_action(command_id: String, meta: Dictionary = {}, callback: Callable = Callable())`
+- `metadata_get(scope: String, owner_id: String, key: String, fallback := null)`
+- `metadata_set(scope: String, owner_id: String, key: String, value)`
+- `metadata_delete(scope: String, owner_id: String, key: String)`
+- `metadata_list(scope: String, owner_id := "")`
+- `metadata_migrate(mod_id: String, from_version: String, to_version: String, callable: Callable)`
+- `report_hook_status(mod_id: String, target: String, status: String, details := {})`
+- `get_hook_health()`
+- `has_failed_hooks(mod_id := "")`
+- `board_get_bounds(opts := {})`
+- `board_get_viewport_rect()`
+- `board_query_rect(rect: Rect2, opts := {})`
+- `board_get_item_bounds(item_id: String)`
+- `board_focus_item(item_id: String, opts := {})`
 
 All wrappers enforce namespaced IDs (`mod_id.local_id`) where applicable and return structured result dictionaries with `ok` and `error` fields.
+
+## Hook Health Monitor
+
+Core tracks hook/extension health and exposes diagnostics in the Core Diagnostics tab and support bundle dump.
+
+Status values:
+- `healthy`
+- `warning`
+- `failed`
+
+`report_hook_status()` details can include human-readable context like:
+- `reason`
+- `method` / `property`
+- `missing_methods` / `missing_properties`
+- `missing_target_script`
+- `scene_lookup_failed` / `node_lookup_failed`
+- `late_init`
+
+## Metadata Service (Save-Scoped + Global)
+
+Core now provides a metadata service for mod-owned persistent data with strict namespaced keys (`mod_id.key`).
+
+Scopes:
+- `save`
+- `board`
+- `workspace`
+- `window`
+- `node`
+- `schematic`
+- `global`
+
+Notes:
+- Save scopes are persisted into save payload (`desktop_data.tajs_core_metadata`) with `user://` fallback.
+- Global scope is persisted under Core storage in `user://mods/...`.
+- Values are JSON-compatible only (null/bool/int/float/string/array/dictionary with string keys).
+- Metadata diagnostics now include scope/owner/key counts and namespace summaries.
+
+## Settings Schema v2
+
+`register_settings_schema()` now supports both:
+- legacy format: `{ "my.key": { ...entry... } }`
+- v2 payload format:
+
+```gdscript
+{
+    "schema_version": 2,
+    "entries": {
+        "my_mod.feature.enabled": {
+            "type": "bool",
+            "default": true,
+            "display_name": "Enable Feature",
+            "description": "Turns feature on/off.",
+            "category": "General",
+            "tags": ["feature", "toggle"],
+            "requires_restart": false,
+            "live_apply": "MyMod.refresh_feature"
+        }
+    },
+    "migrations": [
+        {"from": 1, "to": 2, "rename": {"my_mod.old_key": "my_mod.feature.enabled"}}
+    ]
+}
+```
+
+Supported v2 entry fields include:
+- `type`: `bool|int|float|string|enum|color|keybind`
+- `default`
+- `min|max|step` (numeric)
+- `validator` (`Callable(key, value, schema) -> bool|Dictionary`)
+- `display_name`, `description`, `category`
+- `tags` / `search_terms`
+- `requires_restart`
+- `live_apply` (`Callable` or action id string)
+- `advanced` / `dangerous`
+
+Invalid schema entries now fail gracefully with structured `ok/error` results and do not hard-crash Core startup.
 
 ## Core Events
 

@@ -3,6 +3,8 @@ extends RefCounted
 
 var _cache: Dictionary = {}
 
+## Loads a texture and caches it by absolute resource path.
+## Returns [code]null[/code] when path is empty, missing, or not a texture.
 func load_texture(path: String) -> Texture2D:
 	if path == "":
 		return null
@@ -15,12 +17,23 @@ func load_texture(path: String) -> Texture2D:
 		_cache[path] = texture
 	return texture
 
+## Resolves [param icon_id] to a path, then returns cached texture.
+##
+## Example:
+## [codeblock]
+## var tex := core.assets.load_icon("wrench")
+## var tex2 := core.assets.load_icon("tools.png", "TajemnikTV-QoL")
+## [/codeblock]
 func load_icon(icon_id: String, mod_id: String = "") -> Texture2D:
 	if icon_id == "":
 		return null
 	var path := resolve_icon_path(icon_id, mod_id)
 	return load_texture(path)
 
+## Registers all [code].png[/code] files from [param path] into global icon resources.
+##
+## [param take_over] true makes textures override paths under [code]res://textures/icons[/code].
+## Returns number of loaded icons.
 func register_icon_dir(path: String, take_over: bool = true) -> int:
 	if path == "":
 		return 0
@@ -52,6 +65,13 @@ func _get_autoload(name: String) -> Object:
 		return null
 	return tree.get_root().get_node_or_null(name)
 
+## Resolves an icon id to an absolute [code]res://[/code] path.
+##
+## Rules:
+## - if [param icon_id] starts with [code]res://[/code], it is returned as-is
+## - if [param icon_id] ends with [code].png[/code], extension is preserved
+## - otherwise [code].png[/code] is appended
+## - [param mod_id] routes to [code]res://mods-unpacked/<mod_id>/textures/icons[/code]
 func resolve_icon_path(icon_id: String, mod_id: String = "") -> String:
 	if icon_id.begins_with("res://"):
 		return icon_id

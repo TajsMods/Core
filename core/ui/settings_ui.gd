@@ -583,11 +583,14 @@ func _filter_rows(query: String) -> void:
             var label_text: String = str(entry.get("label", ""))
             var key_text: String = str(entry.get("key", ""))
             var desc_text: String = str(entry.get("description", ""))
+            var tags_text: String = str(entry.get("tags", ""))
             var matches: bool = label_text.to_lower().contains(search_term)
             if not matches and key_text != "":
                 matches = key_text.to_lower().contains(search_term)
             if not matches and desc_text != "":
                 matches = desc_text.to_lower().contains(search_term)
+            if not matches and tags_text != "":
+                matches = tags_text.to_lower().contains(search_term)
             visible = matches
         if visible and bool(entry.get("is_advanced", false)) and not _filter_show_advanced:
             visible = false
@@ -606,12 +609,19 @@ func _clear_search() -> void:
         _search_field.text = ""
         _filter_rows("")
 
-func _track_row(row: Control, label_text: String, tab_idx: int, key: String = "", description: String = "", is_setting_row: bool = false, is_advanced: bool = false, depends_on: Dictionary = {}) -> void:
+func _track_row(row: Control, label_text: String, tab_idx: int, key: String = "", description: String = "", is_setting_row: bool = false, is_advanced: bool = false, depends_on: Dictionary = {}, tags: Array = []) -> void:
+    var tags_joined: String = ""
+    if tags is Array and not tags.is_empty():
+        var tags_text: Array[String] = []
+        for tag: Variant in tags:
+            tags_text.append(str(tag))
+        tags_joined = " ".join(tags_text)
     _searchable_rows.append({
         "row": row,
         "label": label_text,
         "key": key,
         "description": description,
+        "tags": tags_joined,
         "tab_index": tab_idx,
         "is_setting_row": is_setting_row,
         "is_advanced": is_advanced,
@@ -950,11 +960,12 @@ func _build_schema_entry(container: VBoxContainer, tab_index: int, key: String, 
     if _settings_ref == null:
         return
     var schema_entry: Dictionary = entry.duplicate(true)
-    var label_text: String = str(schema_entry.get("label", key))
+    var label_text: String = str(schema_entry.get("display_name", schema_entry.get("label", key)))
     var description: String = str(schema_entry.get("description", ""))
     var hidden_value: Variant = schema_entry.get("hidden", false)
     var experimental_value: Variant = schema_entry.get("experimental", false)
-    var is_advanced: bool = bool(hidden_value) or bool(experimental_value)
+    var is_advanced: bool = bool(hidden_value) or bool(experimental_value) or bool(schema_entry.get("advanced", false)) or bool(schema_entry.get("dangerous", false))
+    var tags: Array = schema_entry.get("tags", schema_entry.get("search_terms", []))
     var depends_on: Variant = schema_entry.get("depends_on", {})
     if not (depends_on is Dictionary):
         depends_on = {}
@@ -966,41 +977,41 @@ func _build_schema_entry(container: VBoxContainer, tab_index: int, key: String, 
     var ui_control: String = _get_schema_ui_control(schema_entry)
 
     if ui_control == "color_map":
-        _build_schema_color_map(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry)
+        _build_schema_color_map(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, tags)
         return
 
     match entry_type:
         "bool":
-            _build_schema_bool(container, tab_index, key, label_text, description, bool(current_value), is_advanced, depends_on, schema_entry)
+            _build_schema_bool(container, tab_index, key, label_text, description, bool(current_value), is_advanced, depends_on, schema_entry, tags)
         "int", "float":
             if ui_control == "input":
-                _build_schema_numeric_input(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type)
+                _build_schema_numeric_input(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type, tags)
             elif schema_entry.has("min") and schema_entry.has("max"):
-                _build_schema_slider(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type)
+                _build_schema_slider(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type, tags)
             else:
-                _build_schema_numeric_input(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type)
+                _build_schema_numeric_input(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, entry_type, tags)
         "enum":
             var options: Variant = schema_entry.get("options", [])
             if options is Array and not options.is_empty():
-                _build_schema_enum(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, options)
+                _build_schema_enum(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, options, tags)
             else:
-                _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry)
+                _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry, tags)
         "string":
-            _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry)
+            _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry, tags)
         "dict", "array", "keybind":
-            _build_schema_json(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry)
+            _build_schema_json(container, tab_index, key, label_text, description, current_value, is_advanced, depends_on, schema_entry, tags)
         "action":
-            _build_schema_action(container, tab_index, key, label_text, description, is_advanced, depends_on, schema_entry)
+            _build_schema_action(container, tab_index, key, label_text, description, is_advanced, depends_on, schema_entry, tags)
         _:
-            _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry)
+            _build_schema_text(container, tab_index, key, label_text, description, str(current_value), is_advanced, depends_on, schema_entry, tags)
 
-func _build_schema_bool(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: bool, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
+func _build_schema_bool(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: bool, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, tags: Array = []) -> void:
     var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
-    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var label: Label = Label.new()
     label.text = label_text
@@ -1010,6 +1021,10 @@ func _build_schema_bool(container: VBoxContainer, tab_index: int, key: String, l
 
     var badge: Label = _create_changed_badge()
     row.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    row.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    row.add_child(restart_badge)
 
     var reset_btn: Button = _create_reset_button(key)
     row.add_child(reset_btn)
@@ -1034,18 +1049,20 @@ func _build_schema_bool(container: VBoxContainer, tab_index: int, key: String, l
         "control": toggle,
         "row": row,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, entry_type: String) -> void:
+func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, entry_type: String, tags: Array = []) -> void:
     var wrapper: VBoxContainer = VBoxContainer.new()
     wrapper.add_theme_constant_override("separation", 5)
     if description != "":
         wrapper.tooltip_text = description
     container.add_child(wrapper)
-    _track_row(wrapper, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(wrapper, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var header: HBoxContainer = HBoxContainer.new()
     wrapper.add_child(header)
@@ -1063,6 +1080,10 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
 
     var badge: Label = _create_changed_badge()
     header.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    header.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    header.add_child(restart_badge)
 
     var reset_btn: Button = _create_reset_button(key)
     header.add_child(reset_btn)
@@ -1110,20 +1131,22 @@ func _build_schema_slider(container: VBoxContainer, tab_index: int, key: String,
         "control": slider,
         "row": wrapper,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry,
         "value_label": value_label,
         "entry_type": entry_type
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_numeric_input(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, entry_type: String) -> void:
+func _build_schema_numeric_input(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, entry_type: String, tags: Array = []) -> void:
     var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
-    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var label: Label = Label.new()
     label.text = label_text
@@ -1133,6 +1156,10 @@ func _build_schema_numeric_input(container: VBoxContainer, tab_index: int, key: 
 
     var badge: Label = _create_changed_badge()
     row.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    row.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    row.add_child(restart_badge)
 
     var reset_btn: Button = _create_reset_button(key)
     row.add_child(reset_btn)
@@ -1172,19 +1199,21 @@ func _build_schema_numeric_input(container: VBoxContainer, tab_index: int, key: 
         "control": input,
         "row": row,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry,
         "entry_type": entry_type
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, options: Array) -> void:
+func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, options: Array, tags: Array = []) -> void:
     var row: HBoxContainer = HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
-    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var label: Label = Label.new()
     label.text = label_text
@@ -1194,6 +1223,10 @@ func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, l
 
     var badge: Label = _create_changed_badge()
     row.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    row.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    row.add_child(restart_badge)
 
     var reset_btn: Button = _create_reset_button(key)
     row.add_child(reset_btn)
@@ -1242,20 +1275,22 @@ func _build_schema_enum(container: VBoxContainer, tab_index: int, key: String, l
         "control": dropdown,
         "row": row,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry,
         "options": options,
         "option_values": option_values
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_text(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: String, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
+func _build_schema_text(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: String, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, tags: Array = []) -> void:
     var row := HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
-    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var label := Label.new()
     label.text = label_text
@@ -1265,6 +1300,10 @@ func _build_schema_text(container: VBoxContainer, tab_index: int, key: String, l
 
     var badge := _create_changed_badge()
     row.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    row.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    row.add_child(restart_badge)
 
     var reset_btn := _create_reset_button(key)
     row.add_child(reset_btn)
@@ -1300,18 +1339,20 @@ func _build_schema_text(container: VBoxContainer, tab_index: int, key: String, l
         "control": input,
         "row": row,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_json(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
+func _build_schema_json(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, tags: Array = []) -> void:
     var row := HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
-    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(row, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var label := Label.new()
     label.text = label_text
@@ -1321,6 +1362,10 @@ func _build_schema_json(container: VBoxContainer, tab_index: int, key: String, l
 
     var badge := _create_changed_badge()
     row.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    row.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    row.add_child(restart_badge)
 
     var reset_btn := _create_reset_button(key)
     row.add_child(reset_btn)
@@ -1347,12 +1392,14 @@ func _build_schema_json(container: VBoxContainer, tab_index: int, key: String, l
         "control": null,
         "row": row,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
+func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, value: Variant, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, tags: Array = []) -> void:
     var overrides: Dictionary = value if value is Dictionary else {}
     var options_raw: Variant = schema_entry.get("color_options", {})
     var option_list: Array[Dictionary] = []
@@ -1372,7 +1419,7 @@ func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: Stri
         return str(a.get("label", "")).naturalnocasecmp_to(str(b.get("label", ""))) < 0
     )
     if option_list.is_empty():
-        _build_schema_json(container, tab_index, key, label_text, description, value, is_advanced, depends_on, schema_entry)
+        _build_schema_json(container, tab_index, key, label_text, description, value, is_advanced, depends_on, schema_entry, tags)
         return
 
     var header := HBoxContainer.new()
@@ -1380,7 +1427,7 @@ func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: Stri
     if description != "":
         header.tooltip_text = description
     container.add_child(header)
-    _track_row(header, label_text, tab_index, key, description, true, is_advanced, depends_on)
+    _track_row(header, label_text, tab_index, key, description, true, is_advanced, depends_on, tags)
 
     var title := Label.new()
     title.text = label_text
@@ -1390,6 +1437,10 @@ func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: Stri
 
     var badge := _create_changed_badge()
     header.add_child(badge)
+    var invalid_badge: Label = _create_invalid_badge()
+    header.add_child(invalid_badge)
+    var restart_badge: Label = _create_restart_badge(bool(schema_entry.get("requires_restart", false)))
+    header.add_child(restart_badge)
 
     var reset_btn := _create_reset_button(key)
     header.add_child(reset_btn)
@@ -1408,7 +1459,7 @@ func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: Stri
         var row := HBoxContainer.new()
         row.custom_minimum_size = Vector2(0, 60)
         list_container.add_child(row)
-        _track_row(row, option_label, tab_index, key, description, true, is_advanced, depends_on)
+        _track_row(row, option_label, tab_index, key, description, true, is_advanced, depends_on, tags)
 
         var label := Label.new()
         label.text = option_label
@@ -1455,20 +1506,22 @@ func _build_schema_color_map(container: VBoxContainer, tab_index: int, key: Stri
         "control": null,
         "row": header,
         "badge": badge,
+        "validation_badge": invalid_badge,
         "schema": schema_entry,
         "pickers": pickers,
         "color_get": color_get
     }
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, invalid_badge)
     _register_restart_requirement(key, schema_entry)
 
-func _build_schema_action(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary) -> void:
+func _build_schema_action(container: VBoxContainer, tab_index: int, key: String, label_text: String, description: String, is_advanced: bool, depends_on: Dictionary, schema_entry: Dictionary, tags: Array = []) -> void:
     var row := HBoxContainer.new()
     row.custom_minimum_size = Vector2(0, 64)
     if description != "":
         row.tooltip_text = description
     container.add_child(row)
-    _track_row(row, label_text, tab_index, key, description, false, is_advanced, depends_on)
+    _track_row(row, label_text, tab_index, key, description, false, is_advanced, depends_on, tags)
 
     var label := Label.new()
     label.text = label_text
@@ -1582,6 +1635,23 @@ func _create_changed_badge() -> Label:
     badge.visible = false
     return badge
 
+func _create_invalid_badge() -> Label:
+    var badge := Label.new()
+    badge.text = "Invalid"
+    badge.add_theme_font_size_override("font_size", 16)
+    badge.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+    badge.visible = false
+    return badge
+
+func _create_restart_badge(visible: bool) -> Label:
+    var badge := Label.new()
+    badge.text = "Restart"
+    badge.add_theme_font_size_override("font_size", 16)
+    badge.add_theme_color_override("font_color", Color(0.95, 0.75, 0.35))
+    badge.visible = visible
+    badge.tooltip_text = "Changes to this setting require restart."
+    return badge
+
 func _create_reset_button(key: String) -> Button:
     var btn := Button.new()
     btn.text = "Reset"
@@ -1599,6 +1669,34 @@ func _update_changed_badge_for_key(key: String, badge: Control) -> void:
     if _settings_ref != null and _settings_ref.has_method("is_default"):
         changed = not _settings_ref.is_default(key)
     badge.visible = changed
+
+func _update_validation_badge_for_key(key: String, badge: Control) -> void:
+    if badge == null:
+        return
+    if badge is Label:
+        badge.text = "Invalid"
+    badge.visible = false
+    badge.tooltip_text = ""
+    if _settings_ref == null or not _settings_ref.has_method("get_validation_state"):
+        return
+    var state: Variant = _settings_ref.get_validation_state(key)
+    if not (state is Dictionary):
+        return
+    var reason: String = str(state.get("reason", ""))
+    var raw_ok: bool = bool(state.get("raw_ok", true))
+    var used_default: bool = bool(state.get("used_default", false))
+    var coerced: bool = bool(state.get("coerced", false))
+    if not raw_ok or used_default:
+        badge.visible = true
+        if badge is Label:
+            badge.text = "Invalid"
+        badge.tooltip_text = "Invalid value: %s" % reason
+    elif coerced:
+        badge.visible = true
+        badge.text = "Clamped"
+        badge.tooltip_text = "Value was coerced/clamped: %s" % reason
+    else:
+        badge.text = "Invalid"
 
 func _is_restart_pending_for_key(key: String) -> bool:
     if _settings_ref == null:
@@ -1894,6 +1992,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
     var kind := str(entry.get("kind", ""))
     var control: Variant = entry.get("control", null)
     var badge: Variant = entry.get("badge", null)
+    var validation_badge: Variant = entry.get("validation_badge", null)
     var value_label: Variant = entry.get("value_label", null)
     var entry_type := str(entry.get("entry_type", ""))
     var schema_entry: Dictionary = entry.get("schema", {})
@@ -1944,6 +2043,7 @@ func _on_settings_value_changed(key: String, value: Variant, _old_value: Variant
     )
 
     _update_changed_badge_for_key(key, badge)
+    _update_validation_badge_for_key(key, validation_badge)
     _update_restart_requirement_for_key(key)
     _filter_rows(_search_field.text if _search_field else "")
 

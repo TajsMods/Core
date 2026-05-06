@@ -2,17 +2,21 @@ class_name TajsCoreConnectionHooks
 extends Node
 
 var _event_bus: Variant
+var _logger: Variant
 
 func setup(event_bus: Variant) -> void:
     _event_bus = event_bus
+    var core: Variant = Engine.get_meta("TajsCore", null)
+    if core != null:
+        _logger = core.get("logger")
 
 func _ready() -> void:
     if not _autoload_ready("Signals"):
         return
-    var _ignored1: Variant = Signals.create_connection.connect(_on_create_connection)
-    var _ignored2: Variant = Signals.connection_created.connect(_on_connection_created)
-    var _ignored3: Variant = Signals.delete_connection.connect(_on_delete_connection)
-    var _ignored4: Variant = Signals.connection_deleted.connect(_on_connection_deleted)
+    _connect_signal_if_present("create_connection", Callable(self, "_on_create_connection"))
+    _connect_signal_if_present("connection_created", Callable(self, "_on_connection_created"))
+    _connect_signal_if_present("delete_connection", Callable(self, "_on_delete_connection"))
+    _connect_signal_if_present("connection_deleted", Callable(self, "_on_connection_deleted"))
 
 func request_connection_create(output: String, input: String) -> bool:
     var payload: Dictionary = _emit_event("connection.validate", {"output": output, "input": input}, true)
@@ -56,3 +60,16 @@ func _autoload_ready(autoload_name: String) -> bool:
     @warning_ignore("unsafe_cast")
     var scene_tree: SceneTree = tree as SceneTree
     return scene_tree.get_root().has_node(autoload_name)
+
+func _connect_signal_if_present(signal_name: String, callback: Callable) -> void:
+    if not Signals.has_signal(signal_name):
+        _log_debug("Missing signal '%s'" % signal_name)
+        return
+    var sig: Signal = Signals.get(signal_name)
+    if sig.is_connected(callback):
+        return
+    sig.connect(callback)
+
+func _log_debug(message: String) -> void:
+    if _logger != null and _logger.has_method("debug"):
+        _logger.debug("hooks", message)

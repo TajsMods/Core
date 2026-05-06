@@ -15,9 +15,9 @@ func setup(event_bus: Variant) -> void:
 func _ready() -> void:
     if not _autoload_ready("Signals"):
         return
-    Signals.menu_set.connect(_on_menu_set)
-    Signals.popup.connect(_on_popup)
-    Signals.prompt.connect(_on_prompt)
+    _connect_signal_if_present("menu_set", Callable(self, "_on_menu_set"))
+    _connect_signal_if_present("popup", Callable(self, "_on_popup"))
+    _connect_signal_if_present("prompt", Callable(self, "_on_prompt"))
     _emit_event("core.ui.ready", {
         "owner_mod_id": "TajemnikTV-Core",
         "has_hud": _has_node("/root/Main/HUD"),
@@ -71,3 +71,11 @@ func _has_node(path: String) -> bool:
     if not (tree is SceneTree):
         return false
     return tree.get_root().has_node(path.trim_prefix("/root/"))
+
+func _connect_signal_if_present(signal_name: String, callback: Callable) -> void:
+    if not Signals.has_signal(signal_name):
+        return
+    var sig: Signal = Signals.get(signal_name)
+    if sig.is_connected(callback):
+        return
+    sig.connect(callback)

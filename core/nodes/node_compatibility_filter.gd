@@ -8,10 +8,16 @@ var _window_connectors_cache: Dictionary = {}
 var _cache_built: bool = false
 
 var _logger: Variant
+var _scene_resolver: Variant
+var _scene_resolution_failures: int = 0
 
 
 func _init(logger: Variant = null) -> void:
     _logger = logger
+    if Engine.has_meta("TajsCore"):
+        var core: Variant = Engine.get_meta("TajsCore")
+        if core != null:
+            _scene_resolver = core.get("scene_path_resolver")
 
 
 ## Build cache of window connector information
@@ -21,6 +27,7 @@ func build_cache() -> void:
 
     _window_connectors_cache.clear()
     var zero_port_nodes: Array[String] = []
+    _scene_resolution_failures = 0
 
     for window_id: Variant in Data.windows:
         var window_data: Dictionary = Data.windows[window_id]
@@ -56,32 +63,39 @@ func get_connector_info(window_id: String) -> Dictionary:
 
 ## Get connector info for a window by loading its scene
 func _get_window_connector_info(window_id: String, window_data: Dictionary) -> Dictionary:
-    var scene_path: String = _resolve_window_scene_path(window_data)
+    var scene_info: Dictionary = _resolve_window_scene_path(window_data)
+    var scene_path: String = str(scene_info.get("resolved", ""))
 
     if not ResourceLoader.exists(scene_path):
-        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s reason=missing_resource" % [
+        _scene_resolution_failures += 1
+        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s attempted=%s reason=missing_resource" % [
             window_id,
-            str(window_data.get("scene", "")),
-            scene_path
+            str(scene_info.get("original", "")),
+            scene_path,
+            str(scene_info.get("attempted", []))
         ])
         return {}
 
     # Load scene to inspect ResourceContainers
     var scene: PackedScene = load(scene_path)
     if not scene:
-        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s reason=load_failed" % [
+        _scene_resolution_failures += 1
+        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s attempted=%s reason=load_failed" % [
             window_id,
-            str(window_data.get("scene", "")),
-            scene_path
+            str(scene_info.get("original", "")),
+            scene_path,
+            str(scene_info.get("attempted", []))
         ])
         return {}
 
     var instance: Node = scene.instantiate()
     if not instance:
-        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s reason=instantiate_failed" % [
+        _scene_resolution_failures += 1
+        _log_debug("Scene resolution failed for '%s': scene=%s resolved=%s attempted=%s reason=instantiate_failed" % [
             window_id,
-            str(window_data.get("scene", "")),
-            scene_path
+            str(scene_info.get("original", "")),
+            scene_path,
+            str(scene_info.get("attempted", []))
         ])
         return {}
 
@@ -130,13 +144,16 @@ func _get_window_connector_info(window_id: String, window_data: Dictionary) -> D
 
     return info
 
-func _resolve_window_scene_path(window_data: Dictionary) -> String:
+func _resolve_window_scene_path(window_data: Dictionary) -> Dictionary:
     var scene_value: String = str(window_data.get("scene", ""))
+    if _scene_resolver != null and _scene_resolver.has_method("resolve_window_scene"):
+        return _scene_resolver.resolve_window_scene(scene_value)
     if scene_value.is_empty():
-        return ""
-    if scene_value.begins_with("res://"):
-        return scene_value if scene_value.ends_with(".tscn") else (scene_value + ".tscn")
-    return "res://scenes/windows/" + scene_value + ".tscn"
+        return {"original": scene_value, "resolved": "", "attempted": []}
+    var fallback: String = scene_value if scene_value.begins_with("res://") else ("res://scenes/windows/" + scene_value)
+    if not fallback.ends_with(".tscn"):
+        fallback += ".tscn"
+    return {"original": scene_value, "resolved": fallback, "attempted": [fallback]}
 
 
 ## For pass-through nodes, dynamic outputs should inherit type from typed inputs
@@ -376,11 +393,15 @@ func get_nodes_with_output(shape: String, color: String) -> Array[Dictionary]:
 func clear_cache() -> void:
     _window_connectors_cache.clear()
     _cache_built = false
+    _scene_resolution_failures = 0
 
 
 ## Get total number of cached windows
 func get_cache_size() -> int:
     return _window_connectors_cache.size()
+
+func get_scene_resolution_failure_count() -> int:
+    return _scene_resolution_failures
 
 
 func _log_info(message: String) -> void:

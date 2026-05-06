@@ -3,6 +3,7 @@ extends RefCounted
 
 const DEFAULT_THEME_ID := "default"
 const DEFAULT_PROFILE_SAVE_PATH := "user://tajs_core_theme_profile_%s.tres"
+const ApiResult := preload("res://mods-unpacked/TajemnikTV-Core/core/api_result.gd")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Font Size Constants (matched to game's JetBrains Mono Thin font)
@@ -49,8 +50,8 @@ func get_theme(theme_id: String) -> Theme:
         return _themes[theme_id]
     return _themes.get(DEFAULT_THEME_ID, null)
 
+## Returns the default in-game theme ([code]main.tres[/code] fallback).
 func get_game_theme() -> Theme:
-    """Returns the game's main.tres theme. Use this to ensure consistent styling."""
     return get_theme(DEFAULT_THEME_ID)
 
 func apply_theme(control: Control, theme_id: String) -> void:
@@ -60,8 +61,8 @@ func apply_theme(control: Control, theme_id: String) -> void:
     if theme != null:
         control.theme = theme
 
+## Applies the default in-game theme to a control.
 func apply_game_theme(control: Control) -> void:
-    """Apply the game's main theme to a control for consistent fonts and styling."""
     apply_theme(control, DEFAULT_THEME_ID)
 
 func list_themes() -> Array:
@@ -71,25 +72,25 @@ func list_themes() -> Array:
 # Tooltip Styling API
 # ─────────────────────────────────────────────────────────────────────────────
 
+## Applies Core tooltip styling to the root viewport.
 func apply_tooltip_styling() -> void:
-    """Apply in-game tooltip styling to the root viewport."""
     if _tooltip_styling == null or _tooltip_applied:
         return
     _tooltip_styling.apply_to_root()
     _tooltip_applied = true
 
+## Applies Core tooltip styling to a specific theme.
 func apply_tooltip_styling_to_theme(theme: Theme) -> void:
-    """Apply tooltip styling to a specific theme."""
     if _tooltip_styling == null or theme == null:
         return
     _tooltip_styling.apply_to_theme(theme)
 
+## Returns true when tooltip styling has been applied.
 func is_tooltip_styling_applied() -> bool:
-    """Check if tooltip styling has been applied."""
     return _tooltip_applied
 
+## Removes tooltip styling and restores defaults.
 func reset_tooltip_styling() -> void:
-    """Remove tooltip styling and restore defaults."""
     if _tooltip_styling != null:
         _tooltip_styling.reset()
         _tooltip_applied = false
@@ -98,6 +99,10 @@ func reset_tooltip_styling() -> void:
 # Theme Editor API
 # ─────────────────────────────────────────────────────────────────────────────
 
+## Creates a namespaced theme profile copied from [param base_theme_id].
+## Return shape:
+## - success: [code]{ok=true, error="", profile_id, base_theme_id}[/code]
+## - failure: [code]{ok=false, error, profile_id?, base_theme_id?}[/code]
 func create_profile(profile_id: String, base_theme_id: String = DEFAULT_THEME_ID) -> Dictionary:
     var id := profile_id.strip_edges()
     if id == "":
@@ -110,22 +115,25 @@ func create_profile(profile_id: String, base_theme_id: String = DEFAULT_THEME_ID
     if base_theme == null:
         return {"ok": false, "error": "base_theme_unavailable", "base_theme_id": base_theme_id}
     _profiles[id] = base_theme.duplicate(true)
-    return {"ok": true, "profile_id": id, "base_theme_id": base_theme_id}
+    return ApiResult.ok({"profile_id": id, "base_theme_id": base_theme_id})
 
+## Sets a theme color in an existing profile.
 func set_color(profile_id: String, color_name: String, control_class_name: String, color: Color) -> Dictionary:
     var theme := _get_profile(profile_id)
     if theme == null:
         return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
     theme.set_color(color_name, control_class_name , color)
-    return {"ok": true, "profile_id": profile_id, "type": "color", "key": color_name, "class_name": control_class_name }
+    return ApiResult.ok({"profile_id": profile_id, "type": "color", "key": color_name, "class_name": control_class_name })
 
+## Sets a theme constant in an existing profile.
 func set_constant(profile_id: String, constant_name: String, control_class_name: String, value: int) -> Dictionary:
     var theme := _get_profile(profile_id)
     if theme == null:
         return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
     theme.set_constant(constant_name, control_class_name , value)
-    return {"ok": true, "profile_id": profile_id, "type": "constant", "key": constant_name, "class_name": control_class_name }
+    return ApiResult.ok({"profile_id": profile_id, "type": "constant", "key": constant_name, "class_name": control_class_name })
 
+## Sets a theme font reference in an existing profile.
 func set_font(profile_id: String, control_class_name: String, property_name: String, font_id: String) -> Dictionary:
     var theme := _get_profile(profile_id)
     if theme == null:
@@ -136,8 +144,23 @@ func set_font(profile_id: String, control_class_name: String, property_name: Str
     if font_res == null:
         return {"ok": false, "error": "font_not_registered", "font_id": font_id}
     theme.set_font(property_name, control_class_name , font_res)
-    return {"ok": true, "profile_id": profile_id, "type": "font", "font_id": font_id, "class_name": control_class_name , "property": property_name}
+    return ApiResult.ok({"profile_id": profile_id, "type": "font", "font_id": font_id, "class_name": control_class_name , "property": property_name})
 
+## Sets a [code]StyleBoxFlat[/code] in a profile.
+##
+## [param opts] keys:
+## - optional [code]bg_color[/code] Color
+## - optional [code]border_color[/code] Color
+## - optional [code]border_width[/code] int (default: unchanged/0)
+## - optional [code]corner_radius[/code] int (default: unchanged/0)
+## Example:
+## [codeblock]
+## core.theme_set_stylebox_flat("TajemnikTV-QoL.alt", "panel", "PanelContainer", {
+##     "bg_color": Color(0.1, 0.1, 0.14, 1.0),
+##     "border_width": 2,
+##     "corner_radius": 8
+## })
+## [/codeblock]
 func set_stylebox_flat(profile_id: String, stylebox_name: String, control_class_name: String, opts: Dictionary) -> Dictionary:
     var theme := _get_profile(profile_id)
     if theme == null:
@@ -157,8 +180,9 @@ func set_stylebox_flat(profile_id: String, stylebox_name: String, control_class_
         var r: int = int(opts["corner_radius"])
         box.set_corner_radius_all(r)
     theme.set_stylebox(stylebox_name, control_class_name , box)
-    return {"ok": true, "profile_id": profile_id, "type": "stylebox_flat", "key": stylebox_name, "class_name": control_class_name }
+    return ApiResult.ok({"profile_id": profile_id, "type": "stylebox_flat", "key": stylebox_name, "class_name": control_class_name })
 
+## Applies a profile theme to one Control node.
 func apply_profile_to_node(profile_id: String, node: Control) -> Dictionary:
     if node == null:
         return {"ok": false, "error": "node_null"}
@@ -166,8 +190,9 @@ func apply_profile_to_node(profile_id: String, node: Control) -> Dictionary:
     if theme == null:
         return {"ok": false, "error": "profile_not_found", "profile_id": profile_id}
     node.theme = theme
-    return {"ok": true, "profile_id": profile_id, "node": str(node.name)}
+    return ApiResult.ok({"profile_id": profile_id, "node": str(node.name)})
 
+## Saves an in-memory profile to [code]user://[/code] or explicit [param output_path].
 func save_profile(profile_id: String, output_path: String = "") -> Dictionary:
     if not _is_namespaced_id(profile_id):
         return {"ok": false, "error": "profile_id_must_be_namespaced_modid.localid", "profile_id": profile_id}
@@ -178,8 +203,9 @@ func save_profile(profile_id: String, output_path: String = "") -> Dictionary:
     var err: Error = ResourceSaver.save(theme, path)
     if err != OK:
         return {"ok": false, "error": "save_failed", "profile_id": profile_id, "path": path, "error_code": int(err)}
-    return {"ok": true, "profile_id": profile_id, "path": path}
+    return ApiResult.ok({"profile_id": profile_id, "path": path})
 
+## Loads a profile theme from [param input_path] into [param profile_id].
 func load_profile(profile_id: String, input_path: String) -> Dictionary:
     var id := profile_id.strip_edges()
     if not _is_namespaced_id(id):
@@ -190,7 +216,7 @@ func load_profile(profile_id: String, input_path: String) -> Dictionary:
     if not (res is Theme):
         return {"ok": false, "error": "resource_not_theme", "profile_id": profile_id, "path": input_path}
     _profiles[id] = res
-    return {"ok": true, "profile_id": id, "path": input_path}
+    return ApiResult.ok({"profile_id": id, "path": input_path})
 
 func list_profiles() -> Array:
     var ids := _profiles.keys()
